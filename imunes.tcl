@@ -195,6 +195,12 @@ foreach file $l2nodes {
 foreach file $l3nodes {
     safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
 }
+# custom nodes - load every .tcl file in custom_nodes directory
+foreach file [glob -nocomplain -directory $ROOTDIR/$LIBDIR/custom_nodes *.tcl] {
+    safeSourceFile $file
+    puts "Loaded custom node from '$file'"
+}
+
 # additional nodes
 safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
 safeSourceFile "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
