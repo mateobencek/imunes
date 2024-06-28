@@ -222,12 +222,16 @@ set cf::clipboard::image_list {}
 set cfg_list {}
 set curcfg ""
 
-#****v* imunes.tcl/editor_only
+#****v* imunes.tcl/.imunesrc
 # NAME
-#    editor_only -- if set, Experiment -> Execute is disabled
+#    editor_only -- if true, Experiment -> Execute is disabled
+#    recents_number -- total number of recently opened file names to keep
 # FUNCTION
-#    IMUNES GUI can be used in editor-only mode.i
-#    This variable can be modified in .imunesrc.
+#    These variables can be modified in .imunesrc:
+#    global editor_only recents_number
+#    set editor_only true
+#    set recents_number 20
+#***
 set editor_only false
 set recents_number 10
 
