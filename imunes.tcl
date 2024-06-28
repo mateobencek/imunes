@@ -229,6 +229,7 @@ set curcfg ""
 #    IMUNES GUI can be used in editor-only mode.i
 #    This variable can be modified in .imunesrc.
 set editor_only false
+set recents_number 10
 
 set winOS false
 if { $isOSwin } {
@@ -250,6 +251,29 @@ set runtimeDir "/var/run/imunes"
 
 set myhome ""
 catch { set myhome $env(HOME) }
+
+set recents_fname ""
+set recent_files {}
+if { $myhome != "" } {
+    set recents_fname "$myhome/.config/imunes/recents"
+    if { ! [file exists "$myhome/.config/imunes"] } {
+	set recents_fname ""
+    } else {
+	if { [file exists $recents_fname] } {
+	    set fd [open $recents_fname r]
+	    set data [read $fd]
+	    close $fd
+
+	    set fnames [split $data \n]
+	    foreach fname $fnames {
+		if { $fname != "" } {
+		    lappend recent_files $fname
+		}
+	    }
+	}
+    }
+}
+
 # Read config files
 readConfigFiles
 
