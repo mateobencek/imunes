@@ -248,11 +248,10 @@ if { [string match -nocase "*imagemagick*" $imInfo] != 1} {
 
 set runtimeDir "/var/run/imunes"
 
-#
-# Read config files, the first one found: .imunesrc, $HOME/.imunesrc
-#
-# XXX
-readConfigFile
+set myhome ""
+catch { set myhome $env(HOME) }
+# Read config files
+readConfigFiles
 
 #
 # Initialization should be complete now, so let's start doing something...
