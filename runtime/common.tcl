@@ -188,13 +188,13 @@ proc setOperMode { mode } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
     global all_modules_list editor_only execMode isOSfreebsd isOSlinux
 
-    if {$mode == "exec" && $node_list == ""} {
+    if { $mode == "exec" && $node_list == "" } {
 	statline "Empty topologies can't be executed."
 	.panwin.f1.c config -cursor left_ptr
 	return
     }
 
-    if { !$cfgDeployed && $mode == "exec" } {
+    if { ! [getFromRunning "cfg_deployed"] && $mode == "exec" } {
 	if { !$isOSlinux && !$isOSfreebsd } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
 	    tk_dialog .dialog1 "IMUNES error" \
@@ -266,7 +266,7 @@ proc setOperMode { mode } {
 	}
 	.bottom.experiment_id configure -text "Experiment ID = $eid"
     } else {
-	if {$oper_mode != "edit"} {
+	if { [getFromRunning "oper_mode"] != "edit"} {
 	    global regular_termination
 	    wm protocol . WM_DELETE_WINDOW {
 	    }
@@ -293,19 +293,19 @@ proc setOperMode { mode } {
 	}
 	.menubar.experiment entryconfigure "Terminate" -state disabled
 	.menubar.experiment entryconfigure "Restart" -state disabled
-	if { $undolevel > 0 } {
+	if { [getFromRunning "undolevel"] > 0 } {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	} else {
 	    .menubar.edit entryconfigure "Undo" -state disabled
 	}
-	if { $redolevel > $undolevel } {
+	if { [getFromRunning "redolevel"] > [getFromRunning "undolevel"] } {
 	    .menubar.edit entryconfigure "Redo" -state normal
 	} else {
 	    .menubar.edit entryconfigure "Redo" -state disabled
 	}
 	.panwin.f1.c bind node <Double-1> "nodeConfigGUI .panwin.f1.c {}"
 	.panwin.f1.c bind nodelabel <Double-1> "nodeConfigGUI .panwin.f1.c {}"
-	set oper_mode edit
+	setToRunning "oper_mode" "edit"
 	.bottom.experiment_id configure -text ""
     }
     .panwin.f1.c config -cursor left_ptr
@@ -373,14 +373,14 @@ proc fetchNodeConfiguration {} {
 		    setIfcMACaddr $node $ifc $macaddr
 		} elseif {[regexp {^\tinet6 (?!fe80:)([^ ]+) prefixlen ([^ ]+)} $line -> ip6addr mask]} {
 		    if {$ip6Set == 0} {
-			setIfcIPv6addr $node $ifc $ip6addr/$mask
+			setIfcIPv6addrs $node $ifc $ip6addr/$mask
 			set ip6Set 1
 		    }
 		} elseif {[regexp {^\tinet ([^ ]+) netmask ([^ ]+) } $line \
 		     -> ip4addr netmask]} {
 		    if {$ip4Set == 0} {
 			set length [ip::maskToLength $netmask]
-			setIfcIPv4addr $node $ifc $ip4addr/$length
+			setIfcIPv4addrs $node $ifc $ip4addr/$length
 			set ip4Set 1
 		    }
 		}
@@ -398,12 +398,12 @@ proc fetchNodeConfiguration {} {
 		     -> ip4addr netmask]} {
 		    if {$ip4Set == 0} {
 			set length [ip::maskToLength $netmask]
-			setIfcIPv4addr $node $ifc $ip4addr/$length
+			setIfcIPv4addrs $node $ifc $ip4addr/$length
 			set ip4Set 1
 		    }
 		} elseif {[regexp {^\s*inet6 addr:\s(?!fe80:)([^ ]+)} $line -> ip6addr]} {
 		    if {$ip6Set == 0} {
-			setIfcIPv6addr $node $ifc $ip6addr
+			setIfcIPv6addrs $node $ifc $ip6addr
 			set ip6Set 1
 		    }
 		} elseif {[regexp {MTU:([^ ]+)} $line -> mtuvalue]} {
@@ -511,7 +511,7 @@ proc dumpLinksToFile { path } {
 	    if { [nodeType $lnode1] == "rj45" } {
 		set lpair $name1
 	    } else {
-		set ifcs [getNodeExternalIfcs $lnode1]
+		set ifcs [getNodeStolenIfaces $lnode1]
 		set lpair [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname1"] 1]
 	    }
 	}
@@ -519,7 +519,7 @@ proc dumpLinksToFile { path } {
 	    if { [nodeType $lnode2] == "rj45" } {
 		set rpair $name2
 	    } else {
-		set ifcs [getNodeExternalIfcs $lnode2]
+		set ifcs [getNodeStolenIfaces $lnode2]
 		set rpair [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname2"] 1]
 	    }
 	}

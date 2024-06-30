@@ -46,24 +46,23 @@ set router_ConfigModel "frr"
 #   * c -- tk canvas
 #   * node -- node id
 #****
-proc nodeConfigGUI { c node } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
+proc nodeConfigGUI { c node_id } {
     global badentry
 
-    if {$node == ""} {
-        set node [lindex [$c gettags current] 1]
+    if {$node_id == ""} {
+        set node_id [lindex [$c gettags current] 1]
     }
-    set type [nodeType $node]
+    set type [nodeType $node_id]
     if { $type == "pseudo" } {
         #
 	# Hyperlink to another canvas
         #
-	set curcanvas [getNodeCanvas [getNodeMirror $node]]
+	setToRunning "curcanvas" [getNodeCanvas [getNodeMirror $node_id]]
 	switchCanvas none
 	return
     } else {
         set badentry 0
-        $type.configGUI $c $node
+        $type.configGUI $c $node_id
     }
 }
 
@@ -81,7 +80,7 @@ proc nodeConfigGUI { c node } {
 proc configGUI_createConfigPopupWin { c } {
     global wi debug
     set wi .popup
-    catch {destroy $wi}
+    catch { destroy $wi }
     toplevel $wi
 
     wm transient $wi .
@@ -89,11 +88,10 @@ proc configGUI_createConfigPopupWin { c } {
     $c dtag node selected
     $c delete -withtags selectmark
 
-    #buduci da se naredbom grab dogadjaji s tipkovnice i misa ogranicavaju na ovaj prozor,
-    #u slucaju greske nece se moci vidjeti detalji niti zatvoriti prozor upozorenjem na gresku
-    #u tom je slucaju potrebno zakomentirati naredbu grab
     after 100 {
 	if { !$debug } {
+	    # grab steals the keyboard/mouse focus so remove it if there are errors and it's
+	    # not possible to close this window
 	    grab $wi
 	}
     }
@@ -111,7 +109,7 @@ proc configGUI_createConfigPopupWin { c } {
 #   * node - node id
 #   * labels - list of tab names
 # RESULT
-#   * tabs - the list containing tab identifiers.
+#   * tab_list - the list containing tab identifiers.
 #****
 proc configGUI_addNotebook { wi node labels } {
     ttk::notebook $wi.nbook -height 200
@@ -134,9 +132,8 @@ proc configGUI_addNotebook { wi node labels } {
     }
     bind $wi.nbook <<NotebookTabChanged>> \
  	"notebookSize $wi $node"
-    #vraca popis tabova
-    set tabs [$wi.nbook tabs]
-    return $tabs
+
+    return [$wi.nbook tabs]
 }
 
 #****f* nodecfgGUI.tcl/notebookSize
@@ -982,11 +979,6 @@ proc configGUI_nodeName { wi node label } {
 	set ifcs [getExtIfcs]
 	$wi.name.nodename configure -values [concat UNASSIGNED $ifcs]
 	set name [getNodeName $node]
-#	if { [getEtherVlanEnabled $node] && [getEtherVlanTag $node] != "" } {
-#	    # use 'file rootname' to remove the 'extension' from the name
-#	    # variable - last dot and everything after it
-#	    set name [file rootname $name]
-#	}
 	$wi.name.nodename set $name
     } else {
 	ttk::entry $wi.name.nodename -width 14 -validate focus
@@ -1014,7 +1006,7 @@ proc configGUI_rj45s { wi node } {
     lappend guielements configGUI_rj45s
 
     set ifcs [getExtIfcs]
-    foreach group [getNodeExternalIfcs $node] {
+    foreach group [getNodeStolenIfaces $node] {
 	lassign $group ifc extIfc
 	set lbl "Interface $ifc"
 	set peer [logicalPeerByIfc $node $ifc]
@@ -1039,27 +1031,29 @@ proc configGUI_rj45s { wi node } {
 # NAME
 #   configGUI_rj45sApply -- configure GUI - node name apply
 # SYNOPSIS
-#   configGUI_rj45sApply $wi $node
+#   configGUI_rj45sApply $wi $node_id
 # FUNCTION
 #   Saves changes in the module with node name.
 # INPUTS
 #   * wi -- widget
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc configGUI_rj45sApply { wi node } {
+proc configGUI_rj45sApply { wi node_id } {
     global changed
 
     set name [string trim [$wi.name.nodename get]]
-    setNodeName $node $name
+    setNodeName $node_id $name
 
-    set ifcs {}
-    foreach ifc [ifcList $node] {
-	lappend ifcs [list $ifc [string trim [$wi.$ifc.nodename get]]]
+    set old_stolen_ifaces [getNodeStolenIfaces $node_id]
+    foreach iface [ifcList $node_id] {
+	set new_stolen_iface [string trim [$wi.$iface.nodename get]]
+	if { $new_stolen_iface != [dictGet $old_stolen_ifaces $iface] } {
+	    set changed 1
+	    setIfcStolenIfc $node_id $iface $new_stolen_iface
+	}
     }
-    set old [getNodeExternalIfcs $node]
-    if { $old != $ifcs } {
-	set changed 1
-	setNodeExternalIfcs $node $ifcs
+
+    if { $changed == 1 } {
 	redrawAll
 	updateUndoLog
     }
@@ -1143,17 +1137,23 @@ proc configGUI_ifcEssentials { wi node ifc } {
 #   * ifc -- interface name
 #****
 proc configGUI_ifcQueueConfig { wi node ifc } {
-    global guielements
-    lappend guielements "configGUI_ifcQueueConfig $ifc"
     global ifqdisc$ifc ifqdrop$ifc
+    global guielements
+
+    lappend guielements "configGUI_ifcQueueConfig $ifc"
+
     set ifqdisc$ifc [getIfcQDisc $node $ifc]
     set ifqdrop$ifc [getIfcQDrop $node $ifc]
+
     ttk::frame $wi.if$ifc.queuecfg -borderwidth 2
+
     ttk::label $wi.if$ifc.queuecfg.txt1 -text "Queue" -anchor w
     ttk::combobox $wi.if$ifc.queuecfg.disc -width 6 -textvariable ifqdisc$ifc
     $wi.if$ifc.queuecfg.disc configure -values [list FIFO DRR WFQ]
+
     ttk::combobox $wi.if$ifc.queuecfg.drop -width 9 -textvariable ifqdrop$ifc
     $wi.if$ifc.queuecfg.drop configure -values [list drop-tail drop-head]
+
     ttk::label $wi.if$ifc.queuecfg.txt2 -text "len" -anchor e -width 3 -padding 2
     ttk::spinbox $wi.if$ifc.queuecfg.len -width 4 \
 	-validate focus -invalidcommand "focusAndFlash %W"
@@ -1161,6 +1161,7 @@ proc configGUI_ifcQueueConfig { wi node ifc } {
     $wi.if$ifc.queuecfg.len configure \
 	-from 5 -to 4096 -increment 1 \
 	-validatecommand {checkIntRange %P 5 4096}
+
     pack $wi.if$ifc.queuecfg.txt1 -side left -anchor w
     pack $wi.if$ifc.queuecfg.disc $wi.if$ifc.queuecfg.drop \
 	-side left -anchor w -padx 2
@@ -1481,7 +1482,6 @@ proc configGUI_snapshots { wi node } {
     if {$showZFSsnapshots != 1} {
 	return
     }
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global guielements snapshot snapshotList isOSfreebsd
     lappend guielements configGUI_snapshots
 
@@ -1498,7 +1498,7 @@ proc configGUI_snapshots { wi node } {
     ttk::combobox $wi.snapshot.text -width 25 -state readonly -textvariable snapshot
     $wi.snapshot.text configure -values $snapshotList
 
-    if { $oper_mode != "edit" || !$isOSfreebsd } {
+    if { [getFromRunning "oper_mode"] != "edit" || !$isOSfreebsd } {
     	$wi.snapshot.text configure -state disabled
     }
 
@@ -1545,10 +1545,10 @@ proc configGUI_stp { wi node } {
 #   * wi -- widget
 #   * node -- node id
 #****
-proc configGUI_routingModel { wi node } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+proc configGUI_routingModel { wi node_id } {
     global ripEnable ripngEnable ospfEnable ospf6Enable supp_router_models
     global router_ConfigModel guielements
+
     lappend guielements configGUI_routingModel
     ttk::frame $wi.routing -relief groove -borderwidth 2 -padding 2
     set w $wi.routing
@@ -1580,19 +1580,20 @@ proc configGUI_routingModel { wi node } {
 	 $w.protocols.ospf configure -state disabled;
 	 $w.protocols.ospf6 configure -state disabled"
 
-    set router_ConfigModel [getNodeModel $node]
+    set router_ConfigModel [getNodeModel $node_id]
     if { $router_ConfigModel != "static" } {
-        set ripEnable [getNodeProtocolRip $node]
-	set ripngEnable [getNodeProtocolRipng $node]
-	set ospfEnable [getNodeProtocolOspfv2 $node]
-	set ospf6Enable [getNodeProtocolOspfv3 $node]
+        set ripEnable [getNodeProtocol $node_id "rip"]
+	set ripngEnable [getNodeProtocol $node_id "ripng"]
+	set ospfEnable [getNodeProtocol $node_id "ospf"]
+	set ospf6Enable [getNodeProtocol $node_id "ospf6"]
     } else {
         $w.protocols.rip configure -state disabled
 	$w.protocols.ripng configure -state disabled
  	$w.protocols.ospf configure -state disabled
  	$w.protocols.ospf6 configure -state disabled
     }
-    if { $oper_mode != "edit" } {
+
+    if { [getFromRunning "oper_mode"] != "edit" } {
 	$w.model.frr configure -state disabled
 	$w.model.quagga configure -state disabled
 	$w.model.static configure -state disabled
@@ -1601,9 +1602,11 @@ proc configGUI_routingModel { wi node } {
 	$w.protocols.ospf configure -state disabled
 	$w.protocols.ospf6 configure -state disabled
     }
+
     if {"frr" ni $supp_router_models} {
 	$w.model.frr configure -state disabled
     }
+
     pack $w.model.label -side left -padx 2
     pack $w.model.frr $w.model.quagga $w.model.static \
         -side left -padx 6
@@ -1627,8 +1630,8 @@ proc configGUI_routingModel { wi node } {
 #   * node -- node id
 #****
 proc configGUI_servicesConfig { wi node } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global guielements all_services_list
+
     lappend guielements configGUI_servicesConfig
     set w $wi.services
     ttk::frame $w -relief groove -borderwidth 2 -padding 2
@@ -1641,7 +1644,7 @@ proc configGUI_servicesConfig { wi node } {
     foreach srv $all_services_list {
 	global $srv\_enable
 	set $srv\_enable 0
-	if { $oper_mode == "edit" } {
+	if { [getFromRunning "oper_mode"] == "edit" } {
 	    ttk::checkbutton $w.list.$srv -text "$srv" -variable $srv\_enable
 	} else {
 	    ttk::checkbutton $w.list.$srv -text "$srv" -variable $srv\_enable \
@@ -1677,7 +1680,6 @@ proc configGUI_attachDockerToExt { wi node } {
 	return
     }
 
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global guielements docker_enable
     lappend guielements configGUI_attachDockerToExt
 
@@ -1689,7 +1691,7 @@ proc configGUI_attachDockerToExt { wi node } {
 
     pack $w.label -side left -padx 2
 
-    if { $oper_mode == "edit" } {
+    if { [getFromRunning "oper_mode"] == "edit" } {
 	ttk::checkbutton $w.chkbox -text "Enabled" -variable docker_enable
     } else {
 	ttk::checkbutton $w.chkbox -text "Enabled" -variable docker_enable \
@@ -1713,9 +1715,8 @@ proc configGUI_attachDockerToExt { wi node } {
 #****
 proc configGUI_customImage { wi node } {
     global VROOT_MASTER isOSlinux
-
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global guielements
+
     lappend guielements configGUI_customImage
 
     set custom_image [getNodeCustomImage $node]
@@ -2051,9 +2052,8 @@ proc configGUI_ifcQueueConfigApply { wi node ifc } {
 #   * ifc -- interface name
 #****
 proc configGUI_ifcMACAddressApply { wi node ifc } {
-    upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global changed apply close
+
     set entry [$wi.if$ifc.mac.addr get]
     if { $entry != "" } {
         set macaddr [MACaddrAddZeros $entry]
@@ -2064,8 +2064,8 @@ proc configGUI_ifcMACAddressApply { wi node ifc } {
 	return
     }
     set dup 0
-    if { $macaddr in $MACUsedList } {
-	foreach n $node_list {
+    if { $macaddr in [getFromRunning "mac_used_list"] } {
+	foreach n [getFromRunning "node_list"] {
 	    foreach i [ifcList $n] {
 		if { $n != $node || $i != $ifc } {
 		    if { $macaddr != "" && $macaddr == [getIfcMACaddr $n $i] } {
@@ -2110,9 +2110,10 @@ proc configGUI_ifcIPv4AddressApply { wi node ifc } {
 	    return
 	}
     }
+
     set oldipaddrs [getIfcIPv4addrs $node $ifc]
     if { $ipaddrs != $oldipaddrs } {
-	if {$apply == 1} {
+	if { $apply == 1 } {
 	    setIfcIPv4addrs $node $ifc $ipaddrs
 	}
 	set changed 1
@@ -2409,7 +2410,6 @@ proc configGUI_customConfigApply { wi node } {
 #   * node -- node id
 #****
 proc configGUI_snapshotsApply { wi node } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global changed snapshot snapshotList isOSfreebsd
     if { [llength [lsearch -inline $snapshotList $snapshot]] == 0 &&
 	$isOSfreebsd } {
@@ -2419,7 +2419,7 @@ proc configGUI_snapshotsApply { wi node } {
 	info 0 Dismiss
 	return
     }
-    if { $oper_mode == "edit" && $snapshot != ""} {
+    if { [getFromRunning "oper_mode"] == "edit" && $snapshot != ""} {
         setNodeSnapshot $node $snapshot
     	set changed 1
     }
@@ -2459,37 +2459,27 @@ proc configGUI_stpApply { wi node } {
 #   * node -- node id
 #****
 proc configGUI_routingModelApply { wi node } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global router_ConfigModel
     global ripEnable ripngEnable ospfEnable ospf6Enable
-    if { $oper_mode == "edit"} {
+
+    if { [getFromRunning "oper_mode"] == "edit" } {
 	if { [nodeType $node] != "nat64" } {
 	    setNodeModel $node $router_ConfigModel
 	}
+
 	if { $router_ConfigModel != "static" } {
-	    setNodeProtocolRip $node $ripEnable
-	    setNodeProtocolRipng $node $ripngEnable
-	    setNodeProtocolOspfv2 $node $ospfEnable
-	    setNodeProtocolOspfv3 $node $ospf6Enable
-	    if { [nodeType $node] == "nat64" } {
-		foreach proto { rip ripng ospf ospf6 bgp } {
-		    set protocfg [netconfFetchSection $node "router $proto"]
-		    if { $protocfg != "" } {
-			set protocfg [linsert $protocfg 0 "router $proto"]
-			set protocfg [linsert $protocfg end "!"]
-			set protocfg [linsert $protocfg [lsearch $protocfg " network *"] " redistribute kernel" ]
-			netconfClearSection $node "router $proto"
-			netconfInsertSection $node $protocfg
-		    }
-		}
-	    }
+	    setNodeProtocol $node "rip" $ripEnable
+	    setNodeProtocol $node "ripng" $ripngEnable
+	    setNodeProtocol $node "ospf" $ospfEnable
+	    setNodeProtocol $node "ospf6" $ospf6Enable
 	} else {
 	    $wi.routing.protocols.rip configure -state disabled
 	    $wi.routing.protocols.ripng configure -state disabled
 	    $wi.routing.protocols.ospf configure -state disabled
             $wi.routing.protocols.ospf6 configure -state disabled
 	}
-    set changed 1
+
+	set changed 1
     }
 }
 
@@ -2505,9 +2495,8 @@ proc configGUI_routingModelApply { wi node } {
 #   * node -- node id
 #****
 proc configGUI_servicesConfigApply { wi node } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global all_services_list
-    if { $oper_mode == "edit"} {
+    if { [getFromRunning "oper_mode"] == "edit"} {
 	set serviceList ""
 	foreach srv $all_services_list {
 	    global $srv\_enable
@@ -2534,10 +2523,9 @@ proc configGUI_servicesConfigApply { wi node } {
 #   * node -- node id
 #****
 proc configGUI_attachDockerToExtApply { wi node } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global docker_enable
     set docker_enable_str [string map {0 false 1 true} $docker_enable]
-    if { $oper_mode == "edit"} {
+    if { [getFromRunning "oper_mode"] == "edit"} {
 	if { [getNodeDockerAttach $node] != $docker_enable_str } {
 	    setNodeDockerAttach $node $docker_enable_str
 	    set changed 1
@@ -2556,12 +2544,11 @@ proc configGUI_attachDockerToExtApply { wi node } {
 #   * wi -- widget
 #   * node -- node id
 #****
-proc configGUI_customImageApply { wi node } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+proc configGUI_customImageApply { wi node_id } {
     set custom_image [$wi.customImg.img get]
-    if { $oper_mode == "edit"} {
-	if { [getNodeCustomImage $node] != $custom_image } {
-	    setNodeCustomImage $node $custom_image
+    if { [getFromRunning "oper_mode"] == "edit"} {
+	if { [getNodeCustomImage $node_id] != $custom_image } {
+	    setNodeCustomImage $node_id $custom_image
 	    set changed 1
 	}
     }
@@ -2729,8 +2716,8 @@ proc customConfigGUI { node } {
     grid $b.applyClose -row 0 -column 2 -sticky swe -padx 2
     grid $b.cancel -row 0 -column 4 -sticky swe -padx 2
 
-    foreach cfgID [lsort [getCustomConfigIDs $node]] {
-	createTab $node $cfgID
+    foreach cfg_id [lsort [getCustomConfigIDs $node]] {
+	createTab $node $cfg_id
     }
 }
 
@@ -2749,13 +2736,13 @@ proc customConfigGUI_Apply { wi node } {
     set o $wi.options
     if { [$wi.nb tabs] != "" } {
 	set t $wi.nb.[$wi.nb tab current -text]
-	set cfgID [$t.confid_e get]
+	set cfg_id [$t.confid_e get]
 	if {[$t.confid_e get] != [$wi.nb tab current -text]} {
 	    removeCustomConfig $node [$wi.nb tab current -text]
 	    setCustomConfig $node [$t.confid_e get] \
 		[$t.bootcmd_e get] [$t.editor get 1.0 {end -1c}]
 	    destroy $t
-	    createTab $node $cfgID
+	    createTab $node $cfg_id
 	} else {
 	    setCustomConfig $node [$t.confid_e get] \
 		[$t.bootcmd_e get] [$t.editor get 1.0 {end -1c}]
@@ -2787,21 +2774,21 @@ proc customConfigGUI_Apply { wi node } {
 # NAME
 #   createTab -- create custom config tab in GUI
 # SYNOPSIS
-#   createTab $node $cfgID
+#   createTab $node $cfg_id
 # FUNCTION
 #   For input node and custom configuration ID this procedure opens a new tab
 #   in editor for editing custom configuration.
 # INPUTS
 #   * node -- node id
-#   * cfgID -- configuration id
+#   * cfg_id -- configuration id
 #****
-proc createTab { node cfgID } {
+proc createTab { node cfg_id } {
     set wi .cfgEditor
     set o $wi.options
-    set w $wi.nb.$cfgID
+    set w $wi.nb.$cfg_id
     set node_id $node
 
-    ttk::frame $wi.nb.$cfgID
+    ttk::frame $wi.nb.$cfg_id
     ttk::label $w.confid_l -text "Configuration ID:" -width 15
     ttk::entry $w.confid_e -width 25
     ttk::label $w.bootcmd_l -text "Boot command:" -width 15
@@ -2818,10 +2805,12 @@ proc createTab { node cfgID } {
     $o.cb configure -values [getCustomConfigIDs $node]
     .popup.nbook.nfConfiguration.custcfg.dcomboDefault \
 	configure -values [getCustomConfigIDs $node]
-    $wi.nb add $wi.nb.$cfgID -text $cfgID
-    $w.confid_e insert 0 $cfgID
-    $w.bootcmd_e insert 0 [getCustomConfigCommand $node $cfgID]
-    set config [getCustomConfig $node $cfgID]
+
+    $wi.nb add $wi.nb.$cfg_id -text $cfg_id
+    $w.confid_e insert 0 $cfg_id
+    $w.bootcmd_e insert 0 [getCustomConfigCommand $node $cfg_id]
+
+    set config [getCustomConfig $node $cfg_id]
     set x 0
     set numOfLines [llength $config]
     foreach data $config {
@@ -2843,7 +2832,7 @@ proc createTab { node cfgID } {
     grid $w.hsb -in $w -sticky nsew -columnspan 5
     grid rowconfigure $w $w.editor -weight 10
     grid columnconfigure $w $w.editor -weight 10
-    $wi.nb select $wi.nb.$cfgID
+    $wi.nb select $wi.nb.$cfg_id
 }
 
 #****f* nodecfgGUI.tcl/customConfigGUIFillDefaults
@@ -2859,10 +2848,10 @@ proc createTab { node cfgID } {
 #   * node -- node id
 #****
 proc customConfigGUIFillDefaults { wi node } {
-    set cfgID [$wi.nb tab current -text]
+    set cfg_id [$wi.nb tab current -text]
     set cmd [[typemodel $node].bootcmd $node]
     set cfg [[typemodel $node].cfggen $node]
-    set w $wi.nb.$cfgID
+    set w $wi.nb.$cfg_id
 
     if { [$w.bootcmd_e get] != "" || [$w.editor get 1.0 {end -1c}] != "" } {
 	set answer [tk_messageBox -message \
@@ -2893,25 +2882,25 @@ proc customConfigGUIFillDefaults { wi node } {
 # NAME
 #   deleteConfig -- delete custom config and destroys tab from editor
 # SYNOPSIS
-#   deleteConfig $node $cfgID
+#   deleteConfig $node $cfg_id
 # FUNCTION
 #   For input node and custom configuration ID this procedure deletes custom
 #   configuration and destroys a tab in editor for editing custom
 #   configuration.
 # INPUTS
 #   * node -- node id
-#   * cfgID -- configuration id
+#   * cfg_id -- configuration id
 #****
 proc deleteConfig { wi node } {
-    set cfgID [$wi.nb tab current -text]
+    set cfg_id [$wi.nb tab current -text]
     set answer [tk_messageBox -message \
-	"Are you sure you want to delete custom config '$cfgID'?" \
+	"Are you sure you want to delete custom config '$cfg_id'?" \
 	-icon warning -type yesno ]
     switch -- $answer {
 	yes {
-	    destroy $wi.nb.$cfgID
-	    removeCustomConfig $node $cfgID
-	    if { $cfgID == [getCustomConfigSelected $node]} {
+	    destroy $wi.nb.$cfg_id
+	    removeCustomConfig $node $cfg_id
+	    if { $cfg_id == [getCustomConfigSelected $node]} {
 		setCustomConfigSelected $node ""
 		$wi.options.cb set ""
 		.popup.nbook.nfConfiguration.custcfg.dcomboDefault set ""
@@ -2934,7 +2923,7 @@ proc deleteConfig { wi node } {
 # NAME
 #   createNewConfiguration -- create new custom config and tab
 # SYNOPSIS
-#   createNewConfiguration $node $cfgID
+#   createNewConfiguration $node $cfg_id
 # FUNCTION
 #   For input node and custom configuration ID this procedure, if possible,
 #   creates a new tab in editor for editing custom configuration.
@@ -4525,7 +4514,7 @@ proc configGUI_bridgeConfig { wi node } {
     global bridgeProtocol
     ttk::frame $wi.bridge -relief groove -borderwidth 2 -padding 2
 
-    set bridgeProtocol [getBridgeProtocol $node bridge0]
+    set bridgeProtocol [getBridgeProtocol $node]
 
     ttk::frame $wi.bridge.protocols -padding 2
     ttk::label $wi.bridge.protocols.label -text "Protocol:"
@@ -4542,7 +4531,7 @@ proc configGUI_bridgeConfig { wi node } {
 	-from 0 -to 61440 -increment 4096 \
 	-validatecommand {checkIntRange %P 0 61440} \
 	-invalidcommand "focusAndFlash %W"
-    set bridgePriority [getBridgePriority $node bridge0]
+    set bridgePriority [getBridgePriority $node]
     if { $bridgePriority != "" } {
 	$wi.bridge.priority.box insert 0 $bridgePriority
     } else {
@@ -4555,7 +4544,7 @@ proc configGUI_bridgeConfig { wi node } {
 	-from 6 -to 40 -increment 2 \
 	-validatecommand {checkIntRange %P 6 40} \
 	-invalidcommand "focusAndFlash %W"
-    set bridgeMaxAge [getBridgeMaxAge $node bridge0]
+    set bridgeMaxAge [getBridgeMaxAge $node]
     if { $bridgeMaxAge != "" } {
 	$wi.bridge.maxage.box insert 0 $bridgeMaxAge
     } else {
@@ -4568,8 +4557,8 @@ proc configGUI_bridgeConfig { wi node } {
 	-from 4 -to 30 -increment 1 \
 	-validatecommand {checkIntRange %P 4 30} \
 	-invalidcommand "focusAndFlash %W"
-    set bridgeFwdDelay [getBridgeFwdDelay $node bridge0]
-    set bridgeMaxAge [getBridgeMaxAge $node bridge0]
+    set bridgeFwdDelay [getBridgeFwdDelay $node]
+    set bridgeMaxAge [getBridgeMaxAge $node]
     if { $bridgeFwdDelay != "" } {
 	$wi.bridge.fwddelay.box insert 0 $bridgeFwdDelay
     } else {
@@ -4582,7 +4571,7 @@ proc configGUI_bridgeConfig { wi node } {
 	-from 1 -to 10 -increment 1 \
 	-validatecommand {checkIntRange %P 1 10} \
 	-invalidcommand "focusAndFlash %W"
-    set bridgeHoldCnt [getBridgeHoldCount $node bridge0]
+    set bridgeHoldCnt [getBridgeHoldCount $node]
     if { $bridgeHoldCnt != "" } {
 	$wi.bridge.holdcnt.box insert 0 $bridgeHoldCnt
     } else {
@@ -4595,7 +4584,7 @@ proc configGUI_bridgeConfig { wi node } {
 	-from 1 -to 2 -increment 1 \
 	-validatecommand {checkIntRange %P 1 2} \
 	-invalidcommand "focusAndFlash %W"
-    set bridgeHelloTime [getBridgeHelloTime $node bridge0]
+    set bridgeHelloTime [getBridgeHelloTime $node]
     if { $bridgeHelloTime != "" } {
 	$wi.bridge.hellotime.box insert 0 $bridgeHelloTime
     } else {
@@ -4608,7 +4597,7 @@ proc configGUI_bridgeConfig { wi node } {
 	-from 0 -to 3600 -increment 20 \
 	-validatecommand {checkIntRange %P 0 3600} \
 	-invalidcommand "focusAndFlash %W"
-    set bridgeTimeout [getBridgeTimeout $node bridge0]
+    set bridgeTimeout [getBridgeTimeout $node]
     if { $bridgeTimeout != "" } {
 	$wi.bridge.timeout.box insert 0 $bridgeTimeout
     } else {
@@ -4621,7 +4610,7 @@ proc configGUI_bridgeConfig { wi node } {
 	-from 0 -to 10000 -increment 10 \
 	-validatecommand {checkIntRange %P 0 10000} \
 	-invalidcommand "focusAndFlash %W"
-    set bridgeMaxAddr [getBridgeMaxAddr $node bridge0]
+    set bridgeMaxAddr [getBridgeMaxAddr $node]
     if { $bridgeMaxAddr != "" } {
 	$wi.bridge.maxaddr.box insert 0 $bridgeMaxAddr
     } else {
@@ -4676,58 +4665,58 @@ proc configGUI_bridgeConfigApply { wi node } {
     global changed
 
     global bridgeProtocol
-    set oldProtocol [getBridgeProtocol $node bridge0]
+    set oldProtocol [getBridgeProtocol $node]
     if { $oldProtocol != $bridgeProtocol } {
-	setBridgeProtocol $node bridge0 $bridgeProtocol
+	setBridgeProtocol $node $bridgeProtocol
 	set changed 1
     }
 
     set newPriority [$wi.bridge.priority.box get]
-    set oldPriority [getBridgePriority $node bridge0]
+    set oldPriority [getBridgePriority $node]
     if { $oldPriority != $newPriority } {
-	setBridgePriority $node bridge0 $newPriority
+	setBridgePriority $node $newPriority
 	set changed 1
     }
 
     set newHoldCount [$wi.bridge.holdcnt.box get]
-    set oldHoldCount [getBridgeHoldCount $node bridge0]
+    set oldHoldCount [getBridgeHoldCount $node]
     if { $oldHoldCount != $newHoldCount } {
-	setBridgeHoldCount $node bridge0 $newHoldCount
+	setBridgeHoldCount $node $newHoldCount
 	set changed 1
     }
 
     set newMaxAge [$wi.bridge.maxage.box get]
-    set oldMaxAge [getBridgeMaxAge $node bridge0]
+    set oldMaxAge [getBridgeMaxAge $node]
     if { $oldMaxAge != $newMaxAge } {
-	setBridgeMaxAge $node bridge0 $newMaxAge
+	setBridgeMaxAge $node $newMaxAge
 	set changed 1
     }
 
     set newFwdDelay [$wi.bridge.fwddelay.box get]
-    set oldFwdDelay [getBridgeFwdDelay $node bridge0]
+    set oldFwdDelay [getBridgeFwdDelay $node]
     if { $oldFwdDelay != $newFwdDelay } {
-	setBridgeFwdDelay $node bridge0 $newFwdDelay
+	setBridgeFwdDelay $node $newFwdDelay
 	set changed 1
     }
 
     set newHelloTime [$wi.bridge.hellotime.box get]
-    set oldHelloTime [getBridgeHelloTime $node bridge0]
+    set oldHelloTime [getBridgeHelloTime $node]
     if { $oldHelloTime != $newHelloTime } {
-	setBridgeHelloTime $node bridge0 $newHelloTime
+	setBridgeHelloTime $node $newHelloTime
 	set changed 1
     }
 
     set newMaxAddr [$wi.bridge.maxaddr.box get]
-    set oldMaxAddr [getBridgeMaxAddr $node bridge0]
+    set oldMaxAddr [getBridgeMaxAddr $node]
     if { $oldMaxAddr != $newMaxAddr } {
-	setBridgeMaxAddr $node bridge0 $newMaxAddr
+	setBridgeMaxAddr $node $newMaxAddr
 	set changed 1
     }
 
     set newTimeout [$wi.bridge.timeout.box get]
-    set oldTimeout [getBridgeTimeout $node bridge0]
+    set oldTimeout [getBridgeTimeout $node]
     if { $oldTimeout != $newTimeout } {
-	setBridgeTimeout $node bridge0 $newTimeout
+	setBridgeTimeout $node $newTimeout
 	set changed 1
     }
 }
@@ -5584,7 +5573,7 @@ proc configGUI_ifcRuleConfig { wi node ifc rule } {
 }
 
 proc configGUI_ifcRuleConfigApply { add dup } {
-    global changed apply curnode
+    global changed curnode
 
     set ruleNumChanged 0
     set noPMO 0
@@ -5595,7 +5584,8 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 
     if { $ifc == "" || $rule == "" } {
 	if { $add != 0 && $dup == 0} {
-	    set new_rule "10:match_drop::"
+	    set new_rule [dict create]
+	    dict set new_rule "action" "match_drop"
 	    addFilterIfcRule $curnode $ifc 10 $new_rule
 	    set changed 1
 	    return 10
@@ -5606,7 +5596,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 
     set rulnum [$wi.if$rule.rconfig.rnval get]
     set action [$wi.if$rule.rconfig.aval get]
-    set adata [$wi.if$rule.rconfig.adval get]
+    set action_data [$wi.if$rule.rconfig.adval get]
     set pattern [$wi.if$rule.rconfig.pval get]
     set mask [$wi.if$rule.rconfig.mval get]
     set offset [$wi.if$rule.rconfig.oval get]
@@ -5623,26 +5613,24 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	set ruleNumChanged 1
     } else {
 	if { $add != 0 } {
-	    set l [lsort -integer [ifcFilterRuleList $curnode $ifc]]
-	    set rulnum [expr {[lindex $l end] + 10}]
+	    set rule_list [lsort -integer [ifcFilterRuleList $curnode $ifc]]
+	    set rulnum [expr {[lindex $rule_list end] + 10}]
 	    if { $dup == 0 } {
 		set action "match_drop"
-		set adata ""
+		set action_data ""
 		set pattern ""
 		set mask ""
 		set offset ""
 	    } else {
-		if { [llength $l] == 0 } {
+		if { [llength $rule_list] == 0 } {
 		    return
 		}
 	    }
 	}
     }
     if { $ruleNumChanged == 1 } {
-	set l [ifcFilterRuleList $curnode $ifc]
-	set i [lsearch $l $old_rulnum]
-	set l [lreplace $l $i $i]
-	if { $rulnum in $l} {
+	set rule_list [removeFromList [ifcFilterRuleList $curnode $ifc] $old_rulnum]
+	if { $rulnum in $rule_list} {
 	    tk_dialog .dialog1 "IMUNES warning" \
 		"Rule number already exists." \
 	    info 0 Dismiss
@@ -5662,7 +5650,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	    set vals [lsort [ifcList $curnode]]
 	    set c [lsearch $vals $ifc]
 	    set vals [lreplace $vals $c $c]
-	    if { $adata ni $vals } {
+	    if { $action_data ni $vals } {
 		tk_dialog .dialog1 "IMUNES warning" \
 		    "ActData: Select one of the existing hooks, but not the current one ($ifc)." \
 		info 0 Dismiss
@@ -5673,7 +5661,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	    set vals [lsort [ifcList $curnode]]
 	    set c [lsearch $vals $ifc]
 	    set vals [lreplace $vals $c $c]
-	    if { $adata ni $vals } {
+	    if { $action_data ni $vals } {
 		tk_dialog .dialog1 "IMUNES warning" \
 		    "ActData: Select one of the existing hooks, but not the current one ($ifc)." \
 		info 0 Dismiss
@@ -5681,7 +5669,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	    }
 	}
 	(no)?match_skipto {
-	    if { $adata < $rulnum } {
+	    if { $action_data < $rulnum } {
 		tk_dialog .dialog1 "IMUNES warning" \
 		    "ActData: number < skipto destination." \
 		info 0 Dismiss
@@ -5689,7 +5677,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	    }
 	}
 	(no)?match_drop {
-	    if { $adata != "" } {
+	    if { $action_data != "" } {
 		tk_dialog .dialog1 "IMUNES warning" \
 		    "ActData: drop doesn't need additional data." \
 		info 0 Dismiss
@@ -5757,25 +5745,24 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	}
     }
 
-    set old_ruleline [getFilterIfcRule $curnode $ifc $old_rulnum]
-    if { $noPMO == 1 } {
-	set new_ruleline "$rulnum:$action\::$adata"
-    } else {
-	set new_ruleline "$rulnum:$action:$pattern/$mask@$offset:$adata"
+    set new_ruleline [list \
+	"action" $action "action_data" $action_data \
+    ]
+    if { $noPMO != 1 } {
+	set new_ruleline [list \
+	    "action" $action "pattern" $pattern "mask" $mask "offset" $offset "action_data" $action_data \
+	]
     }
 
-    if { $new_ruleline != $old_ruleline } {
+    set old_ruleline [getFilterIfcRule $curnode $ifc $old_rulnum]
+    if { $add || $dup || $ruleNumChanged || $new_ruleline != $old_ruleline } {
 	set changed 1
-#	if { $apply == 1} {
-	    if { $add == 0 } {
-		removeFilterIfcRule $curnode $ifc $old_rulnum
-		addFilterIfcRule $curnode $ifc $rulnum $new_ruleline
-		return $rulnum
-	    } else {
-		addFilterIfcRule $curnode $ifc $rulnum $new_ruleline
-		return $rulnum
-	    }
-#	}
+	if { $add == 0 } {
+	    removeFilterIfcRule $curnode $ifc $old_rulnum
+	}
+	addFilterIfcRule $curnode $ifc $rulnum $new_ruleline
+
+	return $rulnum
     }
 }
 
@@ -6431,7 +6418,6 @@ proc configGUI_packetConfigDelete { } {
 ## nat64
 ## custom GUI procedures
 proc configGUI_routingProtocols { wi node } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global ripEnable ripngEnable ospfEnable ospf6Enable
     global guielements
     lappend guielements configGUI_routingModel
@@ -6448,7 +6434,7 @@ proc configGUI_routingProtocols { wi node } {
     set ripngEnable [getNodeProtocolRipng $node]
     set ospfEnable [getNodeProtocolOspfv2 $node]
     set ospf6Enable [getNodeProtocolOspfv3 $node]
-    if { $oper_mode != "edit" } {
+    if { [getFromRunning "oper_mode"] != "edit" } {
 	$wi.routing.protocols.rip configure -state disabled
 	$wi.routing.protocols.ripng configure -state disabled
 	$wi.routing.protocols.ospf configure -state disabled
@@ -6462,10 +6448,8 @@ proc configGUI_routingProtocols { wi node } {
 }
 
 proc configGUI_nat64Config { wi node } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global guielements
     lappend guielements configGUI_nat64Config
-
 
 #    ttk::frame $wi.tunconf -relief groove -borderwidth 2 -padding 2
 #    ttk::label $wi.tunconf.label -text "tun interface:"
@@ -6603,5 +6587,16 @@ proc configGUI_nat64ConfigApply { wi node } {
     if { $oldTaygaMappings != $newTaygaMappings } {
 	setTaygaMappings $node $newTaygaMappings
 	set changed 1
+    }
+}
+
+proc transformNodesGUI { nodes to_type } {
+    global changed
+
+    transformNodes $nodes $to_type
+
+    if { $changed == 1 } {
+	redrawAll
+	updateUndoLog
     }
 }

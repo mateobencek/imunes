@@ -823,7 +823,7 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	if { [nodeType $lnode1] in "rj45 extelem" } {
 	    set physical_ifc [getNodeName $lnode1]
 	    if { [nodeType $lnode1] == "extelem" } {
-		set ifcs [getNodeExternalIfcs $lnode1]
+		set ifcs [getNodeStolenIfaces $lnode1]
 		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname1"] 1]
 	    } elseif { [getEtherVlanEnabled $lnode1] } {
 		set vlan [getEtherVlanTag $lnode1]
@@ -842,7 +842,7 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	} else {
 	    set physical_ifc [getNodeName $lnode2]
 	    if { [nodeType $lnode2] == "extelem" } {
-		set ifcs [getNodeExternalIfcs $lnode2]
+		set ifcs [getNodeStolenIfaces $lnode2]
 		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname2"] 1]
 	    } elseif { [getEtherVlanEnabled $lnode2] } {
 		set vlan [getEtherVlanTag $lnode2]
@@ -919,7 +919,7 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 	} elseif { [nodeType $node] == "extelem" } {
 	    # won't work if the node is a wireless interface
 	    # because netns is not changed
-	    set ifcs [getNodeExternalIfcs $node]
+	    set ifcs [getNodeStolenIfaces $node]
 	    set ifname [lindex [lsearch -inline -exact -index 0 $ifcs "$ifc"] 1]
 	}
 
@@ -1472,7 +1472,7 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber loss dup } {
     if { [nodeType $node] == "rj45" } {
         set devname [getNodeName $node]
     } elseif { [nodeType $node] == "extelem" } {
-	set ifcs [getNodeExternalIfcs $node]
+	set ifcs [getNodeStolenIfaces $node]
 	set devname [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname"] 1]
     }
 

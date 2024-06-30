@@ -11,13 +11,11 @@
 #   * node -- node id
 #****
 proc showCfg { c node } {
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     upvar 0 ::showConfig showCfg
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     upvar 0 ::lastObservedNode lastObservedNode
 
     #Show only if in exec mode
-    if { $oper_mode != "exec" } {
+    if { [getFromRunning "oper_mode"] != "exec" } {
     	return
     }
     #Dont draw again if cursor did not move
@@ -28,7 +26,7 @@ proc showCfg { c node } {
     #Dont show popup window if 'None' or 'Route' is selected from 
     #the 'Show' menu
     #Also, dont show popup window if there is no node
-    if {$showCfg == "None" || $showCfg == "route" || $node == "" } {
+    if { $showCfg == "None" || $showCfg == "route" || $node == "" } {
     	$c delete -withtag showCfgPopup
 	return
     }
@@ -180,10 +178,8 @@ proc showRoute { c node2 } {
     global activetool
     upvar 0 ::showConfig showCfg
     upvar 0 ::traceRouteTime traceRouteTime  
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     #Route can only be drawn in exec mode
-    if {$oper_mode != "exec"} {
+    if { [getFromRunning "oper_mode"] != "exec"} {
 	    return
     }
     #Determine selected node
@@ -217,7 +213,7 @@ proc showRoute { c node2 } {
 		set ip [getIfcIPv4addr $node2 $ifc]
 		set slashPlace [string first "/" $ip]
 		set ipAddr [string range $ip 0 [expr $slashPlace-1]]
-		set nodeId "$eid.$node1"
+		set nodeId "[getFromRunning "eid"].$node1"
 		set hopIP ""
 		set hop 0
 		set n1 $node1
@@ -314,12 +310,9 @@ proc findNode { c ipAddr } {
 #****
 proc drawLine { c node1 node2 } {
     global activetool
-    set xy1 [getNodeCoords $node1]
-    set x1 [lindex $xy1 0]
-    set y1 [lindex $xy1 1]				
-    set xy2 [getNodeCoords $node2]
-    set x2 [lindex $xy2 0]
-    set y2 [lindex $xy2 1]
+
+    lassign [getNodeCoords $node1] x1 y1
+    lassign [getNodeCoords $node2] x2 y2
     $c create line $x1 $y1 $x2 $y2 -fill green \
     	-width 3 -tags "route"
     raiseAll $c

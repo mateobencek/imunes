@@ -49,13 +49,9 @@
 # INPUTS
 #   * canvas -- canvas id
 #****
-proc removeCanvas { canvas } {
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
-
-    set i [lsearch $canvas_list $canvas]
-    set canvas_list [lreplace $canvas_list $i $i]
-    set $canvas {}
+proc removeCanvas { canvas_id } {
+    setToRunning "canvas_list" [removeFromList [getFromRunning "canvas_list"] $canvas_id]
+    cfgUnset "canvases" $canvas_id
 }
 
 #****f* canvas.tcl/newCanvas
@@ -73,19 +69,16 @@ proc removeCanvas { canvas } {
 #   * canvas_id -- canvas id
 #****
 proc newCanvas { name } {
-    upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
+    set canvas_id [newObjectId "canvas"]
+    lappendToRunning "canvas_list" $canvas_id
 
-    set canvas [newObjectId canvas]
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
-    lappend canvas_list $canvas
-    set $canvas {}
     if { $name != "" } {
-	setCanvasName $canvas $name
+	setCanvasName $canvas_id $name
     } else {
-	setCanvasName $canvas Canvas[string range $canvas 1 end]
+	setCanvasName $canvas_id "Canvas[string range $canvas_id 1 end]"
     }
 
-    return $canvas
+    return [cfgGet "canvases" $canvas_id]
 }
 
 #****f* canvas.tcl/setCanvasSize
@@ -100,15 +93,8 @@ proc newCanvas { name } {
 #   * x -- width
 #   * y -- height
 #****
-proc setCanvasSize { canvas x y } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
-
-    set i [lsearch [set $canvas] "size *"]
-    if { $i >= 0 } {
-	set $canvas [lreplace [set $canvas] $i $i "size {$x $y}"]
-    } else {
-	set $canvas [linsert [set $canvas] 1 "size {$x $y}"]
-    }
+proc setCanvasSize { canvas_id x y } {
+    cfgSet "canvases" $canvas_id "size" "$x $y"
 }
 
 #****f* canvas.tcl/getCanvasSize
@@ -123,16 +109,10 @@ proc setCanvasSize { canvas x y } {
 # RESULT
 #   * size -- canvas size in the form of {x y}
 #****
-proc getCanvasSize { canvas } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
+proc getCanvasSize { canvas_id } {
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    set entry [lrange [lsearch -inline [set $canvas] "size *"] 1 end]
-    set size [string trim $entry \{\}]
-    if { $size == "" } {
-	return "900 620"
-    } else {
-	return $size
-    }
+    return [getWithDefault {900 620} $dict_cfg "canvases" $canvas_id "size"]
 }
 
 #****f* canvas.tcl/getCanvasName
@@ -147,11 +127,8 @@ proc getCanvasSize { canvas } {
 # RESULT
 #   * canvas_name -- canvas name
 #****
-proc getCanvasName { canvas } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
-
-    set entry [lrange [lsearch -inline [set $canvas] "name *"] 1 end]
-    return [string trim $entry \{\}]
+proc getCanvasName { canvas_id } {
+    return [cfgGet "canvases" $canvas_id "name"]
 }
 
 #****f* canvas.tcl/setCanvasName
@@ -165,15 +142,8 @@ proc getCanvasName { canvas } {
 #   * canvas -- canvas id
 #   * name -- canvas name
 #****
-proc setCanvasName { canvas name } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
-
-    set i [lsearch [set $canvas] "name *"]
-    if { $i >= 0 } {
-	set $canvas [lreplace [set $canvas] $i $i "name {$name}"]
-    } else {
-	set $canvas [linsert [set $canvas] 1 "name {$name}"]
-    }
+proc setCanvasName { canvas_id name } {
+    return [cfgSet "canvases" $canvas_id "name" $name]
 }
 
 #****f* canvas.tcl/getCanvasBkg
@@ -188,11 +158,8 @@ proc setCanvasName { canvas name } {
 # RESULT
 #   * canvasBkgImage -- image variable name
 #****
-proc getCanvasBkg { canvas } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
-
-    set entry [lrange [lsearch -inline [set $canvas] "bkgImage *"] 1 end]
-    return [string trim $entry \{\}]
+proc getCanvasBkg { canvas_id } {
+    return [cfgGet "canvases" $canvas_id "bkg_image"]
 }
 
 #****f* canvas.tcl/setCanvasBkg
@@ -206,15 +173,8 @@ proc getCanvasBkg { canvas } {
 #   * canvas -- canvas id
 #   * name -- image variable name
 #****
-proc setCanvasBkg { canvas name } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
-
-    set i [lsearch [set $canvas] "bkgImage *"]
-    if { $i >= 0 } {
-	set $canvas [lreplace [set $canvas] $i $i "bkgImage {$name}"]
-    } else {
-	set $canvas [linsert [set $canvas] 1 "bkgImage {$name}"]
-    }
+proc setCanvasBkg { canvas_id name } {
+    return [cfgSet "canvases" $canvas_id "bkg_image" $name]
 }
 
 #****f* canvas.tcl/removeCanvasBkg
@@ -227,13 +187,8 @@ proc setCanvasBkg { canvas name } {
 # INPUTS
 #   * canvas -- canvas id
 #****
-proc removeCanvasBkg { canvas } {
-    upvar 0 ::cf::[set ::curcfg]::$canvas $canvas
-
-    set i [lsearch [set $canvas] "bkgImage *"]
-    if { $i >= 0 } {
-	set $canvas [lreplace [set $canvas] $i $i ]
-    }
+proc removeCanvasBkg { canvas_id } {
+    cfgUnset "canvases" $canvas_id "bkg_image"
 }
 
 #****f* canvas.tcl/setImageReference
@@ -1087,25 +1042,21 @@ proc printCanvasToFile { w entry } {
     destroy $w
 }
 
-#****f* editor.tcl/renameCanvasPopup 
+#****f* editor.tcl/renameCanvasPopup
 # NAME
 #   renameCanvasPopup -- rename canvas popup
 # SYNOPSIS
 #   renameCanvasPopup
 # FUNCTION
-#   Tk widget for renaming the canvas. 
+#   Tk widget for renaming the canvas.
 #****
 proc renameCanvasPopup {} {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-
     set w .entry1
-    catch {destroy $w}
+    catch { destroy $w }
     toplevel $w -takefocus 1
     wm transient $w .
     wm resizable $w 0 0
 
-    #update
-    #grab $w
     wm title $w "Canvas rename"
     wm iconname $w "Canvas rename"
 
@@ -1126,7 +1077,7 @@ proc renameCanvasPopup {} {
     bind $w <Key-Return> "renameCanvasApply $w"
 
     ttk::entry $w.renameframe.e1
-    $w.renameframe.e1 insert 0 [getCanvasName $curcanvas]
+    $w.renameframe.e1 insert 0 [getCanvasName [getFromRunning "curcanvas"]]
     pack $w.renameframe.e1 -side top -pady 5 -padx 10 -fill x
 }
 
@@ -1139,25 +1090,21 @@ proc renameCanvasPopup {} {
 #   Creates a popup dialog box for resizing canvas.
 #****
 proc resizeCanvasPopup {} {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-
     set w .entry1
-    catch {destroy $w}
+    catch { destroy $w }
     toplevel $w -takefocus 1
     wm transient $w .
     wm resizable $w 0 0
-    #update
-    #grab $w
     wm title $w "Canvas resize"
     wm iconname $w "Canvas resize"
+
+    set curcanvas [getFromRunning "curcanvas"]
 
     set minWidth [lindex [getMostDistantNodeCoordinates] 0]
     set minHeight [lindex [getMostDistantNodeCoordinates] 1]
 
-    #dodan glavni frame "resizeframe"
     ttk::frame $w.resizeframe
     pack $w.resizeframe -fill both -expand 1
-
 
     ttk::label $w.resizeframe.msg -wraplength 5i -justify left -text "Canvas size:"
     pack $w.resizeframe.msg -side top
@@ -1199,14 +1146,16 @@ proc resizeCanvasPopup {} {
 #   * w -- tk widget (rename canvas popup dialog box)
 #****
 proc renameCanvasApply { w } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global changed
+
+    set curcanvas [getFromRunning "curcanvas"]
 
     set newname [$w.renameframe.e1 get]
     destroy $w
     if { $newname != [getCanvasName $curcanvas] } {
 	set changed 1
     }
+
     setCanvasName $curcanvas $newname
     switchCanvas none
     updateUndoLog
@@ -1224,21 +1173,23 @@ proc renameCanvasApply { w } {
 #   * w -- tk widget (resize canvas popup dialog box)
 #****
 proc resizeCanvasApply { w } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global changed
-    
+
+    set curcanvas [getFromRunning "curcanvas"]
+
     set x [$w.resizeframe.size.x get]
     set y [$w.resizeframe.size.y get]
     set ix [lindex [getMostDistantNodeCoordinates] 0]
     set iy [lindex [getMostDistantNodeCoordinates] 1]
-    
-    if { [getCanvasBkg $curcanvas] == "" && $ix <= $x && $iy <= $y} {
+
+    if { [getCanvasBkg $curcanvas] == "" && $ix <= $x && $iy <= $y } {
 	destroy $w
 	if { "$x $y" != [getCanvasSize $curcanvas] } {
 	    set changed 1
 	}
+
 	setCanvasSize $curcanvas $x $y
 	switchCanvas none
 	updateUndoLog
-    } 
+    }
 }

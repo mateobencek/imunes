@@ -68,7 +68,7 @@ proc checkExternalInterfaces {} {
 	if { [nodeType $node] == "rj45" } {
 	    lappend nodes_ifcpairs [list $node [list 0 [getNodeName $node]]]
 	} elseif { [nodeType $node] == "extelem" } {
-	    foreach ifcs [getNodeExternalIfcs $node] {
+	    foreach ifcs [getNodeStolenIfaces $node] {
 		lappend nodes_ifcpairs [list $node $ifcs]
 	    }
 	}

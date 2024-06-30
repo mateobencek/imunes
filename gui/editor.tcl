@@ -46,26 +46,23 @@
 #   undolog array and updates the undolevel variable.
 #****
 proc updateUndoLog {} {
-    upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-    upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
-    upvar 0 ::cf::[set ::curcfg]::undolog undolog
-    upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
     global changed showTree
 
+    set undolevel [getFromRunning "undolevel"]
+
     if { $changed } {
-	global t_undolog
-	set t_undolog ""
-	dumpCfg string t_undolog
-	incr undolevel
+	setToRunning "undolevel" [incr undolevel]
 	if { $undolevel == 1 } {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	}
-	set undolog($undolevel) $t_undolog
-	set redolevel $undolevel
+
+	setToUndolog $undolevel $dict_cfg
+	setToRunning "redolevel" $undolevel
 	set changed 0
 	# When some changes are made in the topology, new /etc/hosts files
 	# should be generated.
-	set etchosts ""
+	setToRunning "etc_hosts" ""
 	if { $showTree } {
 	    refreshTopologyTree
 	}
@@ -82,18 +79,25 @@ proc updateUndoLog {} {
 #   configuration. Reduces the value of undolevel.
 #****
 proc undo {} {
-    upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-    upvar 0 ::cf::[set ::curcfg]::undolog undolog
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
 
-    if {$oper_mode == "edit" && $undolevel > 0} {
+    set undolevel [getFromRunning "undolevel"]
+
+    if { [getFromRunning "oper_mode"] == "edit" && $undolevel > 0} {
 	.menubar.edit entryconfigure "Redo" -state normal
-	incr undolevel -1
+	setToRunning "undolevel" [incr undolevel -1]
 	if { $undolevel == 0 } {
 	    .menubar.edit entryconfigure "Undo" -state disabled
 	}
+
 	.panwin.f1.c config -cursor watch
-	loadCfg $undolog($undolevel)
+
+	set dict_cfg [getFromUndolog $undolevel]
+	setToRunning "canvas_list" [getCanvasList]
+	setToRunning "node_list" [getNodeList]
+	setToRunning "link_list" [getLinkList]
+	setToRunning "annotation_list" [getAnnotationList]
 	switchCanvas none
     }
 }
@@ -110,21 +114,28 @@ proc undo {} {
 #   of undolevel. 
 #****
 proc redo {} {
-    upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-    upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
-    upvar 0 ::cf::[set ::curcfg]::undolog undolog
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
 
-    if {$oper_mode == "edit" && $redolevel > $undolevel} {
-	incr undolevel
+    set undolevel [getFromRunning "undolevel"]
+    set redolevel [getFromRunning "redolevel"]
+
+    if { [getFromRunning "oper_mode"] == "edit" && $redolevel > $undolevel} {
+	setToRunning "undolevel" [incr undolevel]
 	if { $undolevel == 1 } {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	}
 	if {$redolevel <= $undolevel} {
 	    .menubar.edit entryconfigure "Redo" -state disabled
 	}
+
 	.panwin.f1.c config -cursor watch
-	loadCfg $undolog($undolevel)
+
+	set dict_cfg [getFromUndolog $undolevel]
+	setToRunning "canvas_list" [getCanvasList]
+	setToRunning "node_list" [getNodeList]
+	setToRunning "link_list" [getLinkList]
+	setToRunning "annotation_list" [getAnnotationList]
 	switchCanvas none
     }
 }
@@ -162,10 +173,11 @@ proc chooseIfName {lnode rnode} {
 #****
 proc l3IfcName {lnode rnode} {
 
-    if {[nodeType $lnode] in "ext extnat"} {
+    if { [nodeType $lnode] in "ext extnat" } {
 	return "ext"
     }
-    if {[nodeType $rnode] == "wlan"} {
+
+    if { [nodeType $rnode] == "wlan" } {
 	return "wlan"
     } else {
 	return "eth"
@@ -460,74 +472,42 @@ proc selectZoomApply { w } {
 #   * wi -- widget
 #****
 proc routerDefaultsApply { wi } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::oper_mode oper_mode
     global changed router_model routerDefaultsModel router_ConfigModel
     global routerRipEnable routerRipngEnable routerOspfEnable routerOspf6Enable
     global rdconfig
 
-    lset rdconfig 0 $routerRipEnable
-    lset rdconfig 1 $routerRipngEnable
-    lset rdconfig 2 $routerOspfEnable 
-    lset rdconfig 3 $routerOspf6Enable	
-    set routerDefaultsModel $router_model 	
-    set model frr
-    set selected_node_list [selectedNodes]
-    set empty {}
+    set oper_mode [getFromRunning "oper_mode"]
 
-    if { $selected_node_list != $empty } {
-	foreach node $selected_node_list {
-	    if { $oper_mode == "edit" && [nodeType $node] == "router" } {
-		setNodeModel $node $router_model
-		set router_ConfigModel $router_model
-		if { $router_ConfigModel != "static" } {
-		    set ripEnable [lindex $rdconfig 0]
-		    set ripngEnable [lindex $rdconfig 1]
-		    set ospfEnable [lindex $rdconfig 2]
-		    set ospf6Enable [lindex $rdconfig 3]
-		    setNodeProtocolRip $node $ripEnable
-		    setNodeProtocolRipng $node $ripngEnable
-		    setNodeProtocolOspfv2 $node $ospfEnable
-		    setNodeProtocolOspfv3 $node $ospf6Enable
-		} else {
-		    $wi.nbook.nf1.protocols.rip configure -state disabled
-		    $wi.nbook.nf1.protocols.ripng configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf6 configure -state disabled
-		}
-		set changed 1
+    set rdconfig "$routerRipEnable $routerRipngEnable $routerOspfEnable $routerOspf6Enable"
+    set routerDefaultsModel $router_model
+
+    set selected_node_list [selectedNodes]
+    if { $selected_node_list == {} } {
+	set selected_node_list [getFromRunning "node_list"]
+    }
+
+    foreach node_id $selected_node_list {
+	if { $oper_mode == "edit" && [nodeType $node_id] == "router" } {
+	    setNodeModel $node_id $router_model
+
+	    set router_ConfigModel $router_model
+	    if { $router_ConfigModel != "static" } {
+		lassign $rdconfig ripEnable ripngEnable ospfEnable ospf6Enable
+		setNodeProtocol $node_id "rip" $ripEnable
+		setNodeProtocol $node_id "ripng" $ripngEnable
+		setNodeProtocol $node_id "ospf" $ospfEnable
+		setNodeProtocol $node_id "ospf6" $ospf6Enable
 	    }
-	}		
-    } else {
-	foreach node $node_list {
-	    if { $oper_mode == "edit" && [nodeType $node] == "router"} {
-		setNodeModel $node $router_model
-		set router_ConfigModel $router_model
-		if { $router_ConfigModel != "static" } {
-		    set ripEnable [lindex $rdconfig 0]
-		    set ripngEnable [lindex $rdconfig 1]
-		    set ospfEnable [lindex $rdconfig 2]
-		    set ospf6Enable [lindex $rdconfig 3]
-		    setNodeProtocolRip $node  $ripEnable
-		    setNodeProtocolRipng $node $ripngEnable
-		    setNodeProtocolOspfv2 $node $ospfEnable
-		    setNodeProtocolOspfv3 $node $ospf6Enable
-		} else {
-		    $wi.nbook.nf1.protocols.rip configure -state disabled
-		    $wi.nbook.nf1.protocols.ripng configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf configure -state disabled
-		    $wi.nbook.nf1.protocols.ospf6 configure -state disabled
-		}
-		set changed 1
-	    }		
-	}		
+	    set changed 1
+	}
     }
 
     if { $changed == 1 } {
 	redrawAll
 	updateUndoLog
-    }	
-    destroy $wi	
+    }
+
+    destroy $wi
 }
 
 #****f* editor.tcl/setCustomIcon
@@ -568,6 +548,9 @@ proc getCustomIcon { node } {
 
     return [lindex [lsearch -inline [set $node] "customIcon *"] 1]
 }
+proc getCustomIcon { node_id } {
+    return [cfgGet "nodes" $node_id "custom_icon"]
+}
 
 #****f* editor.tcl/removeCustomIcon
 # NAME
@@ -597,21 +580,20 @@ proc removeCustomIcon { node } {
 #   Returns the most distant node coordinates.
 #****
 proc getMostDistantNodeCoordinates {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     set x 0
     set y 0
-    foreach node $node_list {
+    foreach node [getFromRunning "node_list"] {
 	set coords [getNodeCoords $node]
 	if {[lindex $coords 0] > $x} {
 	    set x [lindex $coords 0] 
 	}
 	if {[lindex $coords 1] > $y} {
-	    set y [lindex $coords 1] 
+	    set y [lindex $coords 1]
 	}
     }
     set x [expr $x + 25]
     set y [expr $y + 30]
-    
+
     return [list $x $y]
 }
 

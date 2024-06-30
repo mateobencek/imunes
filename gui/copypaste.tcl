@@ -127,7 +127,7 @@ proc paste {} {
     upvar 0 ::cf::[set ::curcfg]::link_list link_list
     upvar 0 ::cf::[set ::curcfg]::annotation_list annotation_list
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
+
     global sizex sizey
     global changed copypaste_list cutNodes copypaste_nodes
     global nodeNamingBase

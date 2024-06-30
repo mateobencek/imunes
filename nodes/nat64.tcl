@@ -68,8 +68,8 @@ proc $MODULE.confNewNode { node } {
 
     setAutoDefaultRoutesStatus $node "enabled"
     setLogIfcType $node lo0 lo
-    setIfcIPv4addr $node lo0 "127.0.0.1/8"
-    setIfcIPv6addr $node lo0 "::1/128"
+    setIfcIPv4addrs $node lo0 "127.0.0.1/8"
+    setIfcIPv6addrs $node lo0 "::1/128"
 
     setTaygaIPv4DynPool $node "192.168.64.0/24"
     setTaygaIPv6Prefix $node "2001::/96"

@@ -256,7 +256,6 @@ proc popupOvalApply { c wi target } {
     setAnnotationWidth $target $width
     
     destroyNewOval $c
-    #setType $target "oval"
     setNodeCanvas $target $curcanvas
     set changed 1
     updateUndoLog

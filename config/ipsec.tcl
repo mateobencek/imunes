@@ -1267,10 +1267,8 @@ proc checkSharedSecret { str } {
 # INPUTS
 #   node - node id
 #****
-proc getNodeIPsec { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [lindex [lsearch -inline [set $node] "ipsec-config *"] 1]
+proc getNodeIPsec { node_id } {
+    return [cfgGet "nodes" $node_id "ipsec" "ipsec_configs"]
 }
 
 proc setNodeIPsec { node newValue } {
@@ -1305,12 +1303,8 @@ proc delNodIPsec { node } {
 # INPUTS
 #   node - node id
 #   item - search item
-proc getNodeIPsecItem { node item } {
-    set cfg [getNodeIPsec $node]
-    if { [lsearch $cfg "$item *"] != -1 } {
-	return [lindex [lsearch -inline $cfg "$item *"] 1]
-    }
-    return ""
+proc getNodeIPsecItem { node_id item } {
+    return [cfgGet "nodes" $node_id "ipsec" "ipsec_configs" $item]
 }
 
 #****f* ipsec.tcl/setNodeIPsecItem

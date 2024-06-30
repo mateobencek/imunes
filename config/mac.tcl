@@ -40,7 +40,7 @@ set mac_byte6 0
 #****
 proc randomizeMACbytes {} {
     global mac_byte4 mac_byte5
-    
+
     set mac_byte4 [expr { (round(rand()*10000))%255 }]
     set mac_byte5 [expr { (round(rand()*10000))%255 }]
 
@@ -62,7 +62,6 @@ proc randomizeMACbytes {} {
 #     address will be assigned
 #****
 proc autoMACaddr { node ifc } {
-    upvar 0 ::cf::[set ::curcfg]::MACUsedList MACUsedList
     global mac_byte4 mac_byte5 mac_byte6
 
     if { [nodeType $node] ni "ext extnat" && [[typemodel $node].virtlayer] != "VIMAGE" } {
@@ -71,7 +70,7 @@ proc autoMACaddr { node ifc } {
 
     set mac_byte6 0
     set macaddr [MACaddrAddZeros 42:00:aa:[format %x $mac_byte4]:[format %x $mac_byte5]:[format %x $mac_byte6]]
-    while { $macaddr in $MACUsedList } {
+    while { $macaddr in [getFromRunning "mac_used_list"] } {
 	incr mac_byte6
 	if { $mac_byte6 > 255 } {
             if { $mac_byte5 > 255 } {
@@ -89,7 +88,7 @@ proc autoMACaddr { node ifc } {
 	set macaddr [MACaddrAddZeros 42:00:aa:[format %x $mac_byte4]:[format %x $mac_byte5]:[format %x $mac_byte6]]
     }
 
-    lappend MACUsedList $macaddr
+    lappendToRunning "mac_used_list" $macaddr
     setIfcMACaddr $node $ifc $macaddr
 }
 

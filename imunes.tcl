@@ -84,7 +84,7 @@ try {
     exit 1
 }
 
-safePackageRequire [list cmdline platform ip base64]
+safePackageRequire [list cmdline platform ip base64 json json::write]
 
 set initMode 0
 set execMode interactive
@@ -144,6 +144,22 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/runtime *.tcl] {
 
 if {! [info exists eid_base]} {
     set eid_base [genExperimentId]
+}
+
+# bases for naming new nodes
+array set nodeNamingBase {
+    pc pc
+    ext ext
+    filter filter
+    router router
+    host host
+    hub hub
+    extelem xel
+    lanswitch switch
+    nat64 nat64-
+    packgen packgen
+    stpswitch stpswitch
+    wlan wlan
 }
 
 # Set default L2 node list
@@ -272,7 +288,7 @@ if {$execMode == "interactive"} {
 
     newProject
     if { $argv != "" && [file exists $argv] } {
-	set ::cf::[set curcfg]::currentFile $argv
+	setToRunning "current_file" $argv
 	openFile
     }
     updateProjectMenu
