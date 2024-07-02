@@ -1991,6 +1991,10 @@ proc getExtIfcs { } {
 }
 
 proc getIPv4IfcCmd { ifc addr primary } {
+    if { $addr == "dhcp" } {
+	return "dhclient -b $ifc"
+    }
+
     if { $primary } {
 	return "ifconfig $ifc inet $addr"
     }

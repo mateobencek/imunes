@@ -2105,9 +2105,13 @@ proc configGUI_ifcMACAddressApply { wi node ifc } {
 proc configGUI_ifcIPv4AddressApply { wi node ifc } {
     global changed apply
     set ipaddrs [formatIPaddrList [$wi.if$ifc.ipv4.addr get]]
-    foreach ipaddr $ipaddrs {
-	if { [checkIPv4Net $ipaddr] == 0 } {
-	    return
+    if { $ipaddrs == "dhcp" } {
+	set changed 1
+    } else {
+	foreach ipaddr $ipaddrs {
+	    if { [checkIPv4Net $ipaddr] == 0 } {
+		return
+	    }
 	}
     }
     set oldipaddrs [getIfcIPv4addrs $node $ifc]

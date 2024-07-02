@@ -1358,6 +1358,10 @@ proc getIPv6RouteCmd { statrte } {
 }
 
 proc getIPv4IfcCmd { ifc addr primary } {
+    if { $addr == "dhcp" } {
+	return "dhclient -nw $ifc"
+    }
+
     return "ip addr add $addr dev $ifc"
 }
 

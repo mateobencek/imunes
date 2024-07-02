@@ -479,6 +479,10 @@ proc checkIPv4Net { str } {
 #     of a valid IP network, 1 otherwise
 #****
 proc checkIPv4Nets { str } {
+    if { $str == "dhcp" } {
+	return 1
+    }
+
     foreach net [split $str ";"] {
 	set net [string trim $net]
 	if { ![checkIPv4Net $net] } {
