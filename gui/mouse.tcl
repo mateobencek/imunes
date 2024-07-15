@@ -414,50 +414,47 @@ proc button3link { c x y } {
     tk_popup .button3menu $x $y
 }
 
-#****f* editor.tcl/movetoCanvas
+#****f* editor.tcl/moveToCanvas
 # NAME
-#   movetoCanvas -- move to canvas 
+#   moveToCanvas -- move to canvas 
 # SYNOPSIS
-#   movetoCanvas $canvas
+#   moveToCanvas $canvas_id
 # FUNCTION
 #   This procedure moves all the nodes selected in the GUI to
 #   the specified canvas.
 # INPUTS
-#   * canvas -- canvas id.
+#   * canvas_id -- canvas id.
 #****
-proc movetoCanvas { canvas } {
+proc moveToCanvas { canvas_id } {
     global changed
 
     set selected_nodes [selectedNodes]
-    foreach node $selected_nodes {
-	setNodeCanvas $node $canvas
+    foreach node_id $selected_nodes {
+	setNodeCanvas $node_id $canvas_id
 	set changed 1
     }
+
     foreach obj [.panwin.f1.c find withtag "linklabel"] {
 	set link [lindex [.panwin.f1.c gettags $obj] 1]
-	set link_peers [getLinkPeers $link]
-	set peer1 [lindex $link_peers 0]
-	set peer2 [lindex $link_peers 1]
-	set peer1_in_selected [lsearch $selected_nodes $peer1]
-	set peer2_in_selected [lsearch $selected_nodes $peer2]
-	if { ($peer1_in_selected == -1 && $peer2_in_selected != -1) ||
-	    ($peer1_in_selected != -1 && $peer2_in_selected == -1) } {
-	    if { [nodeType $peer2] == "pseudo" } {
-		setNodeCanvas $peer2 $canvas
-		if { [getNodeCanvas [getNodeMirror $peer2]] == $canvas } {
+
+	lassign [getLinkPeers $link] peer1 peer2
+	if { ($peer1 ni $selected_nodes && $peer2 in $selected_nodes) || ($peer1 in $selected_nodes && $peer2 ni $selected_nodes) } {
+	    # pseudo nodes are always peer2
+	    if { [nodeType $peer1] == "pseudo" } {
+		setNodeCanvas $peer1 $canvas_id
+		if { [getNodeCanvas [getNodeMirror $peer1]] == $canvas_id } {
 		    mergeLink $link
 		}
 		continue
 	    }
-	    set new_nodes [splitLink $link]
-	    set new_node1 [lindex $new_nodes 0]
-	    set new_node2 [lindex $new_nodes 1]
+
+	    lassign [splitLink $link] new_node1 new_node2
+
 	    setNodeName $new_node1 $peer2
 	    setNodeName $new_node2 $peer1
-	    set link1 [linkByPeers $peer1 $new_node1]
-	    set link2 [linkByPeers $peer2 $new_node2]
 	}
     }
+
     updateUndoLog
     redrawAll
 }
@@ -645,18 +642,16 @@ proc button3node { c x y } {
     # Move to another canvas
     #
     .button3menu.moveto delete 0 end
-    if { $oper_mode == "exec" || $type == "pseudo" } {
-#	.button3menu add cascade -label "Move to" \
-#	    -menu .button3menu.moveto -state disabled
-    } else {
+    if { $oper_mode == "edit" && $type != "pseudo" } {
 	.button3menu add cascade -label "Move to" \
 	    -menu .button3menu.moveto
 	.button3menu.moveto add command -label "Canvas:" -state disabled
+
 	foreach canvas_id $canvas_list {
 	    if { $canvas_id != $curcanvas } {
 		.button3menu.moveto add command \
 		    -label [getCanvasName $canvas_id] \
-		    -command "movetoCanvas $canvas_id"
+		    -command "moveToCanvas $canvas_id"
 	    } else {
 		.button3menu.moveto add command \
 		    -label [getCanvasName $canvas_id] -state disabled

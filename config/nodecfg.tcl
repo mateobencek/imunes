@@ -2108,8 +2108,8 @@ proc newNode { type } {
     global viewid
     catch { unset viewid }
 	
-    set node_id [newObjectId node]
-    cfgSet "nodes" $node_id "type" $type
+    set node_id [newObjectId "node"]
+    setNodeType $node_id $type
     lappendToRunning "node_list" $node_id
 
     if { [info procs $type.confNewNode] == "$type.confNewNode" } {
