@@ -206,7 +206,7 @@ proc evsched {} {
 	    set changed 1
 
 	    if { $evlogfile != 0 } {
-		set peers [linkPeers $object]
+		set peers [getLinkPeers $object]
 		set n0 [lindex $peers 0]
 		set n1 [lindex $peers 1]
 		set ifc0 [ifcByPeer $n0 $n1]
@@ -461,8 +461,8 @@ proc elementsEventsEditor {} {
     $pwi.left.tree focus links
     $pwi.left.tree selection set links
     foreach link [lsort -dictionary $link_list] {
-	set n0 [lindex [linkPeers $link] 0]
-	set n1 [lindex [linkPeers $link] 1]
+	set n0 [lindex [getLinkPeers $link] 0]
+	set n1 [lindex [getLinkPeers $link] 1]
 	set name0 [getNodeName $n0]
 	set name1 [getNodeName $n1]
 	$pwi.left.tree insert links end -id $link -text "$link ($name0 to $name1)" -tags $link

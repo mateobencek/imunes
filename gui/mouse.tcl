@@ -42,7 +42,7 @@ proc animateCursor {} {
 proc removeGUILink { link atomic } {
     global changed
 
-    set nodes [linkPeers $link]
+    set nodes [getLinkPeers $link]
     set node1 [lindex $nodes 0]
     set node2 [lindex $nodes 1]
     if {[nodeType $node1] == "wlan" || [nodeType $node2] == "wlan"} {
@@ -85,7 +85,7 @@ proc removeGUILink { link atomic } {
 proc removeGUINode { node } {
     set type [nodeType $node]
     foreach ifc [ifcList $node] {
-	set peer [peerByIfc $node $ifc]
+	set peer [getIfcPeer $node $ifc]
 	set link [linkByPeers $node $peer]
 	set mirror [getLinkMirror $link]
 	removeGUILink $link non-atomic
@@ -115,7 +115,7 @@ proc splitGUILink { link } {
 
     set zoom [getFromRunning "zoom"]
 
-    lassign [linkPeers $link] orig_node1 orig_node2
+    lassign [getLinkPeers $link] orig_node1 orig_node2
     lassign [splitLink $link] new_node1 new_node2
 
     lassign [getNodeCoords $orig_node1] x1 y1
@@ -288,7 +288,7 @@ proc selectAdjacent {} {
     set adjacent {}
     foreach node $selected {
 	foreach ifc [ifcList $node] {
-	    set peer [peerByIfc $node $ifc]
+	    set peer [getIfcPeer $node $ifc]
 	    if { [getNodeMirror $peer] != "" } {
 		return
 	    }
@@ -401,10 +401,10 @@ proc button3link { c x y } {
     # Merge two pseudo nodes / links
     #
     if { $oper_mode != "exec" && [getLinkMirror $link] != "" &&
-	[getNodeCanvas [getNodeMirror [lindex [linkPeers $link] 1]]] ==
+	[getNodeCanvas [getNodeMirror [lindex [getLinkPeers $link] 1]]] ==
 	[getFromRunning "curcanvas"] } {
 	.button3menu add command -label "Merge" \
-	    -command "mergeGUINode [lindex [linkPeers $link] 1]"
+	    -command "mergeGUINode [lindex [getLinkPeers $link] 1]"
     } else {
 	.button3menu add command -label "Merge" -state disabled
     }
@@ -435,7 +435,7 @@ proc movetoCanvas { canvas } {
     }
     foreach obj [.panwin.f1.c find withtag "linklabel"] {
 	set link [lindex [.panwin.f1.c gettags $obj] 1]
-	set link_peers [linkPeers $link]
+	set link_peers [getLinkPeers $link]
 	set peer1 [lindex $link_peers 0]
 	set peer2 [lindex $link_peers 1]
 	set peer1_in_selected [lsearch $selected_nodes $peer1]
@@ -1908,7 +1908,7 @@ proc changeAddressRange {} {
 	foreach node $element {
 	    set autorenumber_nodes ""
 	    foreach ifc [ifcList $node] {
-		set peer [peerByIfc $node $ifc]
+		set peer [getIfcPeer $node $ifc]
 		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
 		    set peer_ifc [ifcByPeer $peer $node]
 		    lappend autorenumber_nodes "$peer $peer_ifc"
@@ -1936,7 +1936,7 @@ proc changeAddressRange {} {
     foreach node $selected_nodes {
 	if { [[typemodel $node].layer] != "LINK" } {
 	    foreach ifc [ifcList $node] {
-		set peer [peerByIfc $node $ifc]
+		set peer [getIfcPeer $node $ifc]
 		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
 		    lappend autorenumber_ifcs "$node $ifc"
 		    if { [lsearch $autorenumber_nodes $node] == -1 } {
@@ -1959,7 +1959,7 @@ proc changeAddressRange {} {
     foreach el $autorenumber_ifcs {
 	set node [lindex $el 0] 
 	set ifc [lindex $el 1]
-	set peer [peerByIfc $node $ifc]
+	set peer [getIfcPeer $node $ifc]
 	if { [lsearch $autorenumber_nodes $node] < [lsearch $autorenumber_nodes $peer] } {
 	    set changeAddrRange 1
 	}
@@ -2026,7 +2026,7 @@ proc changeAddressRange6 {} {
 	foreach node $element {
 	    set autorenumber_nodes ""
 	    foreach ifc [ifcList $node] {
-		set peer [peerByIfc $node $ifc]
+		set peer [getIfcPeer $node $ifc]
 		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
 		    set peer_ifc [ifcByPeer $peer $node]
 		    lappend autorenumber_nodes "$peer $peer_ifc"
@@ -2054,7 +2054,7 @@ proc changeAddressRange6 {} {
     foreach node $selected_nodes {
 	if { [[typemodel $node].layer] != "LINK" } {
 	    foreach ifc [ifcList $node] {
-		set peer [peerByIfc $node $ifc]
+		set peer [getIfcPeer $node $ifc]
 		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
 		    lappend autorenumber_ifcs "$node $ifc"
 		    if { [lsearch $autorenumber_nodes $node] == -1 } {
@@ -2077,7 +2077,7 @@ proc changeAddressRange6 {} {
     foreach el $autorenumber_ifcs {
 	set node [lindex $el 0] 
 	set ifc [lindex $el 1]
-	set peer [peerByIfc $node $ifc]
+	set peer [getIfcPeer $node $ifc]
 	if { [lsearch $autorenumber_nodes $node] < [lsearch $autorenumber_nodes $peer] } {
 	    set changeAddrRange6 1
 	}

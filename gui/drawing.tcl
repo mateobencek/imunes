@@ -82,7 +82,7 @@ proc redrawAll {} {
 	}
     }
     foreach link [getFromRunning "link_list"] {
-	set nodes [linkPeers $link]
+	set nodes [getLinkPeers $link]
 	if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
 	    [getNodeCanvas [lindex $nodes 1]] != $curcanvas } {
 	    continue
@@ -159,7 +159,7 @@ proc drawNode { node_id } {
 	    -tags "nodelabel $node_id"]
 	
     } else {
-	set pnode [peerByIfc [getNodeMirror $node_id] 0]
+	set pnode [getIfcPeer [getNodeMirror $node_id] "0"]
 	set pcanvas [getNodeCanvas $pnode]
 	set ifc [ifcByPeer $pnode [getNodeMirror $node_id]]
 	if { $pcanvas != [getFromRunning "curcanvas"] } {
@@ -199,7 +199,7 @@ proc drawNode { node_id } {
 #   * link_id -- link id
 #****
 proc drawLink { link } {
-    lassign [linkPeers $link] lnode1 lnode2
+    lassign [getLinkPeers $link] lnode1 lnode2
     if { [nodeType $lnode1] == "wlan" || [nodeType $lnode2] == "wlan" } {
 	return
     }
@@ -270,7 +270,7 @@ proc calcAnglePoints { x1 y1 x2 y2 } {
 }
 
 proc calcAngle { link } {
-    lassign [linkPeers $link] lnode1 lnode2
+    lassign [getLinkPeers $link] lnode1 lnode2
     lassign [getNodeCoords $lnode1] x1 y1
     lassign [getNodeCoords $lnode2] x2 y2
 
@@ -400,7 +400,7 @@ proc redrawAllLinks {} {
     upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
 
     foreach link $link_list {
-	set nodes [linkPeers $link]
+	set nodes [getLinkPeers $link]
 	if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
 	    [getNodeCanvas [lindex $nodes 1]] != $curcanvas } {
 	    continue
@@ -1106,13 +1106,13 @@ proc rearrange { mode } {
 	    }
 
 	    foreach link $link_list {
-		set nodes [linkPeers $link]
+		set nodes [getLinkPeers $link]
 		if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
 		  [getNodeCanvas [lindex $nodes 1]] != $curcanvas ||
 		  [getLinkMirror $link] != "" } {
 		    continue
 		}
-		set peers [linkPeers $link]
+		set peers [getLinkPeers $link]
 		if {[nodeType [lindex $peers 0]] == "wlan" ||
 		  [nodeType [lindex $peers 1]] == "wlan"} {
 		    continue

@@ -486,8 +486,8 @@ proc dumpLinksToFile { path } {
 	if { $link in $skipLinks } {
 	    continue
 	}
-	set lnode1 [lindex [linkPeers $link] 0]
-	set lnode2 [lindex [linkPeers $link] 1]
+	set lnode1 [lindex [getLinkPeers $link] 0]
+	set lnode2 [lindex [getLinkPeers $link] 1]
 	set ifname1 [ifcByPeer $lnode1 $lnode2]
 	set ifname2 [ifcByPeer $lnode2 $lnode1]
 
@@ -496,7 +496,7 @@ proc dumpLinksToFile { path } {
 	    lappend skipLinks $mirror_link
 
 	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
+	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
 	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
 	}
 

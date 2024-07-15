@@ -609,7 +609,7 @@ proc createNodePhysIfcs { node ifcs } {
 
 	# direct link, simulate capturing the host interface into the node,
 	# without bridges between them
-	set peer [peerByIfc $node $ifc]
+	set peer [getIfcPeer $node $ifc]
 	if { $peer != "" } {
 	    set link [linkByPeers $node $peer]
 	    if { $link != "" && [getLinkDirect $link] } {
@@ -1412,13 +1412,13 @@ proc checkSysPrerequisites {} {
 #****
 proc execSetIfcQDisc { eid node ifc qdisc } {
     set target [linkByIfc $node $ifc]
-    set peers [linkPeers [lindex $target 0]]
+    set peers [getLinkPeers [lindex $target 0]]
     set dir [lindex $target 1]
     set lnode1 [lindex $peers 0]
     set lnode2 [lindex $peers 1]
     if { [nodeType $lnode2] == "pseudo" } {
         set mirror_link [getLinkMirror [lindex $target 0]]
-        set lnode2 [lindex [linkPeers $mirror_link] 0]
+        set lnode2 [lindex [getLinkPeers $mirror_link] 0]
     }
     switch -exact $qdisc {
         FIFO { set qdisc fifo_fast }
@@ -1501,8 +1501,8 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber loss dup } {
 #   link -- link id
 #****
 proc execSetLinkParams { eid link } {
-    set lnode1 [lindex [linkPeers $link] 0]
-    set lnode2 [lindex [linkPeers $link] 1]
+    set lnode1 [lindex [getLinkPeers $link] 0]
+    set lnode2 [lindex [getLinkPeers $link] 1]
     set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
     set ifname2 [ifcByLogicalPeer $lnode2 $lnode1]
 
@@ -1510,11 +1510,11 @@ proc execSetLinkParams { eid link } {
 	set mirror_link [getLinkMirror $link]
 	if { [nodeType $lnode1] == "pseudo" } {
 	    set p_lnode1 $lnode1
-	    set lnode1 [lindex [linkPeers $mirror_link] 0]
+	    set lnode1 [lindex [getLinkPeers $mirror_link] 0]
 	    set ifname1 [ifcByPeer $lnode1 [getNodeMirror $p_lnode1]]
 	} else {
 	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
+	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
 	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
 	}
     }

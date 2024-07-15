@@ -2011,7 +2011,7 @@ proc configGUI_ifcEssentialsApply { wi node ifc } {
 #****
 proc configGUI_ifcQueueConfigApply { wi node ifc } {
     global changed apply
-    if { [nodeType [peerByIfc $node $ifc]] != "rj45" } {
+    if { [nodeType [getIfcPeer $node $ifc]] != "rj45" } {
 	set qdisc [string trim [$wi.if$ifc.queuecfg.disc get]]
 	set oldqdisc [getIfcQDisc $node $ifc]
 	if { $qdisc != $oldqdisc } {

@@ -436,7 +436,7 @@ Please don't try killing the process.
 #****
 proc execSetIfcQDisc { eid node ifc qdisc } {
     set link [linkByIfc $node $ifc]
-    set peers [linkPeers [lindex $link 0]]
+    set peers [getLinkPeers [lindex $link 0]]
     set dir [lindex $link 1]
     set lnode1 [lindex $peers 0]
     set lnode2 [lindex $peers 1]
@@ -470,7 +470,7 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
 #****
 proc execSetIfcQDrop { eid node ifc qdrop } {
     set link [linkByIfc $node $ifc]
-    set peers [linkPeers [lindex $link 0]]
+    set peers [getLinkPeers [lindex $link 0]]
     set dir [lindex $link 1]
     set lnode1 [lindex $peers 0]
     set lnode2 [lindex $peers 1]
@@ -502,7 +502,7 @@ proc execSetIfcQDrop { eid node ifc qdrop } {
 #****
 proc execSetIfcQLen { eid node ifc qlen } {
     set link [linkByIfc $node $ifc]
-    set peers [linkPeers [lindex $link 0]]
+    set peers [getLinkPeers [lindex $link 0]]
     set dir [lindex $link 1]
     set lnode1 [lindex $peers 0]
     set lnode2 [lindex $peers 1]
@@ -532,15 +532,15 @@ proc execSetIfcQLen { eid node ifc qlen } {
 proc execSetLinkParams { eid link } {
     global debug
 
-    set lnode1 [lindex [linkPeers $link] 0]
-    set lnode2 [lindex [linkPeers $link] 1]
+    set lnode1 [lindex [getLinkPeers $link] 0]
+    set lnode2 [lindex [getLinkPeers $link] 1]
 
     if { [getLinkMirror $link] != "" } {
 	set mirror_link [getLinkMirror $link]
 	if { [nodeType $lnode1] == "pseudo" } {
-	    set lnode1 [lindex [linkPeers $mirror_link] 0]
+	    set lnode1 [lindex [getLinkPeers $mirror_link] 0]
 	} else {
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
+	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
 	}
     }
 
@@ -587,8 +587,8 @@ proc execSetLinkParams { eid link } {
 #   link -- link id
 #****
 proc execSetLinkJitter { eid link } {
-    set lnode1 [lindex [linkPeers $link] 0]
-    set lnode2 [lindex [linkPeers $link] 1]
+    set lnode1 [lindex [getLinkPeers $link] 0]
+    set lnode2 [lindex [getLinkPeers $link] 1]
 
     set jitter_up [getLinkJitterUpstream $link]
     set jitter_mode_up [getLinkJitterModeUpstream $link]
@@ -646,8 +646,8 @@ proc execSetLinkJitter { eid link } {
 #   * link -- link id
 #****
 proc execResetLinkJitter { eid link } {
-    set lnode1 [lindex [linkPeers $link] 0]
-    set lnode2 [lindex [linkPeers $link] 1]
+    set lnode1 [lindex [getLinkPeers $link] 0]
+    set lnode2 [lindex [getLinkPeers $link] 1]
 
     exec jexec $eid ngctl msg $link: setcfg \
 	"{upstream={jitmode=-1} downstream={jitmode=-1}}"

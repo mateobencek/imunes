@@ -169,8 +169,8 @@ proc destroyLinks { eid links linkCount w } {
 	    continue
 	}
 
-	set lnode1 [lindex [linkPeers $link] 0]
-	set lnode2 [lindex [linkPeers $link] 1]
+	set lnode1 [lindex [getLinkPeers $link] 0]
+	set lnode2 [lindex [getLinkPeers $link] 1]
 
 	set msg "Destroying link $link"
 	set mirror_link [getLinkMirror $link]
@@ -179,7 +179,7 @@ proc destroyLinks { eid links linkCount w } {
 
 	    set msg "Destroying link $link/$mirror_link"
 
-	    set lnode2 [lindex [linkPeers $mirror_link] 0]
+	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
 	}
 
 	try {

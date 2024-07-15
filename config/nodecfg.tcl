@@ -207,9 +207,6 @@
 # ifcList { node_id }
 #	Returns a list of all interfaces present in a node.
 #
-# peerByIfc { node_id ifc }
-#	Returns id of the node on the other side of the interface
-#
 # logicalPeerByIfc { node_id ifc }
 #	Returns id of the logical node on the other side of the interface.
 #
@@ -989,7 +986,6 @@ proc setIfcIPv4addrs { node_id iface addrs } {
     cfgSet "nodes" $node_id $group $iface "ipv4_addrs" $addrs
 }
 
-
 #****f* nodecfg.tcl/getIfcType
 # NAME
 #   getIfcType -- get logical interface type
@@ -1128,7 +1124,7 @@ proc getNodeStolenIfaces { node_id } {
 #   * ifc -- interface name.
 # RESULT
 #   * addr -- first IPv6 address on the interface
-#    
+#
 #****
 proc getIfcIPv6addr { node_id iface } {
     return [lindex [getIfcIPv6addrs $node_id $iface] 0]
@@ -1177,6 +1173,14 @@ proc setIfcIPv6addrs { node_id iface addrs } {
     }
 
     cfgSet "nodes" $node_id $group $iface "ipv6_addrs" $addrs
+}
+
+proc getIfcPeer { node_id iface } {
+    return [cfgGet "nodes" $node_id "ifaces" $iface "peer"]
+}
+
+proc setIfcPeer { node_id iface peer } {
+    cfgSet "nodes" $node_id "ifaces" $iface "peer" $peer
 }
 
 #****f* nodecfg.tcl/getIfcLinkLocalIPv6addr
@@ -1845,25 +1849,6 @@ proc allIfcList { node_id } {
     return [concat [logIfcList $node_id] [ifcList $node_id]]
 }
 
-#****f* nodecfg.tcl/peerByIfc
-# NAME
-#   peerByIfc -- get node's peer by interface.
-# SYNOPSIS
-#   set peer [peerByIfc $node $ifc]
-# FUNCTION
-#   Returns id of the node on the other side of the interface. If the node on
-#   the other side of the interface is situated on the other canvas or
-#   connected via split link, this function returns a pseudo node.
-# INPUTS
-#   * node -- node id
-#   * ifc -- interface name
-# RESULT
-#   * peer -- node id of the node on the other side of the interface
-#****
-proc peerByIfc { node_id iface } {
-    return [cfgGet "nodes" $node_id "ifaces" $iface "peer"]
-}
-
 #****f* nodecfg.tcl/logicalPeerByIfc
 # NAME
 #   logicalPeerByIfc -- get node's peer by interface.
@@ -1872,7 +1857,7 @@ proc peerByIfc { node_id iface } {
 # FUNCTION
 #   Returns id of the node on the other side of the interface. If the node on
 #   the other side of the interface is connected via normal link (not split)
-#   this function acts the same as the function peerByIfc, but if the nodes
+#   this function acts the same as the function getIfcPeer, but if the nodes
 #   are connected via split links or situated on different canvases this
 #   function returns the logical peer node.
 # INPUTS
@@ -1882,13 +1867,14 @@ proc peerByIfc { node_id iface } {
 #   * peer -- node id of the node on the other side of the interface
 #****
 proc logicalPeerByIfc { node_id iface } {
-    set peer [peerByIfc $node_id $iface]
+    set peer [getIfcPeer $node_id $iface]
     if { [nodeType $peer] != "pseudo" } {
 	return $peer
     } else {
 	set mirror_node [getNodeMirror $peer]
 	set mirror_ifc [ifcList $mirror_node]
-	return [peerByIfc $mirror_node $mirror_ifc]
+
+	return [getIfcPeer $mirror_node $mirror_ifc]
     }
 }
 
@@ -1896,7 +1882,7 @@ proc logicalPeerByIfc { node_id iface } {
 # NAME
 #   ifcByPeer -- get node interface by peer.
 # SYNOPSIS
-#   set ifc [peerByIfc $node $peer]
+#   set ifc [ifcByPeer $node $peer]
 # FUNCTION
 #   Returns the name of the interface connected to the specified peer. If the
 #   peer node is on different canvas or connected via split link to the
@@ -1923,7 +1909,7 @@ proc ifcByPeer { node_id peer_id } {
 # NAME
 #   ifcByPeer -- get node interface by peer.
 # SYNOPSIS
-#   set ifc [peerByIfc $node $peer]
+#   set ifc [ifcByLogicalPeer $node $peer]
 # FUNCTION
 #   Returns the name of the interface connected to the specified peer. Returns
 #   the right interface even if the peer node is on the other canvas or
@@ -1941,10 +1927,10 @@ proc ifcByLogicalPeer { node_id peer_id } {
 	# Must search through pseudo peers
 	#
 	foreach iface [ifcList $node_id] {
-	    set t_peer [peerByIfc $node_id $iface]
+	    set t_peer [getIfcPeer $node_id $iface]
 	    if { [nodeType $t_peer] == "pseudo" } {
 		set mirror [getNodeMirror $t_peer]
-		if { [peerByIfc $mirror [ifcList $mirror]] == $peer_id } {
+		if { [getIfcPeer $mirror [ifcList $mirror]] == $peer_id } {
 		    return $iface
 		}
 	    }
@@ -2021,7 +2007,7 @@ proc removeNode { node_id } {
     }
 
     foreach ifc [ifcList $node_id] {
-	set peer_id [peerByIfc $node_id $ifc]
+	set peer_id [getIfcPeer $node_id $ifc]
 	set link [linkByPeers $node_id $peer_id]
 	removeLink $link
     }

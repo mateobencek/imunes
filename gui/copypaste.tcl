@@ -83,7 +83,7 @@ proc copySelection {} {
 	clipboardSet "nodes" $node_id [cfgGet "nodes" $node_id]
 
 	foreach iface [ifcList $node_id] {
-	    set peer [peerByIfc $node_id $iface]
+	    set peer [getIfcPeer $node_id $iface]
 	    if { $peer ni $clipboard_node_list } {
 		clipboardUnset "nodes" $node_id "ifaces" $iface
 		continue
@@ -170,7 +170,7 @@ proc paste {} {
 	set new_node_id $node_map($node_orig)
 
 	foreach iface [ifcList $new_node_id] {
-	    set new_peer_id $node_map([peerByIfc $new_node_id $iface])
+	    set new_peer_id $node_map([getIfcPeer $new_node_id $iface])
 	    cfgSet "nodes" $new_node_id "ifaces" $iface "peer" $new_peer_id
 
 	    if { $cutNodes == 0 } {
@@ -198,7 +198,7 @@ proc paste {} {
 	cfgSet "links" $new_link_id $link_orig_cfg
 	lappendToRunning "link_list" $new_link_id
 
-	set old_peers [linkPeers $new_link_id]
+	set old_peers [getLinkPeers $new_link_id]
 	set new_peers \
 	    "$node_map([lindex $old_peers 0]) $node_map([lindex $old_peers 1])"
 

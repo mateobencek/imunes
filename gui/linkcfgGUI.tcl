@@ -89,8 +89,8 @@ proc link.configGUI { c link } {
     global configelements
     set configelements {}
 
-    set n0 [lindex [linkPeers $link] 0]
-    set n1 [lindex [linkPeers $link] 1]
+    set n0 [lindex [getLinkPeers $link] 0]
+    set n1 [lindex [getLinkPeers $link] 1]
     set name0 [getNodeName $n0]
     set name1 [getNodeName $n1]
 
@@ -194,8 +194,8 @@ proc configGUI_applyButtonLink { wi link phase } {
 #   * link - link id
 #****
 proc configGUI_linkFromTo { wi link } {
-    set n0 [lindex [linkPeers $link] 0]
-    set n1 [lindex [linkPeers $link] 1]
+    set n0 [lindex [getLinkPeers $link] 0]
+    set n1 [lindex [getLinkPeers $link] 1]
     set name0 [getNodeName $n0]
     set name1 [getNodeName $n1]
 
@@ -295,8 +295,8 @@ proc configGUI_linkColor { wi link } {
 proc linkJitterConfigGUI { c link } {
     global wi badentry up_jitmode down_jitmode
 
-    set n0 [lindex [linkPeers $link] 0]
-    set n1 [lindex [linkPeers $link] 1]
+    set n0 [lindex [getLinkPeers $link] 0]
+    set n1 [lindex [getLinkPeers $link] 1]
     set name0 [getNodeName $n0]
     set name1 [getNodeName $n1]
 

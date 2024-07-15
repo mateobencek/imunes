@@ -38,9 +38,6 @@
 #
 # NOTES
 #
-# linkPeers { link_id }
-#	Returns nodes of link endpoints
-#
 # linkByPeers { node1 node2 }
 #	Returns link whose peers are node1 and node2
 #
@@ -70,22 +67,6 @@
 # GUI any updating of related Tk objects (such as text labels etc.) will
 # have to be implemented by additional Tk code.
 #****
-
-#****f* linkcfg.tcl/linkPeers
-# NAME
-#   linkPeers -- get link's peer nodes
-# SYNOPSIS
-#   set link_peers [linkPeers $link_id]
-# FUNCTION
-#   Returns nodes of link endpoints.
-# INPUTS
-#   * link_id -- link id
-# RESULT
-#   * link_peers -- returns nodes of a link endpoints in a list {node1 node2}
-#****
-proc linkPeers { link_id } {
-    return [cfgGet "links" $link_id "peers"]
-}
 
 #****f* linkcfg.tcl/linkByPeers
 # NAME
@@ -125,7 +106,7 @@ proc linkByPeers { node1 node2 } {
 #   * link_id -- link id
 #****
 proc removeLink { link_id } {
-    set pnodes [linkPeers $link_id]
+    set pnodes [getLinkPeers $link_id]
     foreach node_id $pnodes {
 	set peer [removeFromList $pnodes $node_id]
 	set iface [ifcByPeer $node_id $peer]
@@ -920,11 +901,9 @@ proc newLink { lnode1 lnode2 } {
 #   * link -- link id.
 #****
 proc linkByIfc { node ifc } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-
-    set peer [peerByIfc $node $ifc]
-    foreach link $link_list {
-	set endpoints [linkPeers $link]
+    set peer [getIfcPeer $node $ifc]
+    foreach link [getFromRunning "link_list"] {
+	set endpoints [getLinkPeers $link]
 	if { $endpoints == "$node $peer" } {
 	    set dir downstream
 	    break
