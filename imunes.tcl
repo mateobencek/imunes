@@ -234,6 +234,7 @@ set cf::clipboard::link_list {}
 set cf::clipboard::annotation_list {}
 set cf::clipboard::canvas_list {}
 set cf::clipboard::image_list {}
+set cf::clipboard::dict_cfg [dict create]
 
 set cfg_list {}
 set curcfg ""

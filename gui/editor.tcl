@@ -530,7 +530,7 @@ proc routerDefaultsApply { wi } {
 proc setCustomIcon { node iconName } {
     upvar 0 ::cf::[set ::curcfg]::$node $node
     global $iconName
-    
+
     set i [lsearch [set $node] "customIcon *"]
     if { $i >= 0 } {
 	set $node [lreplace [set $node] $i $i "customIcon $iconName"]
@@ -549,11 +549,6 @@ proc setCustomIcon { node iconName } {
 # INPUTS
 #   * node -- node to get the icon from
 #****
-proc getCustomIcon { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    return [lindex [lsearch -inline [set $node] "customIcon *"] 1]
-}
 proc getCustomIcon { node_id } {
     return [cfgGet "nodes" $node_id "custom_icon"]
 }

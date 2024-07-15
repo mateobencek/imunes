@@ -76,9 +76,9 @@ proc redrawAll {} {
 
     .panwin.f1.c lower -withtags background
 
-    foreach node [getFromRunning "node_list"] {
-	if { [getNodeCanvas $node] == $curcanvas } {
-	    drawNode $node
+    foreach node_id [getFromRunning "node_list"] {
+	if { [getNodeCanvas $node_id] == $curcanvas } {
+	    drawNode $node_id
 	}
     }
     foreach link [getFromRunning "link_list"] {
@@ -909,8 +909,7 @@ proc popupIconApply { dialog image } {
 #   Updates custom icon references.
 #****
 proc updateCustomIconReferences {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    foreach node $node_list {
+    foreach node [getFromRunning "node_list"] {
 	set icon [getCustomIcon $node]
 	if { $icon != "" } {
 	    setImageReference $icon $node

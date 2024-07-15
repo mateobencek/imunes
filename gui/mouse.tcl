@@ -283,6 +283,7 @@ proc selectedRealNodes {} {
 	}
 	lappend selected $node
     }
+
     return $selected
 }
 
@@ -1900,9 +1901,9 @@ proc changeAddressRange {} {
     set autorenumber_nodes ""
 
     #spremanje svih selektiranih link_layer cvorova u listu link_nodes_selected
-    foreach node [lsort -dictionary $selected_nodes] {
-	if { [[typemodel $node].layer] == "LINK" } {
-	    lappend link_nodes_selected $node
+    foreach node_id [lsort -dictionary $selected_nodes] {
+	if { [[typemodel $node_id].layer] == "LINK" } {
+	    lappend link_nodes_selected $node_id
 	}
     }
 
@@ -1924,7 +1925,7 @@ proc changeAddressRange {} {
 	    set autorenumber_nodes ""
 	    foreach ifc [ifcList $node] {
 		set peer [peerByIfc $node $ifc]
-		if { [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
+		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
 		    set peer_ifc [ifcByPeer $peer $node]
 		    lappend autorenumber_nodes "$peer $peer_ifc"
 		}
@@ -1952,7 +1953,7 @@ proc changeAddressRange {} {
 	if { [[typemodel $node].layer] != "LINK" } {
 	    foreach ifc [ifcList $node] {
 		set peer [peerByIfc $node $ifc]
-		if { [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
+		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
 		    lappend autorenumber_ifcs "$node $ifc"
 		    if { [lsearch $autorenumber_nodes $node] == -1 } {
 			lappend autorenumber_nodes $node
@@ -2042,7 +2043,7 @@ proc changeAddressRange6 {} {
 	    set autorenumber_nodes ""
 	    foreach ifc [ifcList $node] {
 		set peer [peerByIfc $node $ifc]
-		if { [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
+		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
 		    set peer_ifc [ifcByPeer $peer $node]
 		    lappend autorenumber_nodes "$peer $peer_ifc"
 		}
@@ -2070,7 +2071,7 @@ proc changeAddressRange6 {} {
 	if { [[typemodel $node].layer] != "LINK" } {
 	    foreach ifc [ifcList $node] {
 		set peer [peerByIfc $node $ifc]
-		if { [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
+		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
 		    lappend autorenumber_ifcs "$node $ifc"
 		    if { [lsearch $autorenumber_nodes $node] == -1 } {
 			lappend autorenumber_nodes $node

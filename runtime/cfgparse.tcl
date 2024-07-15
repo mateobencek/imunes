@@ -1254,11 +1254,63 @@ proc cfgSet { args } {
 proc cfgLappend { args } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    return [dictLappend $dict_cfg {*}$args]
+    set dict_cfg [dictLappend $dict_cfg {*}$args]
+
+    return $dict_cfg
 }
 
 proc cfgUnset { args } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+    for {set i 0} {$i < [llength $args]} {incr i} {
+	set dict_cfg [dictUnset $dict_cfg {*}[lrange $args 0 end-$i]]
+
+	set new_upper [dictGet $dict_cfg {*}[lrange $args 0 end-[expr $i+1]]]
+	if { $new_upper != "" } {
+	    break
+	}
+    }
+
+    return $dict_cfg
+}
+
+proc clipboardGet { args } {
+    upvar 0 ::cf::clipboard::dict_cfg dict_cfg
+
+    return [dictGet $dict_cfg {*}$args]
+}
+
+proc clipboardSet { args } {
+    upvar 0 ::cf::clipboard::dict_cfg dict_cfg
+
+    if { [lindex $args end] in {{} ""} } {
+	for {set i 1} {$i < [llength $args]} {incr i} {
+	    set dict_cfg [dictUnset $dict_cfg {*}[lrange $args 0 end-$i]]
+
+	    set new_upper [dictGet $dict_cfg {*}[lrange $args 0 end-[expr $i+1]]]
+	    if { $new_upper != "" } {
+		break
+	    }
+	}
+    } elseif { [dict exists $dict_cfg {*}$args] } {
+	set dict_cfg [dictUnset $dict_cfg {*}$args]
+    } else {
+	set dict_cfg [dictSet $dict_cfg {*}$args]
+    }
+
+    return $dict_cfg
+}
+
+proc clipboardLappend { args } {
+    upvar 0 ::cf::clipboard::dict_cfg dict_cfg
+
+    set dict_cfg [dictLappend $dict_cfg {*}$args]
+
+    return $dict_cfg
+}
+
+proc clipboardUnset { args } {
+    upvar 0 ::cf::clipboard::dict_cfg dict_cfg
 
     for {set i 0} {$i < [llength $args]} {incr i} {
 	set dict_cfg [dictUnset $dict_cfg {*}[lrange $args 0 end-$i]]
