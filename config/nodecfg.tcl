@@ -2006,10 +2006,8 @@ proc removeNode { node_id } {
 	removeImageReference [getCustomIcon $node_id] $node_id
     }
 
-    foreach ifc [ifcList $node_id] {
-	set peer_id [getIfcPeer $node_id $ifc]
-	set link [linkByPeers $node_id $peer_id]
-	removeLink $link
+    foreach iface [ifcList $node_id] {
+	removeLink [linkByPeers $node_id [getIfcPeer $node_id $iface]]
     }
 
     setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]

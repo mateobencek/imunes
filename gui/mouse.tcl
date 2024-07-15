@@ -25,9 +25,9 @@ proc animateCursor {} {
     update
 }
 
-#****f* editor.tcl/removeGUILink
+#****f* editor.tcl/removeLinkGUI
 # NAME
-#   removeGUILink -- remove link from GUI
+#   removeLinkGUI -- remove link from GUI
 # SYNOPSIS
 #   renoveGUILink $link_id $atomic
 # FUNCTION
@@ -35,45 +35,47 @@ proc animateCursor {} {
 #   split links and links connecting nodes on different canvases.
 # INPUTS
 #   * link_id -- the link id
-#   * atomic -- defines if the remove was atomic action or a part 
-#     of a composed, non-atomic action (relevant for updating log 
+#   * atomic -- defines if the remove was atomic action or a part
+#     of a composed, non-atomic action (relevant for updating log
 #     for undo).
 #****
-proc removeGUILink { link atomic } {
+proc removeLinkGUI { link_id atomic } {
     global changed
 
-    set nodes [getLinkPeers $link]
-    set node1 [lindex $nodes 0]
-    set node2 [lindex $nodes 1]
-    if {[getNodeType $node1] == "wlan" || [getNodeType $node2] == "wlan"} {
-	removeLink $link
+    # this data needs to be fetched before we removeLink
+    set mirror_link_id [getLinkMirror $link_id]
+    lassign [getLinkPeers $link_id] node1 node2
+    if { $mirror_link_id != "" } {
+	set mirror_node_id [getNodeMirror $node1]
+    }
+
+    # TODO: check this when wlan node turn comes
+    if { [getNodeType $node1] == "wlan" || [getNodeType $node2] == "wlan" } {
+	removeLink $link_id
 	return
     }
-    if { [getNodeType $node1] == "pseudo" } {
-	removeLink [getLinkMirror $link]
-	removeLink $link
-	removeNode [getNodeMirror $node1]
-	removeNode $node1
+
+    removeLink $link_id
+    .panwin.f1.c delete $link_id
+
+    if { $mirror_link_id != "" } {
+	# remove mirror link from GUI
+	.panwin.f1.c delete $mirror_link_id
+
+	# remove pseudo nodes from GUI
 	.panwin.f1.c delete $node1
-    } elseif { [getNodeType $node2] == "pseudo" } {
-	removeLink [getLinkMirror $link]
-	removeLink $link
-	removeNode [getNodeMirror $node2]
-	removeNode $node2
-	.panwin.f1.c delete $node2
-    } else {
-	removeLink $link
+	.panwin.f1.c delete $mirror_node_id
     }
-    .panwin.f1.c delete $link
+
     if { $atomic == "atomic" } {
 	set changed 1
 	updateUndoLog
     }
 }
 
-#****f* editor.tcl/removeGUINode
+#****f* editor.tcl/removeNodeGUI
 # NAME
-#   removeGUINode -- remove node from GUI
+#   removeNodeGUI -- remove node from GUI
 # SYNOPSIS
 #   renoveGUINode $node_id
 # FUNCTION
@@ -82,21 +84,13 @@ proc removeGUILink { link atomic } {
 # INPUTS
 #   * node_id -- node id
 #****
-proc removeGUINode { node } {
-    set type [getNodeType $node]
-    foreach ifc [ifcList $node] {
-	set peer [getIfcPeer $node $ifc]
-	set link [linkByPeers $node $peer]
-	set mirror [getLinkMirror $link]
-	removeGUILink $link non-atomic
-	if {$mirror != ""} {
-	    removeGUILink $mirror non-atomic
-	}
+proc removeNodeGUI { node_id } {
+    foreach iface [ifcList $node_id] {
+	removeLinkGUI [linkByPeers $node_id [getIfcPeer $node_id $iface]] non-atomic
     }
-    if { $type != "pseudo" } {
-	removeNode $node
-	.panwin.f1.c delete $node
-    }
+
+    removeNode $node_id
+    .panwin.f1.c delete $node_id
 }
 
 #****f* editor.tcl/splitGUILink
@@ -380,7 +374,7 @@ proc button3link { c x y } {
     #
     if { $oper_mode != "exec" } {
 	.button3menu add command -label "Delete" \
-	    -command "removeGUILink $link atomic"
+	    -command "removeLinkGUI $link atomic"
     } else {
 	.button3menu add command -label "Delete" \
 	    -state disabled
@@ -1793,7 +1787,7 @@ proc deleteSelection {} {
 
     foreach lnode [selectedNodes] {
 	if { $lnode != "" } {
-	    removeGUINode $lnode
+	    removeNodeGUI $lnode
 	}
 	if { [isAnnotation $lnode] } {
 	    deleteAnnotation [getFromRunning "curcanvas"] [getNodeType $lnode] $lnode

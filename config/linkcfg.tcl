@@ -107,21 +107,24 @@ proc linkByPeers { node1 node2 } {
 #****
 proc removeLink { link_id } {
     set pnodes [getLinkPeers $link_id]
-    foreach node_id $pnodes {
-	set peer [removeFromList $pnodes $node_id]
-	set iface [ifcByPeer $node_id $peer]
-
-	if { [typemodel $node_id] in "extelem"} {
+    foreach node_id $pnodes iface [getLinkPeersIfaces $link_id] {
+	if { [getNodeType $node_id] in "extelem"} {
 	    cfgUnset "nodes" $node_id "ifaces" $iface
 	    continue
 	}
 
+	set ipv4_used_list [getFromRunning "ipv4_used_list"]
 	foreach addr [getIfcIPv4addrs $node_id $iface] {
-	    setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] $addr]
+	    set ipv4_used_list [removeFromList $ipv4_used_list $addr]
 	}
+	setToRunning "ipv4_used_list" $ipv4_used_list
+
+	set ipv6_used_list [getFromRunning "ipv6_used_list"]
 	foreach addr [getIfcIPv6addrs $node_id $iface] {
-	    setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] $addr]
+	    set ipv6_used_list [removeFromList $ipv6_used_list $addr]
 	}
+	setToRunning "ipv6_used_list" $ipv6_used_list
+
 	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $node_id $iface]]
 
 	cfgUnset "nodes" $node_id "ifaces" $iface
@@ -134,6 +137,19 @@ proc removeLink { link_id } {
 		    }
 		}
 	    }
+	}
+    }
+
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	setLinkMirror $mirror_link_id ""
+	removeLink $mirror_link_id
+    }
+
+    foreach node_id $pnodes {
+	if { [getNodeType $node_id] == "pseudo" } {
+	    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
+	    cfgUnset "nodes" $node_id
 	}
     }
 
