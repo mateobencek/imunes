@@ -105,7 +105,7 @@ proc newProject {} {
     setToRunning "stop_sched" true
     setToRunning "undolevel" 0
     setToRunning "redolevel" 0
-    setToUndolog 0 $dict_cfg
+    setToUndolog 0
     setToRunning "zoom" 1.0
     setToRunning "canvas_list" {}
     lassign [newCanvas ""] curcanvas {}
@@ -151,7 +151,7 @@ proc updateProjectMenu {} {
 proc switchProject {} {
     global curcfg showTree
 
-    if {$curcfg == 0} {
+    if { $curcfg == 0 } {
         set curcfg "c0"
     }
 
@@ -226,7 +226,7 @@ proc openFile {} {
     setToRunning "stop_sched" true
     setToRunning "undolevel" 0
     setToRunning "redolevel" 0
-    setToUndolog 0 $dict_cfg
+    setToUndolog 0
     setActiveTool select
     updateProjectMenu
     setWmTitle $current_file
@@ -313,8 +313,8 @@ proc fileSaveAsDialogBox {} {
     global file_types
 
     set current_file [getFromRunning "current_file"]
-    set selected_file [tk_getSaveFile -filetypes $file_types -initialfile\
-	       untitled -defaultextension .imn]
+    set selected_file [tk_getSaveFile -filetypes $file_types -initialfile \
+	untitled -defaultextension .imn]
 
     saveFile $selected_file
 }
@@ -330,34 +330,29 @@ proc fileSaveAsDialogBox {} {
 proc closeFile {} {
     global cfg_list curcfg
 
-    set new_cfg_list ""
-    if { [llength $cfg_list] > 1 } {
-        set indexes [lsearch -not -all -exact $cfg_list $curcfg]
-        foreach ind $indexes {
-            lappend new_cfg_list [lindex $cfg_list $ind]
-        }
-        set cfg_list $new_cfg_list
+    set idx [lsearch -exact $cfg_list $curcfg]
+    set cfg_list [removeFromList $cfg_list $curcfg]
+    set len [llength $cfg_list]
+    if { $len > 0 } {
+	if { $idx > $len } {
+	    set idx [expr $len - 1]
+	} elseif { $idx != 0 } {
+	    incr idx -1
+	}
+        set curcfg [lindex $cfg_list $idx]
 
-        set cfg [lindex $cfg_list 0]
-        loadCfg $cfg
-        set curcfg $cfg
-
-        upvar 0 ::cf::[set ::curcfg]::canvas_list canvas_list
-        upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-        upvar 0 ::cf::[set ::curcfg]::undolevel undolevel
-        upvar 0 ::cf::[set ::curcfg]::redolevel redolevel
-        upvar 0 ::cf::[set ::curcfg]::undolog undolog
-        upvar 0 ::cf::[set ::curcfg]::current_file current_file
-
-        set curcanvas [lindex $canvas_list 0]
+	setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
         switchCanvas none
-        set undolevel 0
-        set redolevel 0
-        set undolog(0) $cfg
-        setActiveTool select
-        updateProjectMenu
-        switchProject
+	setToRunning "undolevel" 0
+	setToRunning "redolevel" 0
+	setToUndolog 0
+    } else {
+	newProject
     }
+
+    setActiveTool select
+    updateProjectMenu
+    switchProject
 }
 
 #****f* filemgmt.tcl/readConfigFile

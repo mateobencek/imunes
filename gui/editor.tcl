@@ -45,8 +45,14 @@
 #   Updates the undo log. Writes the current configuration to the 
 #   undolog array and updates the undolevel variable.
 #****
+# BUG
+# 'Redo' visible after changing the config when not in top undolevel
+# Repro:
+#  1. add any node
+#  2. click Undo
+#  3. add any node
+# Should reset redolog when changing config from somewhere in undolog
 proc updateUndoLog {} {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
     global changed showTree
 
     set undolevel [getFromRunning "undolevel"]
@@ -57,7 +63,7 @@ proc updateUndoLog {} {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	}
 
-	setToUndolog $undolevel $dict_cfg
+	setToUndolog $undolevel
 	setToRunning "redolevel" $undolevel
 	set changed 0
 	# When some changes are made in the topology, new /etc/hosts files

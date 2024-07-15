@@ -282,6 +282,7 @@ set printFileType ps
 .menubar.file add command -label "Print To File" -underline 9 \
   -command {
     global winOS
+
     set w .entry1
     catch {destroy $w}
     toplevel $w
@@ -290,7 +291,6 @@ set printFileType ps
     wm title $w "Printing options"
     wm iconname $w "Printing options"
 
-    #dodan glavni frame "printframe"
     ttk::frame $w.printframe
     pack $w.printframe -fill both -expand 1
 
@@ -304,10 +304,10 @@ set printFileType ps
 
     ttk::frame $w.printframe.path
 
-    if {$winOS} {
+    if { $winOS } {
 	$w.printframe.pdf configure -state disabled
     } else {
-      catch {exec ps2pdf} msg
+      catch { exec ps2pdf } msg
       if { [string match *ps2pdfwr* $msg] != 1 } {
 	  $w.printframe.pdf configure -state disabled
       }
@@ -318,6 +318,7 @@ set printFileType ps
     ttk::button $w.printframe.path.browse -text "Browse" -width 8 \
 	-command {
 	    global printFileType
+
 	    set printdest [tk_getSaveFile -initialfile print \
 	      -defaultextension .$printFileType]
 	    $w.printframe.path.e1 insert 0 $printdest

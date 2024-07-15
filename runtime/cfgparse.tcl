@@ -1305,8 +1305,13 @@ proc getFromUndolog { undolevel } {
     return [dictGet $dict_run "undolog" $undolevel]
 }
 
-proc setToUndolog { undolevel value } {
+proc setToUndolog { undolevel { value "" } } {
     upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+    if { $value == "" } {
+	set value $dict_cfg
+    }
 
     set dict_run [dictSet $dict_run "undolog" $undolevel $value]
 
