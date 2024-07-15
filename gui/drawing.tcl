@@ -569,22 +569,15 @@ proc newGUILink { lnode1 lnode2 } {
     if { $link == "" } {
 	return
     }
+
     if { [getNodeCanvas $lnode1] != [getNodeCanvas $lnode2] } {
-	set new_nodes [splitLink $link pseudo]
-	set orig_nodes [linkPeers $link]
-	set new_node1 [lindex $new_nodes 0]
-	set new_node2 [lindex $new_nodes 1]
-	set orig_node1 [lindex $orig_nodes 0]
-	set orig_node2 [lindex $orig_nodes 1]
-	set new_link1 [linkByPeers $orig_node1 $new_node1]
-	set new_link2 [linkByPeers $orig_node2 $new_node2]
-	setNodeMirror $new_node1 $new_node2
-	setNodeMirror $new_node2 $new_node1
+	lassign [getLinkPeers $link] orig_node1 orig_node2
+	lassign [splitLink $link] new_node1 new_node2
+
 	setNodeName $new_node1 $orig_node2
 	setNodeName $new_node2 $orig_node1
-	setLinkMirror $new_link1 $new_link2
-	setLinkMirror $new_link2 $new_link1
     }
+
     redrawAll
     set changed 1
     updateUndoLog

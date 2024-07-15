@@ -56,7 +56,7 @@ proc linkConfigGUI { c link } {
 #   * link - link id
 #****
 proc toggleDirectLink { c link } {
-    if {$link == ""} {
+    if { $link == "" } {
 	set link [lindex [$c gettags current] 1]
     }
 

@@ -115,23 +115,11 @@ proc splitGUILink { link } {
 
     set zoom [getFromRunning "zoom"]
 
-    set peer_nodes [linkPeers $link]
-    set new_nodes [splitLink $link pseudo]
-    set orig_node1 [lindex $peer_nodes 0]
-    set orig_node2 [lindex $peer_nodes 1]
-    set new_node1 [lindex $new_nodes 0]
-    set new_node2 [lindex $new_nodes 1]
-    set new_link1 [linkByPeers $orig_node1 $new_node1]
-    set new_link2 [linkByPeers $orig_node2 $new_node2]
-    setLinkMirror $new_link1 $new_link2
-    setLinkMirror $new_link2 $new_link1
-    setNodeMirror $new_node1 $new_node2
-    setNodeMirror $new_node2 $new_node1
+    lassign [linkPeers $link] orig_node1 orig_node2
+    lassign [splitLink $link] new_node1 new_node2
 
-    set x1 [lindex [getNodeCoords $orig_node1] 0]
-    set y1 [lindex [getNodeCoords $orig_node1] 1]
-    set x2 [lindex [getNodeCoords $orig_node2] 0]
-    set y2 [lindex [getNodeCoords $orig_node2] 1]
+    lassign [getNodeCoords $orig_node1] x1 y1
+    lassign [getNodeCoords $orig_node2] x2 y2
 
     setNodeCoords $new_node1 \
 	"[expr {($x1 + 0.4 * ($x2 - $x1)) / $zoom}] \
@@ -461,17 +449,13 @@ proc movetoCanvas { canvas } {
 		}
 		continue
 	    }
-	    set new_nodes [splitLink $link pseudo]
+	    set new_nodes [splitLink $link]
 	    set new_node1 [lindex $new_nodes 0]
 	    set new_node2 [lindex $new_nodes 1]
-	    setNodeMirror $new_node1 $new_node2
-	    setNodeMirror $new_node2 $new_node1
 	    setNodeName $new_node1 $peer2
 	    setNodeName $new_node2 $peer1
 	    set link1 [linkByPeers $peer1 $new_node1]
 	    set link2 [linkByPeers $peer2 $new_node2]
-	    setLinkMirror $link1 $link2
-	    setLinkMirror $link2 $link1
 	}
     }
     updateUndoLog
@@ -492,7 +476,7 @@ proc movetoCanvas { canvas } {
 #   * node -- node id of a pseudo node.
 #****
 proc mergeGUINode { node } {
-    set link [lindex [linkByIfc $node [ifcList $node]] 0]
+    set link [lindex [linkByIfc $node "0"] 0]
     mergeLink $link
     redrawAll
 }
@@ -636,22 +620,22 @@ proc button3node { c x y } {
 	-label "Random" -command "R \[selectedRealNodes\] \
 	\[expr \[llength \[selectedRealNodes\]\] - 1\]"
     .button3menu.connect add separator
-    foreach canvas $canvas_list {
-	destroy .button3menu.connect.$canvas
-	menu .button3menu.connect.$canvas -tearoff 0
-	.button3menu.connect add cascade -label [getCanvasName $canvas] \
-	    -menu .button3menu.connect.$canvas
+    foreach canvas_id $canvas_list {
+	destroy .button3menu.connect.$canvas_id
+	menu .button3menu.connect.$canvas_id -tearoff 0
+	.button3menu.connect add cascade -label [getCanvasName $canvas_id] \
+	    -menu .button3menu.connect.$canvas_id
     }
     foreach peer_node [getFromRunning "node_list"] {
-	set canvas [getNodeCanvas $peer_node]
+	set canvas_id [getNodeCanvas $peer_node]
 	if { $type != "rj45" &&
 	    [lsearch {pseudo rj45} [nodeType $peer_node]] < 0 &&
 	    [ifcByLogicalPeer $node $peer_node] == "" } {
-	    .button3menu.connect.$canvas add command \
+	    .button3menu.connect.$canvas_id add command \
 		-label [getNodeName $peer_node] \
 		-command "connectWithNode \"[selectedRealNodes]\" $peer_node"
 	} elseif { [nodeType $peer_node] != "pseudo" } {
-	    .button3menu.connect.$canvas add command \
+	    .button3menu.connect.$canvas_id add command \
 		-label [getNodeName $peer_node] \
 		-state disabled
 	}
@@ -668,14 +652,14 @@ proc button3node { c x y } {
 	.button3menu add cascade -label "Move to" \
 	    -menu .button3menu.moveto
 	.button3menu.moveto add command -label "Canvas:" -state disabled
-	foreach canvas $canvas_list {
-	    if { $canvas != $curcanvas } {
+	foreach canvas_id $canvas_list {
+	    if { $canvas_id != $curcanvas } {
 		.button3menu.moveto add command \
-		    -label [getCanvasName $canvas] \
-		    -command "movetoCanvas $canvas"
+		    -label [getCanvasName $canvas_id] \
+		    -command "movetoCanvas $canvas_id"
 	    } else {
 		.button3menu.moveto add command \
-		    -label [getCanvasName $canvas] -state disabled
+		    -label [getCanvasName $canvas_id] -state disabled
 	    }
 	}
     }
