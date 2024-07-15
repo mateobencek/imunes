@@ -45,17 +45,17 @@ proc removeGUILink { link atomic } {
     set nodes [getLinkPeers $link]
     set node1 [lindex $nodes 0]
     set node2 [lindex $nodes 1]
-    if {[nodeType $node1] == "wlan" || [nodeType $node2] == "wlan"} {
+    if {[getNodeType $node1] == "wlan" || [getNodeType $node2] == "wlan"} {
 	removeLink $link
 	return
     }
-    if { [nodeType $node1] == "pseudo" } {
+    if { [getNodeType $node1] == "pseudo" } {
 	removeLink [getLinkMirror $link]
 	removeLink $link
 	removeNode [getNodeMirror $node1]
 	removeNode $node1
 	.panwin.f1.c delete $node1
-    } elseif { [nodeType $node2] == "pseudo" } {
+    } elseif { [getNodeType $node2] == "pseudo" } {
 	removeLink [getLinkMirror $link]
 	removeLink $link
 	removeNode [getNodeMirror $node2]
@@ -83,7 +83,7 @@ proc removeGUILink { link atomic } {
 #   * node_id -- node id
 #****
 proc removeGUINode { node } {
-    set type [nodeType $node]
+    set type [getNodeType $node]
     foreach ifc [ifcList $node] {
 	set peer [getIfcPeer $node $ifc]
 	set link [linkByPeers $node $peer]
@@ -159,18 +159,18 @@ proc selectNode { c obj } {
 	return
     }
     $c addtag selected withtag "node && $node"
-    if { [nodeType $node] == "pseudo" } {
+    if { [getNodeType $node] == "pseudo" } {
 	set bbox [$c bbox "nodelabel && $node"]
-    } elseif { [nodeType $node] == "rectangle" } {
+    } elseif { [getNodeType $node] == "rectangle" } {
 	$c addtag selected withtag "rectangle && $node"
 	set bbox [$c bbox "rectangle && $node"]
-    } elseif { [nodeType $node] == "text" } {
+    } elseif { [getNodeType $node] == "text" } {
 	$c addtag selected withtag "text && $node"
 	set bbox [$c bbox "text && $node"]
-    } elseif { [nodeType $node] == "oval" } {
+    } elseif { [getNodeType $node] == "oval" } {
 	$c addtag selected withtag "oval && $node"
 	set bbox [$c bbox "oval && $node"]
-    } elseif { [nodeType $node] == "freeform" } {
+    } elseif { [getNodeType $node] == "freeform" } {
 	$c addtag selected withtag "freeform && $node"
 	set bbox [$c bbox "freeform && $node"]
     } else {
@@ -266,7 +266,7 @@ proc selectedRealNodes {} {
     foreach obj [.panwin.f1.c find withtag "node && selected"] {
 	set node [lindex [.panwin.f1.c gettags $obj] 1]
 	if { [getNodeMirror $node] != "" ||
-	    [nodeType $node] == "rj45" } {
+	    [getNodeType $node] == "rj45" } {
 	    continue
 	}
 	lappend selected $node
@@ -440,7 +440,7 @@ proc moveToCanvas { canvas_id } {
 	lassign [getLinkPeers $link] peer1 peer2
 	if { ($peer1 ni $selected_nodes && $peer2 in $selected_nodes) || ($peer1 in $selected_nodes && $peer2 ni $selected_nodes) } {
 	    # pseudo nodes are always peer2
-	    if { [nodeType $peer1] == "pseudo" } {
+	    if { [getNodeType $peer1] == "pseudo" } {
 		setNodeCanvas $peer1 $canvas_id
 		if { [getNodeCanvas [getNodeMirror $peer1]] == $canvas_id } {
 		    mergeLink $link
@@ -524,7 +524,7 @@ proc button3node { c x y } {
 	}
     }
 
-    set type [nodeType $node]
+    set type [getNodeType $node]
     set mirror_node [getNodeMirror $node]
 
     if { [$c gettags "node && $node && selected"] == "" } {
@@ -626,12 +626,12 @@ proc button3node { c x y } {
     foreach peer_node [getFromRunning "node_list"] {
 	set canvas_id [getNodeCanvas $peer_node]
 	if { $type != "rj45" &&
-	    [lsearch {pseudo rj45} [nodeType $peer_node]] < 0 &&
+	    [lsearch {pseudo rj45} [getNodeType $peer_node]] < 0 &&
 	    [ifcByLogicalPeer $node $peer_node] == "" } {
 	    .button3menu.connect.$canvas_id add command \
 		-label [getNodeName $peer_node] \
 		-command "connectWithNode \"[selectedRealNodes]\" $peer_node"
-	} elseif { [nodeType $peer_node] != "pseudo" } {
+	} elseif { [getNodeType $peer_node] != "pseudo" } {
 	    .button3menu.connect.$canvas_id add command \
 		-label [getNodeName $peer_node] \
 		-state disabled
@@ -948,7 +948,7 @@ proc button1 { c x y button } {
     if { $curtype == "node" || $curtype == "oval" ||
 	 $curtype == "rectangle" || $curtype == "text" ||
 	 $curtype == "freeform" || ( $curtype == "nodelabel" &&
-	 [nodeType [lindex [$c gettags $curobj] 1]] == "pseudo") } {
+	 [getNodeType [lindex [$c gettags $curobj] 1]] == "pseudo") } {
 	set node [lindex [$c gettags current] 1]
 	set wasselected \
 	    [expr {[lsearch [$c find withtag "selected"] \
@@ -971,7 +971,7 @@ proc button1 { c x y button } {
 
 	set t1 [$c gettags current]
 	set o1 [lindex $t1 1]
-	set type1 [nodeType $o1]
+	set type1 [getNodeType $o1]
     
 	if {$type1== "oval" || $type1== "rectangle"} { 
 	    set resizeobj $o1
@@ -1109,7 +1109,7 @@ proc button1-motion { c x y } {
 	#creating a new link
 	$c coords $newlink $lastX $lastY $x $y
     } elseif { $activetool == "select" && $curtype == "nodelabel" \
-	&& [nodeType [lindex [$c gettags $curobj] 1]] != "pseudo" } {
+	&& [getNodeType [lindex [$c gettags $curobj] 1]] != "pseudo" } {
 	$c move $curobj [expr {$x - $lastX}] [expr {$y - $lastY}]
 	set changed 1
 	set lastX $x
@@ -1119,7 +1119,7 @@ proc button1-motion { c x y } {
     } elseif { $activetool == "select" && 
 	( $curobj == $selectbox || $curtype == "background" ||
 	$curtype == "grid" || ($curobj ni [$c find withtag "selected"] &&
-	$curtype != "selectmark") && [nodeType [lindex [$c gettags $curobj] 1]] != "pseudo")  } {
+	$curtype != "selectmark") && [getNodeType [lindex [$c gettags $curobj] 1]] != "pseudo")  } {
 	#forming the selectbox and resizing
 	if {$selectbox == ""} {
 	    set err [catch {
@@ -1703,12 +1703,12 @@ proc nodeEnter { c } {
     global activetool
     
     set node [lindex [$c gettags current] 1]
-    set err [catch {nodeType $node} error] 
+    set err [catch {getNodeType $node} error] 
     if { $err != 0 } {
 	return
     }
 
-    set type [nodeType $node]
+    set type [getNodeType $node]
     set name [getNodeName $node]
     set model [getNodeModel $node]
     if { $model != "" } {
@@ -1796,7 +1796,7 @@ proc deleteSelection {} {
 	    removeGUINode $lnode
 	}
 	if { [isAnnotation $lnode] } {
-	    deleteAnnotation [getFromRunning "curcanvas"] [nodeType $lnode] $lnode
+	    deleteAnnotation [getFromRunning "curcanvas"] [getNodeType $lnode] $lnode
 	}
 	set changed 1
     }

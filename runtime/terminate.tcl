@@ -328,7 +328,7 @@ proc terminateAllNodes { eid } {
     set allNodes {}
     set pseudoNodesCount 0
     foreach node $node_list {
-	if { [nodeType $node] != "pseudo" } {
+	if { [getNodeType $node] != "pseudo" } {
 	    if { [[typemodel $node].virtlayer] == "NETGRAPH" } {
 		if { [typemodel $node] == "rj45" } {
 		    lappend extifcs $node

@@ -65,9 +65,9 @@ proc checkExternalInterfaces {} {
 
     set nodes_ifcpairs {}
     foreach node $node_list {
-	if { [nodeType $node] == "rj45" } {
+	if { [getNodeType $node] == "rj45" } {
 	    lappend nodes_ifcpairs [list $node [list 0 [getNodeName $node]]]
-	} elseif { [nodeType $node] == "extelem" } {
+	} elseif { [getNodeType $node] == "extelem" } {
 	    foreach ifcs [getNodeStolenIfaces $node] {
 		lappend nodes_ifcpairs [list $node $ifcs]
 	    }
@@ -499,7 +499,7 @@ proc deployCfg {} {
     set allNodes {}
     set pseudoNodesCount 0
     foreach node $node_list {
-	if { [nodeType $node] != "pseudo" } {
+	if { [getNodeType $node] != "pseudo" } {
 	    if { [[typemodel $node].virtlayer] != "VIMAGE" } {
 		lappend l2nodes $node
 	    } else {
@@ -925,7 +925,7 @@ proc createLinks { links linkCount w } {
 	displayBatchProgress $batchStep $linkCount
 
 	try {
-	    if { [getLinkDirect $link] || [nodeType $lnode1] == "wlan" || [nodeType $lnode2] == "wlan" } {
+	    if { [getLinkDirect $link] || [getNodeType $lnode1] == "wlan" || [getNodeType $lnode2] == "wlan" } {
 		createDirectLinkBetween $lnode1 $lnode2 $ifname1 $ifname2
 	    } else {
 		createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link

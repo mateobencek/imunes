@@ -64,7 +64,7 @@ proc randomizeMACbytes {} {
 proc autoMACaddr { node ifc } {
     global mac_byte4 mac_byte5 mac_byte6
 
-    if { [nodeType $node] ni "ext extnat" && [[typemodel $node].virtlayer] != "VIMAGE" } {
+    if { [getNodeType $node] ni "ext extnat" && [[typemodel $node].virtlayer] != "VIMAGE" } {
 	return
     }
 

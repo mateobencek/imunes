@@ -161,7 +161,7 @@ proc redo {} {
 #****
 proc chooseIfName {lnode rnode} {
 
-    return [[nodeType $lnode].ifcName $lnode $rnode]
+    return [[getNodeType $lnode].ifcName $lnode $rnode]
 }
 
 #****f* editor.tcl/l3IfcName
@@ -179,11 +179,11 @@ proc chooseIfName {lnode rnode} {
 #****
 proc l3IfcName {lnode rnode} {
 
-    if { [nodeType $lnode] in "ext extnat" } {
+    if { [getNodeType $lnode] in "ext extnat" } {
 	return "ext"
     }
 
-    if { [nodeType $rnode] == "wlan" } {
+    if { [getNodeType $rnode] == "wlan" } {
 	return "wlan"
     } else {
 	return "eth"
@@ -209,7 +209,7 @@ proc listLANnodes { l2node l2peers } {
     lappend l2peers $l2node
     foreach ifc [ifcList $l2node] {
 	set peer [logicalPeerByIfc $l2node $ifc]
-	if {[[typemodel $peer].layer] == "LINK" &&  [nodeType $peer] != "rj45"} {
+	if {[[typemodel $peer].layer] == "LINK" &&  [getNodeType $peer] != "rj45"} {
 	    if { [lsearch $l2peers $peer] == -1 } {
 		set l2peers [listLANnodes $peer $l2peers]
 	    }
@@ -493,7 +493,7 @@ proc routerDefaultsApply { wi } {
     }
 
     foreach node_id $selected_node_list {
-	if { $oper_mode == "edit" && [nodeType $node_id] == "router" } {
+	if { $oper_mode == "edit" && [getNodeType $node_id] == "router" } {
 	    setNodeModel $node_id $router_model
 
 	    set router_ConfigModel $router_model
@@ -657,7 +657,7 @@ proc topologyElementsTree {} {
 	$f.tree focus nodes
 	$f.tree selection set nodes
 	foreach node [lsort -dictionary $node_list] {
-	    set type [nodeType $node]
+	    set type [getNodeType $node]
 	    if { $type != "pseudo" } {
 		$f.tree insert nodes end -id $node -text "[getNodeName $node]" -open false -tags $node
 		lappend nodetags $node
@@ -769,7 +769,7 @@ proc bindEventsToTree {} {
 	    .panwin.f1.c delete -withtags selectmark"
 
     foreach n $nodetags {
-	set type [nodeType $n]
+	set type [getNodeType $n]
 	global selectedIfc
 	$f.tree tag bind $n <1> \
 	      "selectNodeFromTree $n"
@@ -890,7 +890,7 @@ proc refreshTopologyTree {} {
     set nodetags ""
     $f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
     foreach node [lsort -dictionary $node_list] {
-	set type [nodeType $node]
+	set type [getNodeType $node]
 	if { $type != "pseudo" } {
 	    $f.tree insert nodes end -id $node -text "[getNodeName $node]" -tags $node
 	    lappend nodetags $node

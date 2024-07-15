@@ -158,7 +158,7 @@ proc autoIPv6addr { node iface } {
 	set peer_ip6addrs $peer_ip6addr
     }
 
-    set targetbyte [expr 0x[[nodeType $node].IPAddrRange]]
+    set targetbyte [expr 0x[[getNodeType $node].IPAddrRange]]
 
     if { $peer_ip6addrs != "" && $changeAddrRange6 == 0 } {
 	set ipaddr  [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]

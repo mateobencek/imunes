@@ -473,7 +473,7 @@ proc elementsEventsEditor {} {
 #     set eventnodetags ""
 #     $pwi.left.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
 #     foreach node [lsort -dictionary $node_list] {
-# 	set type [nodeType $node]
+# 	set type [getNodeType $node]
 # 	if { $type != "pseudo" && [[typemodel $node].layer] == "NETWORK"} {
 # 	    $pwi.left.tree insert nodes end -id $node -text "[getNodeName $node]" -open false -tags $node
 # 	    lappend eventnodetags $node
@@ -697,7 +697,7 @@ proc bindEventsToEventEditor { pwi text } {
 # 	    "loadElementEvents [lindex $eventlinktags 0] $text" 
 #     
 #     foreach n $eventnodetags {
-# 	set type [nodeType $n]
+# 	set type [getNodeType $n]
 # 	global selectedIfc
 # 	$f.tree tag bind $n <1> \
 # 	      "loadElementEvents $n $text"   

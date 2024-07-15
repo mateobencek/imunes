@@ -15,7 +15,7 @@ set ULIMIT_PROC "1024:2048"
 #   * node -- id of the node (type of the node is either lanswitch or hub)
 #****
 proc l2node.instantiate { eid node } {
-    set type [nodeType $node]
+    set type [getNodeType $node]
 
     set ageing_time ""
     if { $type == "hub" } {
@@ -39,7 +39,7 @@ proc l2node.instantiate { eid node } {
 #   * node -- id of the node
 #****
 proc l2node.destroy { eid node } {
-    set type [nodeType $node]
+    set type [getNodeType $node]
 
     set nodeNs [getNodeNetns $eid $node]
 
@@ -436,12 +436,12 @@ proc getNodeNetns { eid node } {
     global devfs_number
 
     # Top-level experiment netns
-    if { $node in "" || [nodeType $node] in "rj45 extelem" } {
+    if { $node in "" || [getNodeType $node] in "rj45 extelem" } {
 	return $eid
     }
 
     # Global netns
-    if { [nodeType $node] in "ext extnat" } {
+    if { [getNodeType $node] in "ext extnat" } {
 	return ""
     }
 
@@ -592,12 +592,12 @@ proc isNodeNamespaceCreated { node } {
 proc createNodePhysIfcs { node ifcs } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    if { [nodeType $node] in "extelem" } {
+    if { [getNodeType $node] in "extelem" } {
 	return
     }
 
     set nodeNs [getNodeNetns $eid $node]
-    set node_type [nodeType $node]
+    set node_type [getNodeType $node]
 
     # Create "physical" network interfaces
     foreach ifc $ifcs {
@@ -819,10 +819,10 @@ proc setNsIfcMaster { netNs ifname master state } {
 proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
     upvar 0 ::cf::[set ::curcfg]::eid eid
 
-    if { [nodeType $lnode1] in "rj45 extelem" || [nodeType $lnode2] in "rj45 extelem" } {
-	if { [nodeType $lnode1] in "rj45 extelem" } {
+    if { [getNodeType $lnode1] in "rj45 extelem" || [getNodeType $lnode2] in "rj45 extelem" } {
+	if { [getNodeType $lnode1] in "rj45 extelem" } {
 	    set physical_ifc [getNodeName $lnode1]
-	    if { [nodeType $lnode1] == "extelem" } {
+	    if { [getNodeType $lnode1] == "extelem" } {
 		set ifcs [getNodeStolenIfaces $lnode1]
 		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname1"] 1]
 	    } elseif { [getEtherVlanEnabled $lnode1] } {
@@ -841,7 +841,7 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	    }
 	} else {
 	    set physical_ifc [getNodeName $lnode2]
-	    if { [nodeType $lnode2] == "extelem" } {
+	    if { [getNodeType $lnode2] == "extelem" } {
 		set ifcs [getNodeStolenIfaces $lnode2]
 		set physical_ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname2"] 1]
 	    } elseif { [getEtherVlanEnabled $lnode2] } {
@@ -879,11 +879,11 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 	return
     }
 
-    if { [nodeType $lnode1] in "ext extnat" } {
+    if { [getNodeType $lnode1] in "ext extnat" } {
 	set ifname1 $eid-$lnode1
     }
 
-    if { [nodeType $lnode2] in "ext extnat" } {
+    if { [getNodeType $lnode2] in "ext extnat" } {
 	set ifname2 $eid-$lnode2
     }
 
@@ -893,7 +893,7 @@ proc createDirectLinkBetween { lnode1 lnode2 ifname1 ifname2 } {
 
     # add nodes ifc hooks to link bridge and bring them up
     foreach node [list $lnode1 $lnode2] ifc [list $ifname1 $ifname2] ns [list $node1Ns $node2Ns] {
-	if { [[typemodel $node].virtlayer] != "NETGRAPH" || [nodeType $node] in "ext extnat" } {
+	if { [[typemodel $node].virtlayer] != "NETGRAPH" || [getNodeType $node] in "ext extnat" } {
 	    continue
 	}
 
@@ -910,13 +910,13 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     # add nodes ifc hooks to link bridge and bring them up
     foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" {
 	set ifname $node-$ifc
-	if { [nodeType $node] == "rj45" } {
+	if { [getNodeType $node] == "rj45" } {
 	    set ifname [getNodeName $node]
 	    if { [getEtherVlanEnabled $node] } {
 		set vlan [getEtherVlanTag $node]
 		set ifname $ifname.$vlan
 	    }
-	} elseif { [nodeType $node] == "extelem" } {
+	} elseif { [getNodeType $node] == "extelem" } {
 	    # won't work if the node is a wireless interface
 	    # because netns is not changed
 	    set ifcs [getNodeStolenIfaces $node]
@@ -941,7 +941,7 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
 
     # FIXME: remove this to interface configuration?
     foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" {
-	if { [nodeType $node] in "rj45 extelem" } {
+	if { [getNodeType $node] in "rj45 extelem" } {
 	    continue
 	}
 
@@ -1125,9 +1125,9 @@ proc runConfOnNode { node } {
 }
 
 proc destroyDirectLinkBetween { eid lnode1 lnode2 } {
-    if { [nodeType $lnode1] in "ext extnat" } {
+    if { [getNodeType $lnode1] in "ext extnat" } {
 	pipesExec "ip link del $eid-$lnode1"
-    } elseif { [nodeType $lnode2] in "ext extnat" } {
+    } elseif { [getNodeType $lnode2] in "ext extnat" } {
 	pipesExec "ip link del $eid-$lnode2"
     }
 }
@@ -1148,7 +1148,7 @@ proc destroyLinkBetween { eid lnode1 lnode2 link } {
 #   * vimages -- list of virtual nodes
 #****
 proc destroyNodeIfcs { eid node ifcs } {
-    if { [nodeType $node] in "ext extnat" } {
+    if { [getNodeType $node] in "ext extnat" } {
 	pipesExec "ip link del $eid-$node" "hold"
 	return
     }
@@ -1416,7 +1416,7 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
     set dir [lindex $target 1]
     set lnode1 [lindex $peers 0]
     set lnode2 [lindex $peers 1]
-    if { [nodeType $lnode2] == "pseudo" } {
+    if { [getNodeType $lnode2] == "pseudo" } {
         set mirror_link [getLinkMirror [lindex $target 0]]
         set lnode2 [lindex [getLinkPeers $mirror_link] 0]
     }
@@ -1469,9 +1469,9 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber loss dup } {
     global debug
 
     set devname $node-$ifname
-    if { [nodeType $node] == "rj45" } {
+    if { [getNodeType $node] == "rj45" } {
         set devname [getNodeName $node]
-    } elseif { [nodeType $node] == "extelem" } {
+    } elseif { [getNodeType $node] == "extelem" } {
 	set ifcs [getNodeStolenIfaces $node]
 	set devname [lindex [lsearch -inline -exact -index 0 $ifcs "$ifname"] 1]
     }
@@ -1508,7 +1508,7 @@ proc execSetLinkParams { eid link } {
 
     if { [getLinkMirror $link] != "" } {
 	set mirror_link [getLinkMirror $link]
-	if { [nodeType $lnode1] == "pseudo" } {
+	if { [getNodeType $lnode1] == "pseudo" } {
 	    set p_lnode1 $lnode1
 	    set lnode1 [lindex [getLinkPeers $mirror_link] 0]
 	    set ifname1 [ifcByPeer $lnode1 [getNodeMirror $p_lnode1]]

@@ -34,10 +34,10 @@ proc deleteAnnotation { c type target } {
     global changed
 
     set $target {}
-    
+
     set i [lsearch -exact $annotation_list $target]
     set annotation_list [lreplace $annotation_list $i $i]
-    
+
     set changed 1
     updateUndoLog
     redrawAll
@@ -56,9 +56,10 @@ proc deleteAnnotation { c type target } {
 #   * check -- 1 if the node is annotation, otherwise 0
 #****
 proc isAnnotation { node } {
-    if { [nodeType $node] in {"text" "oval" "rectangle" "freeform"} } {
+    if { [getNodeType $node] in {"text" "oval" "rectangle" "freeform"} } {
 	return 1
     }
+
     return 0
 }
 

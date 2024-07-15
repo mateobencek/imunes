@@ -114,7 +114,7 @@ proc drawNode { node_id } {
     global showNodeLabels pseudo
 
     set zoom [getFromRunning "zoom"]
-    set type [nodeType $node_id]
+    set type [getNodeType $node_id]
     lassign [getNodeCoords $node_id] x y
     set x [expr {$x * $zoom}]
     set y [expr {$y * $zoom}]
@@ -143,9 +143,9 @@ proc drawNode { node_id } {
     lassign [getNodeLabelCoords $node_id] x y
     set x [expr {$x * $zoom}]
     set y [expr {$y * $zoom}]
-    if { [nodeType $node_id] != "pseudo" } {
+    if { [getNodeType $node_id] != "pseudo" } {
 	set labelstr [getNodeName $node_id]
-	if { [nodeType $node_id] == "rj45" && [getEtherVlanEnabled $node_id] } {
+	if { [getNodeType $node_id] == "rj45" && [getEtherVlanEnabled $node_id] } {
 	    set labelstr "$labelstr (VLAN [getEtherVlanTag $node_id])"
 	}
 
@@ -178,10 +178,10 @@ proc drawNode { node_id } {
     }
     # XXX Invisible pseudo-node labels
     global invisible
-    if { $invisible == 1 && [nodeType $node_id] == "pseudo" } {
+    if { $invisible == 1 && [getNodeType $node_id] == "pseudo" } {
 	.panwin.f1.c itemconfigure $label -state hidden
     }
-    if {[nodeType $node_id] == "cloud"} {
+    if {[getNodeType $node_id] == "cloud"} {
 	setCloudParts $node_id 1
     }
 }
@@ -200,7 +200,7 @@ proc drawNode { node_id } {
 #****
 proc drawLink { link } {
     lassign [getLinkPeers $link] lnode1 lnode2
-    if { [nodeType $lnode1] == "wlan" || [nodeType $lnode2] == "wlan" } {
+    if { [getNodeType $lnode1] == "wlan" || [getNodeType $lnode2] == "wlan" } {
 	return
     }
 
@@ -296,7 +296,7 @@ proc updateIfcLabel { lnode1 lnode2 } {
 
     set link_id [lindex [.panwin.f1.c gettags "link && $lnode1 && $lnode2"] 1]
     set ifc [ifcByPeer $lnode1 $lnode2]
-    if { [nodeType $lnode1] == "extelem" } {
+    if { [getNodeType $lnode1] == "extelem" } {
 	set ifcs [getNodeStolenIfaces $lnode1]
 	set ifc [lindex [lsearch -inline -exact -index 0 $ifcs "$ifc"] 1]
     }
@@ -426,7 +426,7 @@ proc redrawLink { link_id } {
     }
 
     lassign [.panwin.f1.c gettags $limage1] {} link lnode1 lnode2
-    if { [nodeType $lnode1] == "wlan" || [nodeType $lnode2] == "wlan" } {
+    if { [getNodeType $lnode1] == "wlan" || [getNodeType $lnode2] == "wlan" } {
 	return
     }
 
@@ -435,10 +435,10 @@ proc redrawLink { link_id } {
     .panwin.f1.c coords $limage1 $x1 $y1 $x2 $y2
     .panwin.f1.c coords $limage2 $x1 $y1 $x2 $y2
 
-    if { [nodeType $lnode1] == "pseudo" } {
+    if { [getNodeType $lnode1] == "pseudo" } {
 	set lx [expr {0.25 * ($x2 - $x1) + $x1}]
 	set ly [expr {0.25 * ($y2 - $y1) + $y1}]
-    } elseif { [nodeType $lnode2] == "pseudo" } {
+    } elseif { [getNodeType $lnode2] == "pseudo" } {
 	set lx [expr {0.75 * ($x2 - $x1) + $x1}]
 	set ly [expr {0.75 * ($y2 - $y1) + $y1}]
     } else {
@@ -447,12 +447,12 @@ proc redrawLink { link_id } {
     }
     .panwin.f1.c coords "linklabel && $link_id" $lx $ly
 
-    if { [nodeType $lnode1] != "pseudo" } {
+    if { [getNodeType $lnode1] != "pseudo" } {
 	updateIfcLabelParams $link_id $lnode1 $lnode2 $x1 $y1 $x2 $y2
 	updateIfcLabel $lnode1 $lnode2
     }
 
-    if {[nodeType $lnode2] != "pseudo"} {
+    if {[getNodeType $lnode2] != "pseudo"} {
 	updateIfcLabelParams $link_id $lnode2 $lnode1 $x2 $y2 $x1 $y1
 	updateIfcLabel $lnode2 $lnode1
     }
@@ -992,7 +992,7 @@ proc align2grid {} {
 	    setNodeCoords $node "$x $y"
 	    set dy 32
 	    if { [lsearch {router hub lanswitch rj45} \
-		[nodeType $node]] >= 0 } {
+		[getNodeType $node]] >= 0 } {
 		set dy 24
 	    }
 	    setNodeLabelCoords $node "$x [expr {$y + $dy}]"
@@ -1113,8 +1113,8 @@ proc rearrange { mode } {
 		    continue
 		}
 		set peers [getLinkPeers $link]
-		if {[nodeType [lindex $peers 0]] == "wlan" ||
-		  [nodeType [lindex $peers 1]] == "wlan"} {
+		if {[getNodeType [lindex $peers 0]] == "wlan" ||
+		  [getNodeType [lindex $peers 1]] == "wlan"} {
 		    continue
 		}
 		set coords0 [getNodeCoords [lindex $peers 0]]

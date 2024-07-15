@@ -1042,13 +1042,13 @@ proc loadCfg { cfg } {
     set ipv4_used_list {}
     set mac_used_list {}
     foreach node $node_list {
-	set nodeType [typemodel $node]
-	if { $nodeType in "extelem" } {
+	set node_type [typemodel $node]
+	if { $node_type in "extelem" } {
 	    continue
 	}
-	if { $nodeType ni [concat $all_modules_list "pseudo"] && \
-	    ! [string match "router.*" $nodeType] } {
-	    set msg "Unknown node type: '$nodeType'."
+	if { $node_type ni [concat $all_modules_list "pseudo"] && \
+	    ! [string match "router.*" $node_type] } {
+	    set msg "Unknown node type: '$node_type'."
 	    if { $execMode == "batch" } {
 		statline $msg
 	    } else {

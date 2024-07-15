@@ -159,7 +159,7 @@
 # setNodeName { node_id name }
 #	Sets a new node's logical name.
 #
-# nodeType { node_id }
+# getNodeType { node_id }
 #	Returns node's type.
 #
 # getNodeModel { node_id }
@@ -274,7 +274,7 @@
 #   * typemod -- returns node's type and routing model in form type.model
 #****
 proc typemodel { node_id } {
-    set type [nodeType $node_id]
+    set type [getNodeType $node_id]
     set model [getNodeModel $node_id]
     if { $model != {} } {
 	return $type.$model
@@ -1238,17 +1238,17 @@ proc getIfcLinkLocalIPv6addr { node_id iface } {
 #     my_gws subnets_and_gws
 # FUNCTION
 #   Returns a list of all default IPv4/IPv6 gateways for the subnets in which
-#   this node belongs as a {nodeType|gateway4|gateway6} values. Additionally,
+#   this node belongs as a {getNodeType|gateway4|gateway6} values. Additionally,
 #   it refreshes newly discovered gateways and subnet members to the existing
 #   $subnet_gws list and $nodes_l2data dictionary.
 # INPUTS
 #   * node -- node id
-#   * subnet_gws -- already known {nodeType|gateway4|gateway6} values
+#   * subnet_gws -- already known {getNodeType|gateway4|gateway6} values
 #   * nodes_l2data -- a dictionary of already known {node ifc subnet_idx}
 #   triplets in this subnet
 # RESULT
 #   * my_gws -- list of all possible default gateways for the specified node
-#   * subnet_gws -- refreshed {nodeType|gateway4|gateway6} values
+#   * subnet_gws -- refreshed {getNodeType|gateway4|gateway6} values
 #   * nodes_l2data -- refreshed dictionary of {node ifc subnet_idx} triplets in
 #   this subnet
 #****
@@ -1297,11 +1297,11 @@ proc getDefaultGateways { node_id subnet_gws nodes_l2data } {
 # INPUTS
 #   * this_node -- node id
 #   * this_ifc -- node interface
-#   * subnet_gws -- already known {nodeType|gateway4|gateway6} values
+#   * subnet_gws -- already known {getNodeType|gateway4|gateway6} values
 #   * nodes_l2data -- a dictionary of already known {node ifc subnet_idx}
 #   triplets in this subnet
 # RESULT
-#   * subnet_gws -- refreshed {nodeType|gateway4|gateway6} values
+#   * subnet_gws -- refreshed {getNodeType|gateway4|gateway6} values
 #   * nodes_l2data -- refreshed dictionary of {node ifc subnet_idx} triplets in
 #   this subnet
 #****
@@ -1317,11 +1317,11 @@ proc getSubnetData { this_node_id this_ifc subnet_gws nodes_l2data subnet_idx } 
     dict set nodes_l2data $this_node_id $this_ifc $subnet_idx
 
     if { [[typemodel $this_node_id].layer] == "NETWORK" } {
-	if { [nodeType $this_node_id] in "router extnat" } {
+	if { [getNodeType $this_node_id] in "router extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
 	    set gw4 [lindex [split [getIfcIPv4addr $this_node_id $this_ifc] /] 0]
 	    set gw6 [lindex [split [getIfcIPv6addr $this_node_id $this_ifc] /] 0]
-	    lappend my_gws [nodeType $this_node_id]|$gw4|$gw6
+	    lappend my_gws [getNodeType $this_node_id]|$gw4|$gw6
 	    lset subnet_gws $subnet_idx $my_gws
 	}
 
@@ -1494,7 +1494,7 @@ proc setStatIPv6routes { node_id routes } {
 #   pre-running configuration. Returns IPv4 and IPv6 routes lists.
 # INPUTS
 #   * node -- node id
-#   * gws -- gateway values in the {nodeType|gateway4|gateway6} format
+#   * gws -- gateway values in the {getNodeType|gateway4|gateway6} format
 # RESULT
 #   * all_routes4 -- {0.0.0.0/0 gw4} pairs of default IPv4 routes
 #   * all_routes6 -- {0.0.0.0/0 gw6} pairs of default IPv6 routes
@@ -1504,7 +1504,7 @@ proc getDefaultRoutesConfig { node_id gws } {
     set all_routes6 {}
     foreach route $gws {
 	lassign [split $route "|"] route_type gateway4 gateway6
-	if { [nodeType $node_id] == "router" } {
+	if { [getNodeType $node_id] == "router" } {
 	    if { $route_type == "extnat" } {
 		if { "0.0.0.0/0 $gateway4" ni [list "0.0.0.0/0 " $all_routes4] } {
 		    lappend all_routes4 "0.0.0.0/0 $gateway4"
@@ -1569,7 +1569,7 @@ proc setNodeName { node_id name } {
 # RESULT
 #   * type -- type of the node
 #****
-proc nodeType { node_id } {
+proc getNodeType { node_id } {
     return [cfgGet "nodes" $node_id "type"]
 }
 
@@ -1868,7 +1868,7 @@ proc allIfcList { node_id } {
 #****
 proc logicalPeerByIfc { node_id iface } {
     set peer [getIfcPeer $node_id $iface]
-    if { [nodeType $peer] != "pseudo" } {
+    if { [getNodeType $peer] != "pseudo" } {
 	return $peer
     } else {
 	set mirror_node [getNodeMirror $peer]
@@ -1928,7 +1928,7 @@ proc ifcByLogicalPeer { node_id peer_id } {
 	#
 	foreach iface [ifcList $node_id] {
 	    set t_peer [getIfcPeer $node_id $iface]
-	    if { [nodeType $t_peer] == "pseudo" } {
+	    if { [getNodeType $t_peer] == "pseudo" } {
 		set mirror [getNodeMirror $t_peer]
 		if { [getIfcPeer $mirror [ifcList $mirror]] == $peer_id } {
 		    return $iface
@@ -2014,7 +2014,7 @@ proc removeNode { node_id } {
 
     setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
 
-    set node_type [nodeType $node_id]
+    set node_type [getNodeType $node_id]
     if { $node_type in [array names nodeNamingBase] } {
 	recalculateNumType $node_type $nodeNamingBase($node_type)
     }
@@ -2698,7 +2698,7 @@ proc registerRouterModule { module } {
 proc isNodeRouter { node_id } {
     global router_modules_list
 
-    if { [nodeType $node_id] in $router_modules_list } {
+    if { [getNodeType $node_id] in $router_modules_list } {
 	return 1
     }
 
@@ -2915,7 +2915,7 @@ proc transformNodes { nodes to_type } {
 
     foreach node_id $nodes {
 	if { [[typemodel $node_id].layer] == "NETWORK" } {
-	    set from_type [nodeType $node_id]
+	    set from_type [getNodeType $node_id]
 
 	    # replace type
 	    setNodeType $node_id $to_type

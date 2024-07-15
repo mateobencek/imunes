@@ -147,7 +147,7 @@ proc paste {} {
 	lappendToRunning "node_list" $new_node_id
 
 	lappend copypaste_list $new_node_id
-	set node_type [nodeType $node_orig]
+	set node_type [getNodeType $node_orig]
 	if { $node_type in [array names nodeNamingBase] } {
 	    setNodeName $new_node_id [getNewNodeNameType $node_type $nodeNamingBase($node_type)]
 	} elseif { $node_type in "ext extnat rj45" } {

@@ -296,7 +296,7 @@ proc autoIPv4addr { node iface } {
 	set peer_ip4addrs $peer_ip4addr
     }
 
-    set targetbyte [[nodeType $node].IPAddrRange]
+    set targetbyte [[getNodeType $node].IPAddrRange]
 
     set targetbyte2 0
 

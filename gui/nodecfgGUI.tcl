@@ -52,7 +52,7 @@ proc nodeConfigGUI { c node_id } {
     if {$node_id == ""} {
         set node_id [lindex [$c gettags current] 1]
     }
-    set type [nodeType $node_id]
+    set type [getNodeType $node_id]
     if { $type == "pseudo" } {
         #
 	# Hyperlink to another canvas
@@ -148,7 +148,7 @@ proc configGUI_addNotebook { wi node labels } {
 #   * node - node id
 #****
 proc notebookSize { wi node } {
-    set type [nodeType $node]
+    set type [getNodeType $node]
 
     set dim [$type.notebookDimensions $wi]
     set configh [lindex $dim 0]
@@ -593,7 +593,7 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 
     #if user didn't select Cancel in the popup about saving changes on previously selected interface
     if { $cancel == 0 } {
-	set type [nodeType $node]
+	set type [getNodeType $node]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
 	if {$ifc != "" && $ifc != $shownifc} {
@@ -1925,7 +1925,7 @@ proc configGUI_nodeNameApply { wi node } {
     global changed badentry showTree eid_base isOSlinux
 
     set name [string trim [$wi.name.nodename get]]
-    if { [nodeType $node] ni "extnat rj45" && [regexp {^[A-Za-z_][0-9A-Za-z_-]*$} $name ] == 0 } {
+    if { [getNodeType $node] ni "extnat rj45" && [regexp {^[A-Za-z_][0-9A-Za-z_-]*$} $name ] == 0 } {
 	tk_dialog .dialog1 "IMUNES warning" \
 	    "Hostname should contain only letters, digits, _, and -, and should not start with - (hyphen) or number." \
 	    info 0 Dismiss
@@ -2011,7 +2011,7 @@ proc configGUI_ifcEssentialsApply { wi node ifc } {
 #****
 proc configGUI_ifcQueueConfigApply { wi node ifc } {
     global changed apply
-    if { [nodeType [getIfcPeer $node $ifc]] != "rj45" } {
+    if { [getNodeType [getIfcPeer $node $ifc]] != "rj45" } {
 	set qdisc [string trim [$wi.if$ifc.queuecfg.disc get]]
 	set oldqdisc [getIfcQDisc $node $ifc]
 	if { $qdisc != $oldqdisc } {
@@ -2463,7 +2463,7 @@ proc configGUI_routingModelApply { wi node } {
     global ripEnable ripngEnable ospfEnable ospf6Enable
 
     if { [getFromRunning "oper_mode"] == "edit" } {
-	if { [nodeType $node] != "nat64" } {
+	if { [getNodeType $node] != "nat64" } {
 	    setNodeModel $node $router_ConfigModel
 	}
 
@@ -5022,7 +5022,7 @@ proc configGUI_showBridgeIfcInfo { wi phase node ifc } {
     #if user didn't select Cancel in the popup about saving changes on
     #previously selected interface
     if { $cancel == 0 } {
-	set type [nodeType $node]
+	set type [getNodeType $node]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
 	if {$ifc != "" && $ifc != $shownifc} {
@@ -5432,7 +5432,7 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node ifc rule } {
 
     #if user didn't select Cancel in the popup about saving changes on previously selected interface
     if { $cancel == 0 } {
-	set type [nodeType $node]
+	set type [getNodeType $node]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
 	if {$rule != "" && $rule != $shownrule} {
@@ -6191,7 +6191,7 @@ proc configGUI_showPacketInfo { wi phase node pac } {
 
     #if user didn't select Cancel in the popup about saving changes on previously selected interface
     if { $cancel == 0 } {
-	set type [nodeType $node]
+	set type [getNodeType $node]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
 	if {$pac != "" && $pac != $shownpac} {

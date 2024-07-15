@@ -844,8 +844,8 @@ proc newLink { lnode1 lnode2 } {
     global defEthBandwidth defSerBandwidth defSerDelay
 
     foreach node "$lnode1 $lnode2" {
-	if { [info procs [nodeType $node].maxLinks] != "" } {
-	    if { [ numOfLinks $node ] == [[nodeType $node].maxLinks] } {
+	if { [info procs [getNodeType $node].maxLinks] != "" } {
+	    if { [ numOfLinks $node ] == [[getNodeType $node].maxLinks] } {
 		tk_dialog .dialog1 "IMUNES warning" \
 		   "Warning: Maximum links connected to the node $node" \
 		   info 0 Dismiss
@@ -865,11 +865,11 @@ proc newLink { lnode1 lnode2 } {
 
     cfgSet "links" $link_id "peers" "$lnode1 $lnode2"
     cfgSet "links" $link_id "peers_ifaces" "$ifname1 $ifname2"
-    if { ([nodeType $lnode1] == "lanswitch" || \
-	[nodeType $lnode2] == "lanswitch" || \
+    if { ([getNodeType $lnode1] == "lanswitch" || \
+	[getNodeType $lnode2] == "lanswitch" || \
 	[string first eth "$ifname1 $ifname2"] != -1) && \
-	[nodeType $lnode1] != "rj45" && \
-	[nodeType $lnode2] != "rj45" } {
+	[getNodeType $lnode1] != "rj45" && \
+	[getNodeType $lnode2] != "rj45" } {
 	cfgSet "links" $link_id "bandwidth" $defEthBandwidth
     } elseif { [string first ser "$ifname1 $ifname2"] != -1 } {
 	cfgSet "links" $link_id "bandwidth" $defSerBandwidth
@@ -877,11 +877,11 @@ proc newLink { lnode1 lnode2 } {
     }
     lappendToRunning "link_list" $link_id
 
-    if {[info procs [nodeType $lnode1].confNewIfc] != ""} {
-	[nodeType $lnode1].confNewIfc $lnode1 $ifname1
+    if {[info procs [getNodeType $lnode1].confNewIfc] != ""} {
+	[getNodeType $lnode1].confNewIfc $lnode1 $ifname1
     }
-    if {[info procs [nodeType $lnode2].confNewIfc] != ""} {
-	[nodeType $lnode2].confNewIfc $lnode2 $ifname2
+    if {[info procs [getNodeType $lnode2].confNewIfc] != ""} {
+	[getNodeType $lnode2].confNewIfc $lnode2 $ifname2
     }
 
     return $link_id

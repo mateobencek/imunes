@@ -445,7 +445,7 @@ proc execSetIfcQDisc { eid node ifc qdisc } {
 	WFQ { set qdisc wfq }
 	DRR { set qdisc drr }
     }
-    if { [nodeType $lnode2] == "pseudo" } {
+    if { [getNodeType $lnode2] == "pseudo" } {
 	set mirror_link [getLinkMirror [lindex $link 0]]
 	pipesExec "jexec $eid ngctl msg $mirror_link: setcfg \"{ $dir={ $qdisc=1 } }\"" "hold"
     }
@@ -478,7 +478,7 @@ proc execSetIfcQDrop { eid node ifc qdrop } {
 	drop-head { set qdrop drophead }
 	drop-tail { set qdrop droptail }
     }
-    if { [nodeType $lnode2] == "pseudo" } {
+    if { [getNodeType $lnode2] == "pseudo" } {
 	set mirror_link [getLinkMirror [lindex $link 0]]
 	pipesExec "jexec $eid ngctl msg $mirror_link: setcfg \"{ $dir={ $qdrop=1 } }\"" "hold"
     }
@@ -509,7 +509,7 @@ proc execSetIfcQLen { eid node ifc qlen } {
     if { $qlen == 0 } {
 	set qlen -1
     }
-    if { [nodeType $lnode2] == "pseudo" } {
+    if { [getNodeType $lnode2] == "pseudo" } {
 	set mirror_link [getLinkMirror [lindex $link 0]]
 	pipesExec "jexec $eid ngctl msg $mirror_link: setcfg \"{ $dir={ $queuelen=$qlen } }\"" "hold"
     }
@@ -537,7 +537,7 @@ proc execSetLinkParams { eid link } {
 
     if { [getLinkMirror $link] != "" } {
 	set mirror_link [getLinkMirror $link]
-	if { [nodeType $lnode1] == "pseudo" } {
+	if { [getNodeType $lnode1] == "pseudo" } {
 	    set lnode1 [lindex [getLinkPeers $mirror_link] 0]
 	} else {
 	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
@@ -1682,7 +1682,7 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     # FIXME: remove this to interface configuration?
     # Queues
     foreach node "$lnode1 $lnode2" ifc "$ifname1 $ifname2" {
-	if {[nodeType $lnode1] != "rj45" && [nodeType $lnode2] != "rj45"} {
+	if {[getNodeType $lnode1] != "rj45" && [getNodeType $lnode2] != "rj45"} {
 	    set qdisc [getIfcQDisc $node $ifc]
 	    if {$qdisc != "FIFO"} {
 		execSetIfcQDisc $eid $node $ifc $qdisc
@@ -1734,7 +1734,7 @@ proc destroyLinkBetween { eid lnode1 lnode2 link } {
 #   * vimages -- list of virtual nodes
 #****
 proc destroyNodeIfcs { eid node ifcs } {
-    if { [nodeType $node] in "ext extnat" } {
+    if { [getNodeType $node] in "ext extnat" } {
 	pipesExec "jexec $eid ngctl rmnode $eid-$node:" "hold"
 	return
     }
@@ -1808,7 +1808,7 @@ proc removeExperimentFiles { eid widget } {
 #   * node -- id of the node (type of the node is either lanswitch or hub)
 #****
 proc l2node.instantiate { eid node } {
-    switch -exact [nodeType $node] {
+    switch -exact [getNodeType $node] {
 	lanswitch {
 	    set ngtype bridge
 	}
