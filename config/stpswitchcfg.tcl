@@ -7,9 +7,7 @@ proc setBridgeProtocol { node_id protocol } {
 }
 
 proc getBridgePriority { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 32768 $dict_cfg "nodes" $node_id "bridge" "priority"]
+    return [cfgGetWithDefault 32768 "nodes" $node_id "bridge" "priority"]
 }
 
 proc setBridgePriority { node_id priority } {
@@ -17,9 +15,7 @@ proc setBridgePriority { node_id priority } {
 }
 
 proc getBridgeHoldCount { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 6 $dict_cfg "nodes" $node_id "bridge" "hold_count"]
+    return [cfgGetWithDefault 6 "nodes" $node_id "bridge" "hold_count"]
 }
 
 proc setBridgeHoldCount { node_id hold_count } {
@@ -27,9 +23,7 @@ proc setBridgeHoldCount { node_id hold_count } {
 }
 
 proc getBridgeMaxAge { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 20 $dict_cfg "nodes" $node_id "bridge" "max_age"]
+    return [cfgGetWithDefault 20 "nodes" $node_id "bridge" "max_age"]
 }
 
 proc setBridgeMaxAge { node_id max_age } {
@@ -37,9 +31,7 @@ proc setBridgeMaxAge { node_id max_age } {
 }
 
 proc getBridgeFwdDelay { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 15 $dict_cfg "nodes" $node_id "bridge" "forwarding_delay"]
+    return [cfgGetWithDefault 15 "nodes" $node_id "bridge" "forwarding_delay"]
 }
 
 proc setBridgeFwdDelay { node_id forwarding_delay } {
@@ -47,9 +39,7 @@ proc setBridgeFwdDelay { node_id forwarding_delay } {
 }
 
 proc getBridgeHelloTime { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 2 $dict_cfg "nodes" $node_id "bridge" "hello_time"]
+    return [cfgGetWithDefault 2 "nodes" $node_id "bridge" "hello_time"]
 }
 
 proc setBridgeHelloTime { node_id hello_time } {
@@ -57,9 +47,7 @@ proc setBridgeHelloTime { node_id hello_time } {
 }
 
 proc getBridgeMaxAddr { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 100 $dict_cfg "nodes" $node_id "bridge" "max_addresses"]
+    return [cfgGetWithDefault 100 "nodes" $node_id "bridge" "max_addresses"]
 }
 
 proc setBridgeMaxAddr { node_id max_addresses } {
@@ -67,9 +55,7 @@ proc setBridgeMaxAddr { node_id max_addresses } {
 }
 
 proc getBridgeTimeout { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 240 $dict_cfg "nodes" $node_id "bridge" "address_timeout"]
+    return [cfgGetWithDefault 240 "nodes" $node_id "bridge" "address_timeout"]
 }
 
 proc setBridgeTimeout { node_id address_timeout } {
@@ -81,9 +67,7 @@ proc setBridgeTimeout { node_id address_timeout } {
 #####
 
 proc getBridgeIfcDiscover { node_id iface } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 0 $dict_cfg "nodes" $node_id "ifaces" $iface "stp_discover"]
+    return [cfgGetWithDefault 0 "nodes" $node_id "ifaces" $iface "stp_discover"]
 }
 
 proc setBridgeIfcDiscover { node_id iface stp_discover } {
@@ -91,9 +75,7 @@ proc setBridgeIfcDiscover { node_id iface stp_discover } {
 }
 
 proc getBridgeIfcLearn { node_id iface } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 0 $dict_cfg "nodes" $node_id "ifaces" $iface "stp_learn"]
+    return [cfgGetWithDefault 0 "nodes" $node_id "ifaces" $iface "stp_learn"]
 }
 
 proc setBridgeIfcLearn { node_id iface stp_learn } {
@@ -101,9 +83,7 @@ proc setBridgeIfcLearn { node_id iface stp_learn } {
 }
 
 proc getBridgeIfcSticky { node_id iface } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 0 $dict_cfg "nodes" $node_id "ifaces" $iface "stp_sticky"]
+    return [cfgGetWithDefault 0 "nodes" $node_id "ifaces" $iface "stp_sticky"]
 }
 
 proc setBridgeIfcSticky { node_id iface stp_sticky } {
@@ -111,9 +91,7 @@ proc setBridgeIfcSticky { node_id iface stp_sticky } {
 }
 
 proc getBridgeIfcPrivate { node_id iface } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 0 $dict_cfg "nodes" $node_id "ifaces" $iface "stp_private"]
+    return [cfgGetWithDefault 0 "nodes" $node_id "ifaces" $iface "stp_private"]
 }
 
 proc setBridgeIfcPrivate { node_id iface stp_private } {
@@ -121,9 +99,7 @@ proc setBridgeIfcPrivate { node_id iface stp_private } {
 }
 
 proc getBridgeIfcSnoop { node_id iface } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 0 $dict_cfg "nodes" $node_id "ifaces" $iface "stp_snoop"]
+    return [cfgGetWithDefault 0 "nodes" $node_id "ifaces" $iface "stp_snoop"]
 }
 
 proc setBridgeIfcSnoop { node_id iface stp_snoop } {
@@ -131,9 +107,7 @@ proc setBridgeIfcSnoop { node_id iface stp_snoop } {
 }
 
 proc getBridgeIfcStp { node_id iface } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 0 $dict_cfg "nodes" $node_id "ifaces" $iface "stp_enabled"]
+    return [cfgGetWithDefault 0 "nodes" $node_id "ifaces" $iface "stp_enabled"]
 }
 
 proc setBridgeIfcStp { node_id iface stp_enabled } {
@@ -141,9 +115,7 @@ proc setBridgeIfcStp { node_id iface stp_enabled } {
 }
 
 proc getBridgeIfcEdge { node_id iface } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 0 $dict_cfg "nodes" $node_id "ifaces" $iface "stp_edge"]
+    return [cfgGetWithDefault 0 "nodes" $node_id "ifaces" $iface "stp_edge"]
 }
 
 proc setBridgeIfcEdge { node_id iface stp_edge } {
@@ -151,9 +123,7 @@ proc setBridgeIfcEdge { node_id iface stp_edge } {
 }
 
 proc getBridgeIfcAutoedge { node_id iface } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 0 $dict_cfg "nodes" $node_id "ifaces" $iface "stp_autoedge"]
+    return [cfgGetWithDefault 0 "nodes" $node_id "ifaces" $iface "stp_autoedge"]
 }
 
 proc setBridgeIfcAutoedge { node_id iface stp_autoedge } {
@@ -161,9 +131,7 @@ proc setBridgeIfcAutoedge { node_id iface stp_autoedge } {
 }
 
 proc getBridgeIfcPtp { node_id iface } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 0 $dict_cfg "nodes" $node_id "ifaces" $iface "stp_ptp"]
+    return [cfgGetWithDefault 0 "nodes" $node_id "ifaces" $iface "stp_ptp"]
 }
 
 proc setBridgeIfcPtp { node_id iface stp_ptp } {
@@ -171,9 +139,7 @@ proc setBridgeIfcPtp { node_id iface stp_ptp } {
 }
 
 proc getBridgeIfcAutoptp { node_id iface } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 0 $dict_cfg "nodes" $node_id "ifaces" $iface "stp_autoptp"]
+    return [cfgGetWithDefault 0 "nodes" $node_id "ifaces" $iface "stp_autoptp"]
 }
 
 proc setBridgeIfcAutoptp { node_id iface stp_autoptp } {

@@ -35,5 +35,6 @@ proc checkPacketData { str } {
     if { $str != "" } {
 	return [regexp {^([0-9a-f][0-9a-f])*$} $str]
     }
+
     return 1
 }

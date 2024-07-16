@@ -14,6 +14,7 @@ proc animateCursor {} {
 	update
 	return
     }
+
     set clock_seconds [clock seconds]
     if { $cursorState } {
 	.panwin.f1.c config -cursor watch
@@ -22,6 +23,7 @@ proc animateCursor {} {
 	.panwin.f1.c config -cursor pirate
 	set cursorState 1
     }
+
     update
 }
 
@@ -93,24 +95,24 @@ proc removeNodeGUI { node_id } {
     .panwin.f1.c delete $node_id
 }
 
-#****f* editor.tcl/splitGUILink
+#****f* editor.tcl/splitLinkGUI
 # NAME
-#   splitGUILink -- splits a link
+#   splitLinkGUI -- splits a link
 # SYNOPSIS
-#   splitGUILink $link
+#   splitLinkGUI $link_id
 # FUNCTION
-#   Splits the link and draws new links and new pseudo nodes 
+#   Splits the link and draws new links and new pseudo nodes
 #   on the canvas.
 # INPUTS
-#   * link -- link id
+#   * link_id -- link id
 #****
-proc splitGUILink { link } {
+proc splitLinkGUI { link_id } {
     global changed
 
     set zoom [getFromRunning "zoom"]
 
-    lassign [getLinkPeers $link] orig_node1 orig_node2
-    lassign [splitLink $link] new_node1 new_node2
+    lassign [getLinkPeers $link_id] orig_node1 orig_node2
+    lassign [splitLink $link_id] new_node1 new_node2
 
     lassign [getNodeCoords $orig_node1] x1 y1
     lassign [getNodeCoords $orig_node2] x2 y2
@@ -131,7 +133,7 @@ proc splitGUILink { link } {
 
 #****f* editor.tcl/selectNode
 # NAME
-#   selectNode -- select node 
+#   selectNode -- select node
 # SYNOPSIS
 #   selectNode $c $obj
 # FUNCTION
@@ -147,39 +149,41 @@ proc selectNode { c obj } {
 	return
     }
 
-    set node [lindex [$c gettags $obj] 1]
-
-    if { $node == "" } {
+    set node_id [lindex [$c gettags $obj] 1]
+    if { $node_id == "" } {
 	return
     }
-    $c addtag selected withtag "node && $node"
-    if { [getNodeType $node] == "pseudo" } {
-	set bbox [$c bbox "nodelabel && $node"]
-    } elseif { [getNodeType $node] == "rectangle" } {
-	$c addtag selected withtag "rectangle && $node"
-	set bbox [$c bbox "rectangle && $node"]
-    } elseif { [getNodeType $node] == "text" } {
-	$c addtag selected withtag "text && $node"
-	set bbox [$c bbox "text && $node"]
-    } elseif { [getNodeType $node] == "oval" } {
-	$c addtag selected withtag "oval && $node"
-	set bbox [$c bbox "oval && $node"]
-    } elseif { [getNodeType $node] == "freeform" } {
-	$c addtag selected withtag "freeform && $node"
-	set bbox [$c bbox "freeform && $node"]
+
+    $c addtag selected withtag "node && $node_id"
+    if { [getNodeType $node_id] == "pseudo" } {
+	set bbox [$c bbox "nodelabel && $node_id"]
+    } elseif { [getNodeType $node_id] == "rectangle" } {
+	$c addtag selected withtag "rectangle && $node_id"
+	set bbox [$c bbox "rectangle && $node_id"]
+    } elseif { [getNodeType $node_id] == "text" } {
+	$c addtag selected withtag "text && $node_id"
+	set bbox [$c bbox "text && $node_id"]
+    } elseif { [getNodeType $node_id] == "oval" } {
+	$c addtag selected withtag "oval && $node_id"
+	set bbox [$c bbox "oval && $node_id"]
+    } elseif { [getNodeType $node_id] == "freeform" } {
+	$c addtag selected withtag "freeform && $node_id"
+	set bbox [$c bbox "freeform && $node_id"]
     } else {
-	set bbox [$c bbox "node && $node"]
+	set bbox [$c bbox "node && $node_id"]
     }
+
     if { $bbox == "" } {
 	return
     }
+
     set bx1 [expr {[lindex $bbox 0] - 2}]
     set by1 [expr {[lindex $bbox 1] - 2}]
     set bx2 [expr {[lindex $bbox 2] + 1}]
     set by2 [expr {[lindex $bbox 3] + 1}]
-    $c delete -withtags "selectmark && $node"
+    $c delete -withtags "selectmark && $node_id"
     $c create line $bx1 $by1 $bx2 $by1 $bx2 $by2 $bx1 $by2 $bx1 $by1 \
-	-dash {6 4} -fill black -width 1 -tags "selectmark $node"
+	-dash {6 4} -fill black -width 1 -tags "selectmark $node_id"
 }
 
 #****f* editor.tcl/selectAllObjects
@@ -193,6 +197,7 @@ proc selectNode { c obj } {
 proc selectAllObjects { } {
     foreach obj [.panwin.f1.c find withtag "node || text || oval || rectangle \
 	|| freeform"] {
+
 	selectNode .panwin.f1.c $obj
     }
 }
@@ -208,9 +213,9 @@ proc selectAllObjects { } {
 #   * nodelist -- list of nodes to select.
 #****
 proc selectNodes { nodelist } {
-    foreach node $nodelist {
+    foreach node_id $nodelist {
 	selectNode .panwin.f1.c [.panwin.f1.c find withtag \
-	    "(node || text || oval || rectangle || freeform) && $node"]
+	    "(node || text || oval || rectangle || freeform) && $node_id"]
     }
 }
 
@@ -258,12 +263,11 @@ proc selectedNodes {} {
 proc selectedRealNodes {} {
     set selected {}
     foreach obj [.panwin.f1.c find withtag "node && selected"] {
-	set node [lindex [.panwin.f1.c gettags $obj] 1]
-	if { [getNodeMirror $node] != "" ||
-	    [getNodeType $node] == "rj45" } {
+	set node_id [lindex [.panwin.f1.c gettags $obj] 1]
+	if { [getNodeMirror $node_id] != "" || [getNodeType $node_id] == "rj45" } {
 	    continue
 	}
-	lappend selected $node
+	lappend selected $node_id
     }
 
     return $selected
@@ -280,27 +284,29 @@ proc selectedRealNodes {} {
 proc selectAdjacent {} {
     set selected [selectedNodes]
     set adjacent {}
-    foreach node $selected {
-	foreach ifc [ifcList $node] {
-	    set peer [getIfcPeer $node $ifc]
+    foreach node_id $selected {
+	foreach iface [ifcList $node_id] {
+	    set peer [getIfcPeer $node_id $iface]
 	    if { [getNodeMirror $peer] != "" } {
 		return
 	    }
+
 	    if { [lsearch $adjacent $peer] < 0 } {
 		lappend adjacent $peer
 	    }
 	}
     }
+
     selectNodes $adjacent
 }
 
 #****f* editor.tcl/button3link
 # NAME
-#   button3link 
+#   button3link
 # SYNOPSIS
 #   button3link $c $x $y
 # FUNCTION
-#   This procedure is called when a right mouse button is 
+#   This procedure is called when a right mouse button is
 #   clicked on the canvas. If there is a link on the place of
 #   mouse click this procedure creates and configures a popup
 #   menu. The options in the menu are:
@@ -317,16 +323,16 @@ proc selectAdjacent {} {
 proc button3link { c x y } {
     set oper_mode [getFromRunning "oper_mode"]
 
-    set link [lindex [$c gettags {link && current}] 1]
-    if { $link == "" } {
-	set link [lindex [$c gettags {linklabel && current}] 1]
-	if { $link == "" } {
+    set link_id [lindex [$c gettags "link && current"] 1]
+    if { $link_id == "" } {
+	set link_id [lindex [$c gettags "linklabel && current"] 1]
+	if { $link_id == "" } {
 	    return
 	}
     }
 
-    global linkDirect_$link
-    set linkDirect_$link [getLinkDirect $link]
+    global linkDirect_$link_id
+    set linkDirect_$link_id [getLinkDirect $link_id]
 
     .button3menu delete 0 end
 
@@ -334,13 +340,13 @@ proc button3link { c x y } {
     # Configure link
     #
     .button3menu add command -label "Configure" \
-	-command "linkConfigGUI $c $link"
+	-command "linkConfigGUI $c $link_id"
 
     #
-    # Clear link configuration 
+    # Clear link configuration
     #
     .button3menu add command -label "Clear all settings" \
-	-command "linkResetConfig $link"
+	-command "linkResetConfig $link_id"
 
     global linkJitterConfiguration
     if  { $linkJitterConfiguration } {
@@ -348,12 +354,12 @@ proc button3link { c x y } {
 	# Edit link jitter
 	#
 	.button3menu add command -label "Edit link jitter" \
-	    -command "linkJitterConfigGUI $c $link"
+	    -command "linkJitterConfigGUI $c $link_id"
 	#
 	# Reset link jitter
 	#
 	.button3menu add command -label "Clear link jitter" \
-	    -command "linkJitterReset $link"
+	    -command "linkJitterReset $link_id"
     }
 
     #
@@ -361,11 +367,11 @@ proc button3link { c x y } {
     #
     if { $oper_mode != "exec" } {
 	.button3menu add checkbutton -label "Direct link" \
-	    -underline 5 -variable linkDirect_$link \
-	    -command "toggleDirectLink $c $link"
+	    -underline 5 -variable linkDirect_$link_id \
+	    -command "toggleDirectLink $c $link_id"
     } else {
 	.button3menu add checkbutton -label "Direct link" \
-	    -underline 5 -variable linkDirect_$link \
+	    -underline 5 -variable linkDirect_$link_id \
 	    -state disabled
     }
 
@@ -374,7 +380,7 @@ proc button3link { c x y } {
     #
     if { $oper_mode != "exec" } {
 	.button3menu add command -label "Delete" \
-	    -command "removeLinkGUI $link atomic"
+	    -command "removeLinkGUI $link_id atomic"
     } else {
 	.button3menu add command -label "Delete" \
 	    -state disabled
@@ -383,9 +389,9 @@ proc button3link { c x y } {
     #
     # Split link
     #
-    if { $oper_mode != "exec" && [getLinkMirror $link] == "" } {
+    if { $oper_mode != "exec" && [getLinkMirror $link_id] == "" } {
 	.button3menu add command -label "Split" \
-	    -command "splitGUILink $link"
+	    -command "splitLinkGUI $link_id"
     } else {
 	.button3menu add command -label "Split" \
 	    -state disabled
@@ -394,11 +400,11 @@ proc button3link { c x y } {
     #
     # Merge two pseudo nodes / links
     #
-    if { $oper_mode != "exec" && [getLinkMirror $link] != "" &&
-	[getNodeCanvas [getNodeMirror [lindex [getLinkPeers $link] 1]]] ==
+    if { $oper_mode != "exec" && [getLinkMirror $link_id] != "" &&
+	[getNodeCanvas [getNodeMirror [lindex [getLinkPeers $link_id] 1]]] ==
 	[getFromRunning "curcanvas"] } {
 	.button3menu add command -label "Merge" \
-	    -command "mergeGUINode [lindex [getLinkPeers $link] 1]"
+	    -command "mergeNodeGUI [lindex [getLinkPeers $link_id] 1]"
     } else {
 	.button3menu add command -label "Merge" -state disabled
     }
@@ -410,7 +416,7 @@ proc button3link { c x y } {
 
 #****f* editor.tcl/moveToCanvas
 # NAME
-#   moveToCanvas -- move to canvas 
+#   moveToCanvas -- move to canvas
 # SYNOPSIS
 #   moveToCanvas $canvas_id
 # FUNCTION
@@ -429,20 +435,22 @@ proc moveToCanvas { canvas_id } {
     }
 
     foreach obj [.panwin.f1.c find withtag "linklabel"] {
-	set link [lindex [.panwin.f1.c gettags $obj] 1]
+	set link_id [lindex [.panwin.f1.c gettags $obj] 1]
 
-	lassign [getLinkPeers $link] peer1 peer2
-	if { ($peer1 ni $selected_nodes && $peer2 in $selected_nodes) || ($peer1 in $selected_nodes && $peer2 ni $selected_nodes) } {
-	    # pseudo nodes are always peer2
+	lassign [getLinkPeers $link_id] peer1 peer2
+	if { ($peer1 ni $selected_nodes && $peer2 in $selected_nodes) ||
+	    ($peer1 in $selected_nodes && $peer2 ni $selected_nodes) } {
+
+	    # pseudo nodes are always peer1
 	    if { [getNodeType $peer1] == "pseudo" } {
 		setNodeCanvas $peer1 $canvas_id
 		if { [getNodeCanvas [getNodeMirror $peer1]] == $canvas_id } {
-		    mergeLink $link
+		    mergeLink $link_id
 		}
 		continue
 	    }
 
-	    lassign [splitLink $link] new_node1 new_node2
+	    lassign [splitLink $link_id] new_node1 new_node2
 
 	    setNodeName $new_node1 $peer2
 	    setNodeName $new_node2 $peer1
@@ -453,22 +461,21 @@ proc moveToCanvas { canvas_id } {
     redrawAll
 }
 
-#****f* editor.tcl/mergeGUINode
+#****f* editor.tcl/mergeNodeGUI
 # NAME
-#   mergeGUINode -- merge GUI node
+#   mergeNodeGUI -- merge GUI node
 # SYNOPSIS
-#   mergeGUINode $node
+#   mergeNodeGUI $node_id
 # FUNCTION
 #   This procedure removes the specified pseudo node as well
 #   as it's mirror copy. Also this procedure removes the
 #   pseudo links and reestablish the original link between
 #   the non-pseudo nodes.
 # INPUTS
-#   * node -- node id of a pseudo node.
+#   * node_id -- node id of a pseudo node.
 #****
-proc mergeGUINode { node } {
-    set link [lindex [linkByIfc $node "0"] 0]
-    mergeLink $link
+proc mergeNodeGUI { node_id } {
+    mergeLink [lindex [linkByIfc $node_id "0"] 0]
     redrawAll
 }
 
@@ -478,7 +485,7 @@ proc mergeGUINode { node } {
 # SYNOPSIS
 #   button3node $c $x $y
 # FUNCTION
-#   This procedure is called when a right mouse button is 
+#   This procedure is called when a right mouse button is
 #   clicked on the canvas. If there is a node on the place of
 #   mouse click this procedure creates and configures a popup
 #   menu. The options in the menu are:
@@ -490,11 +497,11 @@ proc mergeGUINode { node } {
 #   that have mirror nodes on the same canvas (Pseudo nodes
 #   created by splitting a link).
 #   * Delete -- delete the node
-#   * Shell window -- specifies the shell window to open in 
-#   exec mode. This option is available only to nodes on a 
+#   * Shell window -- specifies the shell window to open in
+#   exec mode. This option is available only to nodes on a
 #   network layer
-#   * Wireshark -- opens a Wireshark program for the specified 
-#   node and the specified interface. This option is available 
+#   * Wireshark -- opens a Wireshark program for the specified
+#   node and the specified interface. This option is available
 #   only for network layer nodes in exec mode.
 # INPUTS
 #   * c -- tk canvas
@@ -507,21 +514,19 @@ proc button3node { c x y } {
     set canvas_list [getFromRunning "canvas_list"]
     set curcanvas [getFromRunning "curcanvas"]
     set oper_mode [getFromRunning "oper_mode"]
-    #set eid [getFromRunning "eid"]
 
-    set node [lindex [$c gettags {node && current}] 1]
-
-    if { $node == "" } {
-	set node [lindex [$c gettags {nodelabel && current}] 1]
-	if { $node == "" } {
+    set node_id [lindex [$c gettags "node && current"] 1]
+    if { $node_id == "" } {
+	set node_id [lindex [$c gettags "nodelabel && current"] 1]
+	if { $node_id == "" } {
 	    return
 	}
     }
 
-    set type [getNodeType $node]
-    set mirror_node [getNodeMirror $node]
+    set type [getNodeType $node_id]
+    set mirror_node [getNodeMirror $node_id]
 
-    if { [$c gettags "node && $node && selected"] == "" } {
+    if { [$c gettags "node && $node_id && selected"] == "" } {
 	$c dtag node selected
 	$c delete -withtags selectmark
 	selectNode $c [$c find withtag "current"]
@@ -545,12 +550,12 @@ proc button3node { c x y } {
     #
     if { $type != "pseudo" } {
 	.button3menu add command -label "Configure" \
-	    -command "nodeConfigGUI $c $node"
+	    -command "nodeConfigGUI $c $node_id"
     } else {
 	.button3menu add command -label "Configure" \
-	    -command "nodeConfigGUI $c $node" -state disabled
+	    -command "nodeConfigGUI $c $node_id" -state disabled
     }
-    
+
     #
     # Transform
     #
@@ -568,12 +573,9 @@ proc button3node { c x y } {
 
     #
     # Node icon preferences
-    #   
+    #
     .button3menu.icon delete 0 end
-    if { $oper_mode == "exec" || $type == "pseudo" } {
-#	.button3menu add cascade -label "Node icon" \
-#	    -menu .button3menu.icon -state disabled
-    } else {
+    if { $oper_mode == "edit" && $type != "pseudo" } {
 	.button3menu add cascade -label "Node icon" \
 	    -menu .button3menu.icon
 	.button3menu.icon add command -label "Change node icons" \
@@ -586,10 +588,7 @@ proc button3node { c x y } {
     # Create a new link - can be between different canvases
     #
     .button3menu.connect delete 0 end
-    if { $oper_mode == "exec" || $type == "pseudo" } {
-#	.button3menu add cascade -label "Create link to" \
-#	    -menu .button3menu.connect -state disabled
-    } else {
+    if { $oper_mode == "edit" && $type != "pseudo" } {
 	.button3menu add cascade -label "Create link to" \
 	    -menu .button3menu.connect
     }
@@ -601,8 +600,8 @@ proc button3node { c x y } {
 	-label "Chain" -command "P \[selectedRealNodes\]"
     .button3menu.connect.selected add command \
 	-label "Star" \
-	-command "Kb $node \[lsearch -all -inline -not -exact \
-	\[selectedRealNodes\] $node\]"
+	-command "Kb $node_id \[lsearch -all -inline -not -exact \
+	\[selectedRealNodes\] $node_id\]"
     .button3menu.connect.selected add command \
 	-label "Cycle" -command "C \[selectedRealNodes\]"
     .button3menu.connect.selected add command \
@@ -611,17 +610,19 @@ proc button3node { c x y } {
 	-label "Random" -command "R \[selectedRealNodes\] \
 	\[expr \[llength \[selectedRealNodes\]\] - 1\]"
     .button3menu.connect add separator
+
     foreach canvas_id $canvas_list {
 	destroy .button3menu.connect.$canvas_id
 	menu .button3menu.connect.$canvas_id -tearoff 0
 	.button3menu.connect add cascade -label [getCanvasName $canvas_id] \
 	    -menu .button3menu.connect.$canvas_id
     }
+
     foreach peer_node [getFromRunning "node_list"] {
 	set canvas_id [getNodeCanvas $peer_node]
 	if { $type != "rj45" &&
 	    [lsearch {pseudo rj45} [getNodeType $peer_node]] < 0 &&
-	    [ifcByLogicalPeer $node $peer_node] == "" } {
+	    [ifcByLogicalPeer $node_id $peer_node] == "" } {
 	    .button3menu.connect.$canvas_id add command \
 		-label [getNodeName $peer_node] \
 		-command "connectWithNode \"[selectedRealNodes]\" $peer_node"
@@ -659,9 +660,7 @@ proc button3node { c x y } {
     if { $oper_mode != "exec" && $type == "pseudo" && \
 	[getNodeCanvas $mirror_node] == $curcanvas } {
 	.button3menu add command -label "Merge" \
-	    -command "mergeGUINode $node"
-    } else {
-#	.button3menu add command -label "Merge" -state disabled
+	    -command "mergeNodeGUI $node_id"
     }
 
     #
@@ -669,8 +668,6 @@ proc button3node { c x y } {
     #
     if { $oper_mode != "exec" } {
 	.button3menu add command -label "Delete" -command deleteSelection
-    } else {
-#	.button3menu add command -label "Delete" -state disabled
     }
 
     if { $type != "pseudo" } {
@@ -680,28 +677,25 @@ proc button3node { c x y } {
     #
     # Start & stop node
     #
-    if {$oper_mode == "exec" && [info procs [typemodel $node].start] != "" \
-	&& [info procs [typemodel $node].shutdown] != ""} {
+    if { $oper_mode == "exec" && [info procs [typemodel $node_id].start] != "" \
+	&& [info procs [typemodel $node_id].shutdown] != ""} {
+
 	.button3menu add command -label Start \
-	    -command "startNodeFromMenu $node"
+	    -command "startNodeFromMenu $node_id"
 	.button3menu add command -label Stop \
-	    -command "stopNodeFromMenu $node" 
+	    -command "stopNodeFromMenu $node_id"
 	.button3menu add command -label Restart \
-	    -command "stopNodeFromMenu $node; \
-	     startNodeFromMenu $node" 
-    } else {
-#	.button3menu add command -label Start \
-#	    -command "[typemodel $node].start $eid $node" -state disabled
-#	.button3menu add command -label Stop \
-#	    -command "[typemodel $node].shutdown $eid $node" -state disabled 
+	    -command "stopNodeFromMenu $node_id; \
+	     startNodeFromMenu $node_id"
     }
 
     #
     # Services menu
     #
     .button3menu.services delete 0 end
-    if {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE" && $type != "ext"} {
+    if { $oper_mode == "exec" && [[typemodel $node_id].virtlayer] == "VIMAGE" && $type != "ext" } {
 	global all_services_list
+
 	.button3menu add cascade -label "Services" \
 	    -menu .button3menu.services
 	foreach service $all_services_list {
@@ -711,189 +705,177 @@ proc button3node { c x y } {
 	    } else {
 		$m delete 0 end
 	    }
+
 	    .button3menu.services add cascade -label $service \
 		-menu $m
+
 	    foreach action { "Start" "Stop" "Restart" } {
 		$m add command -label $action \
-		    -command "$service.[string tolower $action] $node"
+		    -command "$service.[string tolower $action] $node_id"
 	    }
 	}
     }
 
     #
     # Node settings
-    #   
+    #
     .button3menu.sett delete 0 end
     if { $type != "pseudo" } {
 	if { $type == "ext" && $oper_mode == "exec" } {
-	.button3menu add cascade -label "Settings" \
-	    -menu .button3menu.sett -state disabled
+	    .button3menu add cascade -label "Settings" \
+		-menu .button3menu.sett -state disabled
 	} else {
 	    .button3menu add cascade -label "Settings" \
 		-menu .button3menu.sett
 	}
-    } else {
-	#.button3menu add cascade -label "Settings" \
-	    #-menu .button3menu.sett -state disabled
     }
+
     if { $oper_mode == "exec" } {
 	.button3menu.sett add command -label "Import Running Configuration" \
 	    -command "fetchNodeConfiguration"
     } else {
-#        .button3menu.sett add command -label "Fetch Node Configurations" \
-#	    -state disabled
 	.button3menu.sett add command -label "Remove IPv4 addresses" \
 	    -command "removeIPv4nodes"
         .button3menu.sett add command -label "Remove IPv6 addresses" \
 	    -command "removeIPv6nodes"
-    } 
+    }
 
     #
     # IPv4 autorenumber
     #
-    if { $oper_mode == "exec" || [[typemodel $node].layer] == "LINK" \
-	|| $type == "pseudo" } {
-#	.button3menu add command -label "IPv4 autorenumber" \
-#	    -state disabled
-    } else {
-	.button3menu add command -label "IPv4 autorenumber" \
-	    -command { 
-		global IPv4autoAssign
-		set IPv4autoAssign 1
-		changeAddressRange 
-		set IPv4autoAssign 0
-	    }
+    if { $oper_mode == "edit" && [[typemodel $node_id].layer] != "LINK" \
+	&& $type != "pseudo" } {
+
+	.button3menu add command -label "IPv4 autorenumber" -command {
+	    global IPv4autoAssign
+	    set IPv4autoAssign 1
+	    changeAddressRange
+	    set IPv4autoAssign 0
+	}
     }
 
     #
     # IPv6 autorenumber
     #
-    if { $oper_mode == "exec" || [[typemodel $node].layer] == "LINK" \
-	|| $type == "pseudo" } {
-#	.button3menu add command -label "IPv6 autorenumber" \
-#	    -state disabled
-    } else {
-	.button3menu add command -label "IPv6 autorenumber" \
-	    -command {
-		global IPv6autoAssign
-		set IPv6autoAssign 1
-		changeAddressRange6 
-		set IPv6autoAssign 0
-	    }
-    }
+    if { $oper_mode == "edit" && [[typemodel $node_id].layer] != "LINK" \
+	&& $type != "pseudo" } {
 
+	.button3menu add command -label "IPv6 autorenumber" -command {
+	    global IPv6autoAssign
+	    set IPv6autoAssign 1
+	    changeAddressRange6
+	    set IPv6autoAssign 0
+	}
+    }
 
     #
     # Shell selection
     #
     .button3menu.shell delete 0 end
-    if {$type != "ext" && $oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
+    if { $type != "ext" && $oper_mode == "exec" && [[typemodel $node_id].virtlayer] == "VIMAGE" } {
 	.button3menu add separator
 	.button3menu add cascade -label "Shell window" \
 	    -menu .button3menu.shell
-	foreach cmd [existingShells [[typemodel $node].shellcmds] $node] {
+	foreach cmd [existingShells [[typemodel $node_id].shellcmds] $node_id] {
 	    .button3menu.shell add command -label "[lindex [split $cmd /] end]" \
-		-command "spawnShell $node $cmd"
+		-command "spawnShell $node_id $cmd"
 	}
-    } else {
-#	.button3menu add cascade -label "Shell window" \
-#	    -menu .button3menu.shell -state disabled
     }
 
     .button3menu.wireshark delete 0 end
     .button3menu.tcpdump delete 0 end
-    if {$oper_mode == "exec" && $type == "ext" } {
+    if { $oper_mode == "exec" && $type == "ext" } {
 	.button3menu add separator
+
 	#
 	# Wireshark
 	#
-        set wiresharkComm ""
+        set wireshark_command ""
         foreach wireshark "wireshark wireshark-gtk wireshark-qt" {
-            if {[checkForExternalApps $wireshark] == 0} {
-                set wiresharkComm $wireshark
+            if { [checkForExternalApps $wireshark] == 0 } {
+                set wireshark_command $wireshark
                 break
             }
         }
-        if { $wiresharkComm != "" } {
+
+        if { $wireshark_command != "" } {
 	    .button3menu add command -label "Wireshark" \
-		-command "captureOnExtIfc $node $wiresharkComm"
+		-command "captureOnExtIfc $node_id $wireshark_command"
 	}
 
 	#
 	# tcpdump
 	#
-	if {[checkForExternalApps "tcpdump"] == 0} {
+	if { [checkForExternalApps "tcpdump"] == 0 } {
 	    .button3menu add command -label "tcpdump" \
-		-command "captureOnExtIfc $node tcpdump"
+		-command "captureOnExtIfc $node_id tcpdump"
 	}
-    } elseif {$oper_mode == "exec" && [[typemodel $node].virtlayer] == "VIMAGE"} {
+    } elseif { $oper_mode == "exec" && [[typemodel $node_id].virtlayer] == "VIMAGE" } {
 	#
 	# Wireshark
 	#
 	.button3menu add cascade -label "Wireshark" \
 	    -menu .button3menu.wireshark
-	if { [llength [allIfcList $node]] == 0 } {
-	    .button3menu.wireshark add command -label "No interfaces available." 
+	if { [llength [allIfcList $node_id]] == 0 } {
+	    .button3menu.wireshark add command -label "No interfaces available."
 	} else {
-	    foreach ifc [allIfcList $node] {
-		set label "$ifc"
-		if { [getIfcIPv4addr $node $ifc] != "" } {
-		    set label "$label ([getIfcIPv4addr $node $ifc])"
+	    foreach iface [allIfcList $node_id] {
+		set label "$iface"
+		if { [getIfcIPv4addr $node_id $iface] != "" } {
+		    set label "$label ([getIfcIPv4addr $node_id $iface])"
 		}
-		if { [getIfcIPv6addr $node $ifc] != "" } {
-		    set label "$label ([getIfcIPv6addr $node $ifc])"
+		if { [getIfcIPv6addr $node_id $iface] != "" } {
+		    set label "$label ([getIfcIPv6addr $node_id $iface])"
 		}
 		.button3menu.wireshark add command -label $label \
-		    -command "startWiresharkOnNodeIfc $node $ifc"
+		    -command "startWiresharkOnNodeIfc $node_id $iface"
 	    }
 	}
+
 	#
 	# tcpdump
 	#
 	.button3menu add cascade -label "tcpdump" \
 	    -menu .button3menu.tcpdump
-	if { [llength [allIfcList $node]] == 0 } {
-	    .button3menu.tcpdump add command -label "No interfaces available." 
+	if { [llength [allIfcList $node_id]] == 0 } {
+	    .button3menu.tcpdump add command -label "No interfaces available."
 	} else {
-	    foreach ifc [allIfcList $node] {
-		set label "$ifc"
-		if { [getIfcIPv4addr $node $ifc] != "" } {
-		    set label "$label ([getIfcIPv4addr $node $ifc])"
+	    foreach iface [allIfcList $node_id] {
+		set label "$iface"
+		if { [getIfcIPv4addr $node_id $iface] != "" } {
+		    set label "$label ([getIfcIPv4addr $node_id $iface])"
 		}
-		if { [getIfcIPv6addr $node $ifc] != "" } {
-		    set label "$label ([getIfcIPv6addr $node $ifc])"
+		if { [getIfcIPv6addr $node_id $iface] != "" } {
+		    set label "$label ([getIfcIPv6addr $node_id $iface])"
 		}
 		.button3menu.tcpdump add command -label $label \
-		    -command "startTcpdumpOnNodeIfc $node $ifc"
+		    -command "startTcpdumpOnNodeIfc $node_id $iface"
 	    }
 	}
+
 	#
 	# Firefox
 	#
-	if {[checkForExternalApps "startxcmd"] == 0 && \
-	    [checkForApplications $node "firefox"] == 0} {
+	if { [checkForExternalApps "startxcmd"] == 0 && \
+	    [checkForApplications $node_id "firefox"] == 0 } {
+
 	    .button3menu add command -label "Web Browser" \
-		-command "startXappOnNode $node \"firefox -no-remote -setDefaultBrowser about:blank\""
+		-command "startXappOnNode $node_id \"firefox -no-remote -setDefaultBrowser about:blank\""
 	} else {
-	    .button3menu add command -label "Web Browser" \
-		-state disabled
+	    .button3menu add command -label "Web Browser" -state disabled
 	}
+
 	#
 	# Sylpheed mail client
 	#
-	if {[checkForExternalApps "startxcmd"] == 0 && \
-	    [checkForApplications $node "sylpheed"] == 0} {
+	if { [checkForExternalApps "startxcmd"] == 0 && \
+	    [checkForApplications $node_id "sylpheed"] == 0 } {
+
 	    .button3menu add command -label "Mail client" \
-		-command "startXappOnNode $node \"G_FILENAME_ENCODING=UTF-8 sylpheed\""
+		-command "startXappOnNode $node_id \"G_FILENAME_ENCODING=UTF-8 sylpheed\""
 	} else {
-	    .button3menu add command -label "Mail client" \
-		-state disabled
+	    .button3menu add command -label "Mail client" -state disabled
 	}
-    } else {
-#	.button3menu add cascade -label "Wireshark" \
-#	    -menu .button3menu.wireshark -state disabled
-#	.button3menu add command -label "Web Browser" \
-#	    -state disabled
     }
 
     #
@@ -910,9 +892,9 @@ proc button3node { c x y } {
 # SYNOPSIS
 #   button1 $c $x $y $button
 # FUNCTION
-#   This procedure is called when a left mouse button is 
+#   This procedure is called when a left mouse button is
 #   clicked on the canvas. This procedure selects a new
-#   node or creates a new node, depending on the selected 
+#   node or creates a new node, depending on the selected
 #   tool.
 # INPUTS
 #   * c -- tk canvas
@@ -943,14 +925,16 @@ proc button1 { c x y button } {
 	 $curtype == "rectangle" || $curtype == "text" ||
 	 $curtype == "freeform" || ( $curtype == "nodelabel" &&
 	 [getNodeType [lindex [$c gettags $curobj] 1]] == "pseudo") } {
-	set node [lindex [$c gettags current] 1]
+
+	set node_id [lindex [$c gettags current] 1]
 	set wasselected \
 	    [expr {[lsearch [$c find withtag "selected"] \
-	    [$c find withtag "(node || text || freeform || rectangle || oval) && $node"]] > -1}]
+	    [$c find withtag "(node || text || freeform || rectangle || oval) && $node_id"]] > -1}]
+
 	if { $button == "ctrl" } {
 	    if { $wasselected } {
-		$c dtag $node selected
-		$c delete -withtags "selectmark && $node"
+		$c dtag $node_id selected
+		$c delete -withtags "selectmark && $node_id"
 	    }
 	} elseif { !$wasselected } {
 	    foreach node_type { "node" "text" "oval" "rectangle" "freeform"} {
@@ -958,16 +942,16 @@ proc button1 { c x y button } {
 	    }
 	    $c delete -withtags selectmark
 	}
-	if { $activetool == "select" && !$wasselected} {
+
+	if { $activetool == "select" && !$wasselected } {
 	    selectNode $c $curobj
 	}
     } elseif { $curtype == "selectmark" } {
-
 	set t1 [$c gettags current]
 	set o1 [lindex $t1 1]
 	set type1 [getNodeType $o1]
-    
-	if {$type1== "oval" || $type1== "rectangle"} { 
+
+	if { $type1 == "oval" || $type1 == "rectangle" } {
 	    set resizeobj $o1
 	    set bbox1 [$c bbox $o1]
 	    set x1 [lindex $bbox1 0]
@@ -984,25 +968,25 @@ proc button1 { c x y button } {
 	    if { $y < [expr $y1+($y2-$y1)/8.0]} { set u 1 }
 	    if { $y > [expr $y2-($y2-$y1)/8.0]} { set d 1 }
 
-	    if {$l==1} {
-		if {$u==1} { 
+	    if { $l == 1 } {
+		if { $u == 1 } {
 		    set resizemode lu
-		} elseif {$d==1} { 
+		} elseif { $d == 1 } {
 		    set resizemode ld
-		} else { 
+		} else {
 		    set resizemode l
-		} 
-	    } elseif {$r==1} {
-		if {$u==1} { 
+		}
+	    } elseif { $r == 1 } {
+		if { $u == 1 } {
 		    set resizemode ru
-		} elseif {$d==1} { 
+		} elseif { $d == 1 } {
 		    set resizemode rd
-		} else { 
+		} else {
 		    set resizemode r
-		} 
-	    } elseif {$u==1} { 
+		}
+	    } elseif { $u == 1 } {
 		set resizemode u
-	    } elseif {$d==1} {
+	    } elseif { $d == 1 } {
 		set resizemode d
 	    } else {
 		set resizemode false
@@ -1015,35 +999,41 @@ proc button1 { c x y button } {
 	}
 	$c delete -withtags selectmark
     }
+
     #determine whether we can create nodes on the current object
-    set isObjectDrawable 0
+    set object_drawable 0
     foreach type {background grid rectangle oval freeform text} {
 	if { $type in [.panwin.f1.c gettags $curobj] } {
-	    set isObjectDrawable 1
+	    set object_drawable 1
 	    break
 	}
     }
-    if { $isObjectDrawable } {
-	if { $activetool ni {select link oval rectangle text freeform} } {
+
+    if { $object_drawable } {
+	if { $activetool ni "select link oval rectangle text freeform" } {
 	    # adding a new node
-	    set node [newNode $activetool]
-	    setNodeCanvas $node [getFromRunning "curcanvas"]
-	    setNodeCoords $node "[expr {$x / $zoom}] [expr {$y / $zoom}]"
+	    set node_id [newNode $activetool]
+	    setNodeCanvas $node_id [getFromRunning "curcanvas"]
+	    setNodeCoords $node_id "[expr {$x / $zoom}] [expr {$y / $zoom}]"
+
 	    # To calculate label distance we take into account the normal icon
 	    # height
 	    global $activetool\_iconheight
+
 	    set dy [expr [set $activetool\_iconheight]/2 + 11]
-	    setNodeLabelCoords $node "[expr {$x / $zoom}] \
+	    setNodeLabelCoords $node_id "[expr {$x / $zoom}] \
 		[expr {$y / $zoom + $dy}]"
-	    drawNode $node
-	    selectNode $c [$c find withtag "node && $node"]
+
+	    drawNode $node_id
+	    selectNode $c [$c find withtag "node && $node_id"]
 	    set changed 1
 	} elseif { $activetool == "select" \
-	    && $curtype != "node" && $curtype != "nodelabel"} {
+	    && $curtype != "node" && $curtype != "nodelabel" } {
+
 	    $c config -cursor cross
 	    set lastX $x
 	    set lastY $y
-	    if {$selectbox != ""} {
+	    if { $selectbox != "" } {
 		# We actually shouldn't get here!
 		$c delete $selectbox
 		set selectbox ""
@@ -1060,10 +1050,11 @@ proc button1 { c x y button } {
 		-anchor w -justify left -tags "newtext"]
 	}
     } else {
-	if {$curtype in {node nodelabel text oval rectangle freeform}} {
+	if { $curtype in "node nodelabel text oval rectangle freeform" } {
 	    $c config -cursor fleur
 	}
-	if {$activetool == "link" && $curtype == "node"} {
+
+	if { $activetool == "link" && $curtype == "node" } {
 	    $c config -cursor cross
 	    set lastX [lindex [$c coords $curobj] 0]
 	    set lastY [lindex [$c coords $curobj] 1]
@@ -1080,11 +1071,11 @@ proc button1 { c x y button } {
 # NAME
 #   button1-motion -- button1 moved
 # SYNOPSIS
-#   button1-motion $c $x $y 
+#   button1-motion $c $x $y
 # FUNCTION
-#   This procedure is called when a left mouse button is 
-#   pressed and the mouse is moved around the canvas. 
-#   This procedure creates new select box, moves the 
+#   This procedure is called when a left mouse button is
+#   pressed and the mouse is moved around the canvas.
+#   This procedure creates new select box, moves the
 #   selected nodes or draws a new link.
 # INPUTS
 #   * c -- tk canvas
@@ -1095,27 +1086,30 @@ proc button1-motion { c x y } {
     global activetool newlink changed
     global lastX lastY sizex sizey selectbox background
     global newoval newrect newtext newfree resizemode
+
     set x [$c canvasx $x]
     set y [$c canvasy $y]
     set curobj [$c find withtag current]
     set curtype [lindex [$c gettags current] 0]
-    if {$activetool == "link" && $newlink != ""} {
+    if { $activetool == "link" && $newlink != "" } {
 	#creating a new link
 	$c coords $newlink $lastX $lastY $x $y
     } elseif { $activetool == "select" && $curtype == "nodelabel" \
 	&& [getNodeType [lindex [$c gettags $curobj] 1]] != "pseudo" } {
+
 	$c move $curobj [expr {$x - $lastX}] [expr {$y - $lastY}]
 	set changed 1
 	set lastX $x
 	set lastY $y
     } elseif { $activetool == "select" && $curobj == "" && $curtype == "" } {
 	return
-    } elseif { $activetool == "select" && 
+    } elseif { $activetool == "select" &&
 	( $curobj == $selectbox || $curtype == "background" ||
 	$curtype == "grid" || ($curobj ni [$c find withtag "selected"] &&
-	$curtype != "selectmark") && [getNodeType [lindex [$c gettags $curobj] 1]] != "pseudo")  } {
+	$curtype != "selectmark") && [getNodeType [lindex [$c gettags $curobj] 1]] != "pseudo") } {
+
 	#forming the selectbox and resizing
-	if {$selectbox == ""} {
+	if { $selectbox == "" } {
 	    set err [catch {
 		set selectbox [$c create line \
 		    $lastX $lastY $x $lastY $x $y $lastX $y $lastX $lastY \
@@ -1124,6 +1118,7 @@ proc button1-motion { c x y } {
 	    if { $err != 0 } {
 		return
 	    }
+
 	    $c raise $selectbox "background || link || linklabel || interface"
 	} else {
 	    set err [catch {
@@ -1134,12 +1129,13 @@ proc button1-motion { c x y } {
 		return
 	    }
 	}
-    # actually we should check if curobj==bkgImage
+    # actually we should check if curobj == bkgImage
     } elseif { $activetool == "oval" && ( $curobj == $newoval \
 	|| $curobj == $background || $curtype == "background" \
-	|| $curtype == "grid")} {
+	|| $curtype == "grid") } {
+
 	# Draw a new oval
-	if {$newoval == ""} {
+	if { $newoval == "" } {
 	    set newoval [$c create oval $lastX $lastY $x $y \
 			-outline blue \
 			-dash {10 4} -width 1 -tags "newoval"]
@@ -1150,9 +1146,10 @@ proc button1-motion { c x y } {
 	}
     } elseif { $activetool == "rectangle" && ( $curobj == $newrect \
 	|| $curobj == $background || $curtype == "background" \
-	|| $curtype == "oval" || $curtype == "grid")} {
+	|| $curtype == "oval" || $curtype == "grid") } {
+
 	# Draw a new rectangle
-	if {$newrect == ""} {
+	if { $newrect == "" } {
 	    set newrect [$c create rectangle $lastX $lastY $x $y \
 		-outline blue \
 		-dash {10 4} -width 1 -tags "newrect"]
@@ -1163,25 +1160,21 @@ proc button1-motion { c x y } {
     } elseif { $activetool == "freeform" && ( $curobj == $newfree \
 	|| $curobj == $background || $curtype == "background" \
 	|| $curtype == "oval" || $curtype == "rectangle"  \
-	|| $curtype == "grid")} {
+	|| $curtype == "grid") } {
+
 	# Draw a new freeform
-	if {$newfree == ""} {
+	if { $newfree == "" } {
 	    set newfree [$c create line $lastX $lastY $x $y \
 		-fill blue -width 2 -tags "newfree"]
 	    $c raise $newfree "oval || rectangle || background || link || linklabel || interface"
 	} else {
 	    xpos $newfree $x $y 2 blue
-	}		
+	}
     } elseif { $curtype == "selectmark" } {
-	foreach o [$c find withtag "selected"] { 
-	    set node [lindex [$c gettags $o] 1]
-	    set tagovi [$c gettags $o]
-	    set koord [getNodeCoords $node]
+	foreach o [$c find withtag "selected"] {
+	    set node_id [lindex [$c gettags $o] 1]
 
-	    set oldX1 [lindex $koord 0]
-	    set oldY1 [lindex $koord 1]
-	    set oldX2 [lindex $koord 2]
-	    set oldY2 [lindex $koord 3]
+	    lassign [getNodeCoords $node_id] oldX1 oldY1 oldX2 oldY2
 	    switch -exact -- $resizemode {
 		lu {
 		    set oldX1 $x
@@ -1212,7 +1205,7 @@ proc button1-motion { c x y } {
 		    set oldY2 $y
 		}
 	    }
-	    if {$selectbox == ""} {
+	    if { $selectbox == "" } {
 		set err [catch {
 		    set selectbox [$c create line \
 			$oldX1 $oldY1 $oldX2 $oldY1 $oldX2 $oldY2 $oldX1 $oldY2 $oldX1 $oldY1 \
@@ -1236,19 +1229,22 @@ proc button1-motion { c x y } {
 	foreach img [$c find withtag "selected"] {
 	    $c move $img [expr {$x - $lastX}] [expr {$y - $lastY}]
 
-	    set node [lindex [$c gettags $img] 1]
+	    set node_id [lindex [$c gettags $img] 1]
 
 	    foreach elem { "selectmark" "nodelabel" "link"} {
-		set obj [$c find withtag "$elem && $node"]
+		set obj [$c find withtag "$elem && $node_id"]
 		$c move $obj [expr {$x - $lastX}] [expr {$y - $lastY}]
+
 		if { $elem == "link" } {
-		    $c addtag need_redraw withtag "link && $node"
+		    $c addtag need_redraw withtag "link && $node_id"
 		}
 	    }
 	}
-	foreach link [$c find withtag "link && need_redraw"] {
-	    redrawLink [lindex [$c gettags $link] 1]
+
+	foreach link_id [$c find withtag "link && need_redraw"] {
+	    redrawLink [lindex [$c gettags $link_id] 1]
 	}
+
 	$c dtag link need_redraw
 	set changed 1
 	set lastX $x
@@ -1260,10 +1256,10 @@ proc button1-motion { c x y } {
 # NAME
 #   button1-release -- button1 released
 # SYNOPSIS
-#   button1-release $c $x $y 
+#   button1-release $c $x $y
 # FUNCTION
-#   This procedure is called when a left mouse button is 
-#   released. 
+#   This procedure is called when a left mouse button is
+#   released.
 #   The result of this function depends on the actions
 #   during the button1-motion procedure.
 # INPUTS
@@ -1285,173 +1281,182 @@ proc button1-release { c x y } {
     set redrawNeeded 0
 
     set outofbounds 0
-	
+
     set x [$c canvasx $x]
     set y [$c canvasy $y]
 
     $c config -cursor left_ptr
     # if the link tool is active and we are creating a new link
-    if {$activetool == "link" && $newlink != ""} {
+    if { $activetool == "link" && $newlink != "" } {
 	$c delete $newlink
 	set newlink ""
 	set destobj ""
+
 	# find the node that is under the cursor
 	foreach obj [$c find overlapping $x $y $x $y] {
-	    if {[lindex [$c gettags $obj] 0] == "node"} {
+	    if { [lindex [$c gettags $obj] 0] == "node" } {
 		set destobj $obj
 		break
 	    }
 	}
+
 	# if there is an object beneath the cursor and an object was
 	# selected by the button1 procedure create a link between nodes
-	if {$destobj != "" && $curobj != "" && $destobj != $curobj} {
-	    set lnode1 [lindex [$c gettags $destobj] 1]
-	    set lnode2 [lindex [$c gettags $curobj] 1]
+	if { $destobj != "" && $curobj != "" && $destobj != $curobj } {
+	    set lnode1 [lindex [$c gettags $curobj] 1]
+	    set lnode2 [lindex [$c gettags $destobj] 1]
 	    if { [ifcByLogicalPeer $lnode1 $lnode2] == "" } {
-		set link [newLink $lnode1 $lnode2]
-		if { $link != "" } {
-		    drawLink $link
-		    redrawLink $link
-		    updateLinkLabel $link
+		set link_id [newLink $lnode1 $lnode2]
+		if { $link_id != "" } {
+		    drawLink $link_id
+		    redrawLink $link_id
+		    updateLinkLabel $link_id
 		    set changed 1
 		}
 	    }
 	}
-    } elseif {$activetool == "rectangle" || $activetool == "oval" \
-	|| $activetool == "text" || $activetool =="freeform"} {
-	popupAnnotationDialog $c 0 "false" 
+    } elseif { $activetool == "rectangle" || $activetool == "oval" \
+	|| $activetool == "text" || $activetool =="freeform" } {
+
+	popupAnnotationDialog $c 0 "false"
     }
 
     if { $changed == 1 } {
 	set regular true
+
 	# selects the node whose label was moved
 	if { [lindex [$c gettags $curobj] 0] == "nodelabel" } {
-	    set node [lindex [$c gettags $curobj] 1]
-	    selectNode $c [$c find withtag "node && $node"]
+	    set node_id [lindex [$c gettags $curobj] 1]
+	    selectNode $c [$c find withtag "node && $node_id"]
 	}
+
 	set selected {}
 	foreach img [$c find withtag "selected"] {
-	    set node [lindex [$c gettags $img] 1]
-	    lappend selected $node
+	    set node_id [lindex [$c gettags $img] 1]
+	    lappend selected $node_id
 	    set coords [$c coords $img]
 	    set x [expr {[lindex $coords 0] / $zoom}]
 	    set y [expr {[lindex $coords 1] / $zoom}]
-	    
+
 	    # only nodes are snapped to grid, annotations are not
 	    if { $autorearrange_enabled == 0 && \
-		[$c find withtag "node && $node"] != "" } {
+		[$c find withtag "node && $node_id"] != ""  } {
+
 		set dx [expr {(int($x / $grid + 0.5) * $grid - $x) * $zoom}]
 		set dy [expr {(int($y / $grid + 0.5) * $grid - $y) * $zoom}]
 		$c move $img $dx $dy
+
 		set coords [$c coords $img]
 		set x [expr {[lindex $coords 0] / $zoom}]
 		set y [expr {[lindex $coords 1] / $zoom}]
-		setNodeCoords $node "$x $y"
+		setNodeCoords $node_id "$x $y"
+
 		#moving the nodelabel assigned to the moving node
-		$c move "nodelabel && $node" $dx $dy
-		set coords [$c coords "nodelabel && $node"]
+		$c move "nodelabel && $node_id" $dx $dy
+		set coords [$c coords "nodelabel && $node_id"]
 		set x [expr {[lindex $coords 0] / $zoom}]
 		set y [expr {[lindex $coords 1] / $zoom}]
-		setNodeLabelCoords $node "$x $y"
-		if {$x < 0 || $y < 0 || $x > $sizex || $y > $sizey} {
+		setNodeLabelCoords $node_id "$x $y"
+		if { $x < 0 || $y < 0 || $x > $sizex || $y > $sizey } {
 		    set regular false
 		}
 	    } else {
 		set dx 0
 		set dy 0
 	    }
-	    # only nodes (annotations can not) can set the regular flag
-#	    if {$x < 0 || $y < 0 || $x > $sizex || $y > $sizey} {
-#		set regular false
-#	    } 
-	    if { [lindex [$c gettags $node] 0] == "oval"} {
-		set coordinates [$c coords [lindex [$c gettags $node] 1]]
-		set x1 [expr {[lindex $coordinates 0] / $zoom}]
-		set y1 [expr {[lindex $coordinates 1] / $zoom}]
-		set x2 [expr {[lindex $coordinates 2] / $zoom}]
-		set y2 [expr {[lindex $coordinates 3] / $zoom}]
-		if {$x1<0} {
+
+	    if { [lindex [$c gettags $node_id] 0] == "oval"} {
+		lassign [$c coords [lindex [$c gettags $node_id] 1]] x1 y1 x2 y2
+		set x1 [expr {$x1 / $zoom}]
+		set y1 [expr {$y1 / $zoom}]
+		set x2 [expr {$x2 / $zoom}]
+		set y2 [expr {$y2 / $zoom}]
+		if { $x1 < 0 } {
 		    set x2 [expr {$x2-$x1}]
 		    set x1 0
 		    set outofbounds 1
 		}
-		if {$y1<0} {
+		if { $y1 < 0 } {
 		    set y2 [expr {$y2-$y1}]
 		    set y1 0
 		    set outofbounds 1
 		}
-		if {$x2>$sizex} {
+		if { $x2 > $sizex } {
 		    set x1 [expr {$x1-($x2-$sizex)}]
 		    set x2 $sizex
 		    set outofbounds 1
 		}
-		if {$y2>$sizey} {
+		if { $y2 > $sizey } {
 		    set y1 [expr {$y1-($y2-$sizey)}]
 		    set y2 $sizey
 		    set outofbounds 1
 		}
-		setNodeCoords $node "$x1 $y1 $x2 $y2"
+
+		setNodeCoords $node_id "$x1 $y1 $x2 $y2"
 	    }
-	    if {[lindex [$c gettags $node] 0] == "rectangle" } {
-		set coordinates [$c coords [lindex [$c gettags $node] 1]]
+
+	    if { [lindex [$c gettags $node_id] 0] == "rectangle" } {
+		set coordinates [$c coords [lindex [$c gettags $node_id] 1]]
 		set x1 [expr {[lindex $coordinates 0] / $zoom}]
 		set y1 [expr {[lindex $coordinates 1] / $zoom}]
 		set x2 [expr {[lindex $coordinates 6] / $zoom}]
 		set y2 [expr {[lindex $coordinates 13] / $zoom}]
-		if {$x1<0} {
+		if { $x1 < 0 } {
 		    set x2 [expr {$x2-$x1}]
 		    set x1 0
 		    set outofbounds 1
 		}
-		if {$y1<0} {
+		if { $y1 < 0 } {
 		    set y2 [expr {$y2-$y1}]
 		    set y1 0
 		    set outofbounds 1
 		}
-		if {$x2>$sizex} {
+		if { $x2 > $sizex } {
 		    set x1 [expr {$x1-($x2-$sizex)}]
 		    set x2 $sizex
 		    set outofbounds 1
 		}
-		if {$y2>$sizey} {
+		if { $y2 > $sizey } {
 		    set y1 [expr {$y1-($y2-$sizey)}]
 		    set y2 $sizey
 		    set outofbounds 1
 		}
-		setNodeCoords $node "$x1 $y1 $x2 $y2"
-	    }
-	    if { [lindex [$c gettags $node] 0] == "freeform"} {
-		set bbox [$c bbox "selectmark && $node"]
-		set x1 [expr {[lindex $bbox 0] / $zoom}]
-		set y1 [expr {[lindex $bbox 1] / $zoom}]
-		set x2 [expr {[lindex $bbox 2] / $zoom}]
-		set y2 [expr {[lindex $bbox 3] / $zoom}]
-		set shiftx 0	
-		set shifty 0	
 
-		if {$x1<0} {
+		setNodeCoords $node_id "$x1 $y1 $x2 $y2"
+	    }
+
+	    if { [lindex [$c gettags $node_id] 0] == "freeform"} {
+		lassign [$c bbox "selectmark && $node_id"] x1 y1 x2 y2
+		set x1 [expr {$x1 / $zoom}]
+		set y1 [expr {$y1 / $zoom}]
+		set x2 [expr {$x2 / $zoom}]
+		set y2 [expr {$y2 / $zoom}]
+		set shiftx 0
+		set shifty 0
+
+		if { $x1 < 0 } {
 		    set shiftx -$x1
 		    set outofbounds 1
 		}
-		if {$y1<0} {
+		if { $y1 < 0 } {
 		    set shifty -$y1
 		    set outofbounds 1
 		}
-		if {$x2>$sizex} {
+		if { $x2 > $sizex } {
 		    set shiftx [expr $sizex-$x2]
 		    set outofbounds 1
 		}
-		if {$y2>$sizey} {
+		if { $y2 > $sizey } {
 		    set shifty [expr $sizey-$y2]
 		    set outofbounds 1
 		}
 
-		set coordinates [$c coords [lindex [$c gettags $node] 1]]
+		set coordinates [$c coords [lindex [$c gettags $node_id] 1]]
                 set l [expr {[llength $coordinates]-1}]
                 set newcoords {}
                 set i 0
 
-		while {$i<=$l} {
+		while { $i <= $l } {
                     set f1 [expr {[lindex $coords $i] * $zoom}]
                     set g1 [expr {[lindex $coords $i+1] * $zoom}]
                     set xx1 [expr $f1+$shiftx]
@@ -1460,70 +1465,74 @@ proc button1-release { c x y } {
                     lappend newcoords $xx1 $yy1
                     set i [expr {$i+2}]
                 }
-                setNodeCoords $node $newcoords
+
+                setNodeCoords $node_id $newcoords
 	    }
-	    if { [lindex [$c gettags $node] 0] == "text"} {
-		set bbox [$c bbox "selectmark && $node"]
-		set coordinates [$c coords [lindex [$c gettags $node] 1]]
-		set x1 [expr [lindex $coordinates 0]]
-		set y1 [expr [lindex $coordinates 1]]
+
+	    if { [lindex [$c gettags $node_id] 0] == "text"} {
+		set bbox [$c bbox "selectmark && $node_id"]
+		lassign [$c coords [lindex [$c gettags $node_id] 1]] x1 y1
 		set width [expr [lindex $bbox 2] - [lindex $bbox 0]]
 		set height [expr [lindex $bbox 3] - [lindex $bbox 1]]
-		if {[lindex $bbox 0]<0} {
+
+		if { [lindex $bbox 0] < 0 } {
 		    set x1 5
 		    set outofbounds 1
 		}
-		if {[lindex $bbox 1]<0} {
+		if { [lindex $bbox 1] < 0 } {
 		    set y1 [expr $height/2]
 		    set outofbounds 1
 		}
-		if {[lindex $bbox 2]>$sizex} {
+		if { [lindex $bbox 2] > $sizex } {
 		    set x1 [expr $sizex-$width+5]
 		    set outofbounds 1
 		}
-		if {[lindex $bbox 3]>$sizey} {
+		if { [lindex $bbox 3] > $sizey } {
 		    set y1 [expr {$sizey-$height/2}]
 		    set outofbounds 1
 		}
-		setNodeCoords $node "$x1 $y1"
+
+		setNodeCoords $node_id "$x1 $y1"
 	    }
 
-	    $c move "selectmark && $node" $dx $dy
-	    $c addtag need_redraw withtag "link && $node"
+	    $c move "selectmark && $node_id" $dx $dy
+	    $c addtag need_redraw withtag "link && $node_id"
 	    set changed 1
 	} ;# end of: foreach img selected
 
-	if {$outofbounds} {
+	if { $outofbounds } {
 	    redrawAll
-	    if {$activetool == "select" } {
+	    if { $activetool == "select" } {
 		selectNodes $selected
 	    }
 	}
 
-
-	if {$regular == "true"} {
-	    foreach link [$c find withtag "link && need_redraw"] {
-		redrawLink [lindex [$c gettags $link] 1]
-                updateLinkLabel [lindex [$c gettags $link] 1]
+	if { $regular == "true" } {
+	    foreach link_id [$c find withtag "link && need_redraw"] {
+		redrawLink [lindex [$c gettags $link_id] 1]
+                updateLinkLabel [lindex [$c gettags $link_id] 1]
 	    }
 	} else {
 	    .panwin.f1.c config -cursor watch
+
+	    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 	    set dict_cfg [getFromUndolog $undolevel]
 	    setToRunning "canvas_list" [getCanvasList]
 	    setToRunning "node_list" [getNodeList]
 	    setToRunning "link_list" [getLinkList]
 	    setToRunning "annotation_list" [getAnnotationList]
 	    redrawAll
-	    if {$activetool == "select" } {
+
+	    if { $activetool == "select" } {
 		selectNodes $selected
 	    }
+
 	    set changed 0
 	}
 	$c dtag link need_redraw
-
     # $changed!=1
-    } elseif {$activetool == "select" } { 
-	if {$selectbox == ""} {
+    } elseif { $activetool == "select" } {
+	if { $selectbox == "" } {
 	    set x1 $x
 	    set y1 $y
 	    set autorearrange_enabled 0
@@ -1539,25 +1548,27 @@ proc button1-release { c x y } {
 
 	if { $resizemode == "false" } {
 	    set enclosed {}
-	    catch {$c find enclosed $x $y $x1 $y1} enc_objs
+
+	    catch { $c find enclosed $x $y $x1 $y1 } enc_objs
 	    foreach obj $enc_objs {
 		set tags [$c gettags $obj]
-		if {[lindex $tags 0] == "node" && [lsearch $tags selected] == -1} {
+		if { [lindex $tags 0] == "node" && [lsearch $tags selected] == -1 } {
 		    lappend enclosed $obj
 		}
-		if {[lindex $tags 0] == "oval" && [lsearch $tags selected] == -1} {
+		if { [lindex $tags 0] == "oval" && [lsearch $tags selected] == -1 } {
 		    lappend enclosed $obj
 		}
-		if {[lindex $tags 0] == "rectangle" && [lsearch $tags selected] == -1} {
+		if { [lindex $tags 0] == "rectangle" && [lsearch $tags selected] == -1 } {
 		    lappend enclosed $obj
 		}
-		if {[lindex $tags 0] == "text" && [lsearch $tags selected] == -1} {
+		if { [lindex $tags 0] == "text" && [lsearch $tags selected] == -1 } {
 		    lappend enclosed $obj
 		}
-		if {[lindex $tags 0] == "freeform" && [lsearch $tags selected] == -1} {
+		if { [lindex $tags 0] == "freeform" && [lsearch $tags selected] == -1 } {
 		    lappend enclosed $obj
 		}
 	    }
+
 	    foreach obj $enclosed {
 		selectNode $c $obj
 	    }
@@ -1574,6 +1585,7 @@ proc button1-release { c x y } {
     } else {
 	raiseAll $c
     }
+
     update
     updateUndoLog
 }
@@ -1604,14 +1616,14 @@ proc button3background { c x y } {
     .button3menu add checkbutton -label "Show background" \
     -underline 5 -variable showBkgImage \
     -command { redrawAll }
-    
+
     .button3menu add separator
     #
     # Change canvas background
     #
     .button3menu add command -label "Change background" \
 	    -command "changeBkgPopup"
-	    
+
     #
     # Remove canvas background
     #
@@ -1623,10 +1635,9 @@ proc button3background { c x y } {
 		      redrawAll;
 		      set changed 1;
 		      updateUndoLog"
-	    
-    
+
     .button3menu.canvases delete 0 end
-    
+
     set m .button3menu.canvases
 
     set mode normal
@@ -1669,10 +1680,10 @@ proc setDefaultIcon {} {
     global changed
     set nodelist [selectedNodes]
 
-    foreach node $nodelist {
-	set icon [getCustomIcon $node]
-	removeCustomIcon $node
-	removeImageReference $icon $node
+    foreach node_id $nodelist {
+	set icon [getCustomIcon $node_id]
+	removeCustomIcon $node_id
+	removeImageReference $icon $node_id
     }
     redrawAll
     set changed 1
@@ -1685,40 +1696,40 @@ proc setDefaultIcon {} {
 # SYNOPSIS
 #   nodeEnter $c
 # FUNCTION
-#   This procedure prints the node id, node name and 
+#   This procedure prints the node id, node name and
 #   node model (if exists), as well as all the interfaces
-#   of the node in the status line. 
+#   of the node in the status line.
 #   Information is presented for the node above which is
-#   the mouse pointer.  
+#   the mouse pointer.
 # INPUTS
 #   * c -- tk canvas
 #****
 proc nodeEnter { c } {
     global activetool
-    
-    set node [lindex [$c gettags current] 1]
-    set err [catch {getNodeType $node} error] 
+
+    set node_id [lindex [$c gettags current] 1]
+    set err [catch {getNodeType $node_id} error]
     if { $err != 0 } {
 	return
     }
 
-    set type [getNodeType $node]
-    set name [getNodeName $node]
-    set model [getNodeModel $node]
+    set type [getNodeType $node_id]
+    set name [getNodeName $node_id]
+    set model [getNodeModel $node_id]
     if { $model != "" } {
-	set line "{$node} $name ($model):"
+	set line "{$node_id} $name ($model):"
     } else {
-	set line "{$node} $name:"
+	set line "{$node_id} $name:"
     }
     if { $type != "rj45" } {
-	foreach ifc [ifcList $node] {
-	    set line "$line $ifc:[getIfcIPv4addr $node $ifc]"
+	foreach iface [ifcList $node_id] {
+	    set line "$line $iface:[getIfcIPv4addr $node_id $iface]"
 	}
     }
     .bottom.textbox config -text "$line"
 
-    showCfg $c $node
-    showRoute $c $node
+    showCfg $c $node_id
+    showRoute $c $node_id
 }
 
 #****f* editor.tcl/linkEnter
@@ -1730,18 +1741,18 @@ proc nodeEnter { c } {
 #   This procedure prints the link id, link bandwidth
 #   and link delay in the status line.
 #   Information is presented for the link above which is
-#   the mouse pointer.  
+#   the mouse pointer.
 # INPUTS
 #   * c -- tk canvas
 #****
-proc linkEnter {c} {
+proc linkEnter { c } {
     global activetool
 
-    set link [lindex [$c gettags current] 1]
-    if { [lsearch [getFromRunning "link_list"] $link] == -1 } {
+    set link_id [lindex [$c gettags current] 1]
+    if { [lsearch [getFromRunning "link_list"] $link_id] == -1 } {
 	return
     }
-    set line "$link: [getLinkBandwidthString $link] [getLinkDelayString $link]"
+    set line "$link_id: [getLinkBandwidthString $link_id] [getLinkDelayString $link_id]"
     .bottom.textbox config -text "$line"
 }
 
@@ -1755,11 +1766,11 @@ proc linkEnter {c} {
 # INPUTS
 #   * c -- tk canvas
 #****
-proc anyLeave {c} {
+proc anyLeave { c } {
     global activetool
 
     .bottom.textbox config -text ""
-    
+
     $c delete -withtag showCfgPopup
     $c delete -withtag route
 }
@@ -1770,12 +1781,12 @@ proc anyLeave {c} {
 # SYNOPSIS
 #   deleteSelection
 # FUNCTION
-#   By calling this procedure all the selected nodes in imunes will 
+#   By calling this procedure all the selected nodes in imunes will
 #   be deleted.
 #****
 proc deleteSelection {} {
     global changed
-    global background 
+    global background
     global viewid
 
     if { [getFromRunning "oper_mode"] == "exec" } {
@@ -1812,10 +1823,10 @@ proc removeIPv4nodes {} {
     global changed
     set nodelist [selectedNodes]
 
-    foreach node $nodelist {
-	setStatIPv4routes $node "" 
-	foreach ifc [ifcList $node] {
-	    setIfcIPv4addrs $node $ifc "" 
+    foreach node_id $nodelist {
+	setStatIPv4routes $node_id ""
+	foreach iface [ifcList $node_id] {
+	    setIfcIPv4addrs $node_id $iface ""
 	}
     }
     redrawAll
@@ -1835,12 +1846,13 @@ proc removeIPv6nodes {} {
     global changed
     set nodelist [selectedNodes]
 
-    foreach node $nodelist {
-	setStatIPv6routes $node "" 
-	foreach ifc [ifcList $node] {
-	    setIfcIPv6addrs $node $ifc "" 
+    foreach node_id $nodelist {
+	setStatIPv6routes $node_id ""
+	foreach iface [ifcList $node_id] {
+	    setIfcIPv6addrs $node_id $iface ""
 	}
     }
+
     redrawAll
     set changed 1
     updateUndoLog
@@ -1854,6 +1866,7 @@ proc removeIPv6nodes {} {
 # FUNCTION
 #   Change address range for selected nodes.
 #****
+# TODO: merge this with auto default gateway procedures?
 proc changeAddressRange {} {
     global changed changeAddrRange control changeAddressRange
     global copypaste_nodes copypaste_list
@@ -1869,20 +1882,21 @@ proc changeAddressRange {} {
     } else {
 	set selected_nodes [selectedNodes]
     }
+
     set link_nodes_selected ""
     set connected_link_layer_nodes ""
     set autorenumber_nodes ""
 
-    #spremanje svih selektiranih link_layer cvorova u listu link_nodes_selected
+    # all L2 nodes are saved in link_nodes_selected list
     foreach node_id [lsort -dictionary $selected_nodes] {
 	if { [[typemodel $node_id].layer] == "LINK" } {
 	    lappend link_nodes_selected $node_id
 	}
     }
 
-    #spremanje svih medjusobno povezanih selektiranih link_layer cvorova kao jedan element liste connected_link_layer_nodes
+    # all L2 nodes from the same subnet are saved as one element of connected_link_layer_nodes list
     foreach link_node $link_nodes_selected {
-	set lan_nodes [lsort -dictionary [listLANnodes $link_node {}]]
+	set lan_nodes [lsort -dictionary [listLANNodes $link_node {}]]
 	if { [lsearch $connected_link_layer_nodes $lan_nodes] == -1 } {
 	    lappend connected_link_layer_nodes $lan_nodes
 	}
@@ -1891,26 +1905,26 @@ proc changeAddressRange {} {
     global autorenumbered_ifcs
     set autorenumbered_ifcs ""
 
-    #dodijeljivanje adresa suceljima spojenima na link_layer cvorove
+    # assign addresses to nodes connected to L2 nodes
     foreach element $connected_link_layer_nodes {
 	set counter 0
-	foreach node $element {
+	foreach node_id $element {
 	    set autorenumber_nodes ""
-	    foreach ifc [ifcList $node] {
-		set peer [getIfcPeer $node $ifc]
+	    foreach iface [ifcList $node_id] {
+		set peer [getIfcPeer $node_id $iface]
 		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
-		    set peer_ifc [ifcByPeer $peer $node]
+		    set peer_ifc [ifcByPeer $peer $node_id]
 		    lappend autorenumber_nodes "$peer $peer_ifc"
 		}
 	    }
 	    foreach el $autorenumber_nodes {
-		set n [lindex $el 0]
-		set i [lindex $el 1]
+		lassign $el node_id iface
 		if { $counter == 0 } {
 		    set changeAddrRange 1
 		}
-		autoIPv4addr $n $i
-		lappend autorenumbered_ifcs "$n $i"
+
+		autoIPv4addr $node_id $iface
+		lappend autorenumbered_ifcs "$node_id $iface"
 		incr counter
 		set changed 1
 		set changeAddrRange 0
@@ -1921,45 +1935,43 @@ proc changeAddressRange {} {
     set autorenumber_nodes ""
     set autorenumber_ifcs ""
 
-    #spremanje svih selektiranih cvorova koji nisu povezani s link_layer cvorom u listu autorenumber_nodes
-    foreach node $selected_nodes {
-	if { [[typemodel $node].layer] != "LINK" } {
-	    foreach ifc [ifcList $node] {
-		set peer [getIfcPeer $node $ifc]
+    # save nodes not connected to the L2 node in the autorenumber_nodes list
+    foreach node_id $selected_nodes {
+	if { [[typemodel $node_id].layer] != "LINK" } {
+	    foreach iface [ifcList $node_id] {
+		set peer [getIfcPeer $node_id $iface]
 		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
-		    lappend autorenumber_ifcs "$node $ifc"
-		    if { [lsearch $autorenumber_nodes $node] == -1 } {
-			lappend autorenumber_nodes $node
+		    lappend autorenumber_ifcs "$node_id $iface"
+		    if { [lsearch $autorenumber_nodes $node_id] == -1 } {
+			lappend autorenumber_nodes $node_id
 		    }
 		}
 	    }
 	}
     }
 
-    #brisanje adresa selektiranih cvorova prije nove dodjele tako da ne bi
-    #utjecalo na detekciju postojecih podmreza
+    # delete the existing IP addresses
     foreach el $autorenumber_ifcs {
-	set node [lindex $el 0] 
-	set ifc [lindex $el 1]
-	setIfcIPv4addrs $node $ifc ""
+	lassign $el node_id iface
+	setIfcIPv4addrs $node_id $iface ""
     }
 
-    #dodijeljivanje adresa suceljima koja nisu spojena na link_layer cvorove
+    # assign IP addresses to interfaces not connected to L2 nodes
     foreach el $autorenumber_ifcs {
-	set node [lindex $el 0] 
-	set ifc [lindex $el 1]
-	set peer [getIfcPeer $node $ifc]
-	if { [lsearch $autorenumber_nodes $node] < [lsearch $autorenumber_nodes $peer] } {
+	lassign $el node_id iface
+	set peer [getIfcPeer $node_id $iface]
+	if { [lsearch $autorenumber_nodes $node_id] < [lsearch $autorenumber_nodes $peer] } {
 	    set changeAddrRange 1
 	}
-	autoIPv4addr $node $ifc
+
+	autoIPv4addr $node_id $iface
 	set changed 1
 	set changeAddrRange 0
     }
 
     set autorenumber 0
     set changeAddressRange 0
-    
+
     redrawAll
     updateUndoLog
 }
@@ -1972,6 +1984,7 @@ proc changeAddressRange {} {
 # FUNCTION
 #   Change IPv6 address range for selected nodes.
 #****
+# TODO: merge this with auto default gateway procedures?
 proc changeAddressRange6 {} {
     global changed changeAddrRange6 control changeAddressRange6
     global copypaste_nodes copypaste_list
@@ -1987,20 +2000,21 @@ proc changeAddressRange6 {} {
     } else {
 	set selected_nodes [selectedNodes]
     }
+
     set link_nodes_selected ""
     set connected_link_layer_nodes ""
     set autorenumber_nodes ""
 
-    #spremanje svih selektiranih link_layer cvorova u listu link_nodes_selected
-    foreach node [lsort -dictionary $selected_nodes] {
-	if { [[typemodel $node].layer] == "LINK" } {
-	    lappend link_nodes_selected $node
+    # all L2 nodes are saved in link_nodes_selected list
+    foreach node_id [lsort -dictionary $selected_nodes] {
+	if { [[typemodel $node_id].layer] == "LINK" } {
+	    lappend link_nodes_selected $node_id
 	}
     }
 
-    #spremanje svih medjusobno povezanih selektiranih link_layer cvorova kao jedan element liste connected_link_layer_nodes
+    # all L2 nodes from the same subnet are saved as one element of connected_link_layer_nodes list
     foreach link_node $link_nodes_selected {
-	set lan_nodes [lsort -dictionary [listLANnodes $link_node {}]]
+	set lan_nodes [lsort -dictionary [listLANNodes $link_node {}]]
 	if { [lsearch $connected_link_layer_nodes $lan_nodes] == -1 } {
 	    lappend connected_link_layer_nodes $lan_nodes
 	}
@@ -2009,26 +2023,26 @@ proc changeAddressRange6 {} {
     global autorenumbered_ifcs6
     set autorenumbered_ifcs6 ""
 
-    #dodijeljivanje adresa suceljima spojenima na link_layer cvorove
+    # assign addresses to nodes connected to L2 nodes
     foreach element $connected_link_layer_nodes {
 	set counter 0
-	foreach node $element {
+	foreach node_id $element {
 	    set autorenumber_nodes ""
-	    foreach ifc [ifcList $node] {
-		set peer [getIfcPeer $node $ifc]
+	    foreach iface [ifcList $node_id] {
+		set peer [getIfcPeer $node_id $iface]
 		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
-		    set peer_ifc [ifcByPeer $peer $node]
+		    set peer_ifc [ifcByPeer $peer $node_id]
 		    lappend autorenumber_nodes "$peer $peer_ifc"
 		}
 	    }
 	    foreach el $autorenumber_nodes {
-		set n [lindex $el 0]
-		set i [lindex $el 1]
+		lassign $el node_id iface
 		if { $counter == 0 } {
 		    set changeAddrRange6 1
 		}
-		autoIPv6addr $n $i
-		lappend autorenumbered_ifcs6 "$n $i"
+
+		autoIPv6addr $node_id $iface
+		lappend autorenumbered_ifcs6 "$node_id $iface"
 		incr counter
 		set changed 1
 		set changeAddrRange6 0
@@ -2039,45 +2053,43 @@ proc changeAddressRange6 {} {
     set autorenumber_nodes ""
     set autorenumber_ifcs ""
 
-    #spremanje svih selektiranih cvorova koji nisu povezani s link_layer cvorom u listu autorenumber_nodes
-    foreach node $selected_nodes {
-	if { [[typemodel $node].layer] != "LINK" } {
-	    foreach ifc [ifcList $node] {
-		set peer [getIfcPeer $node $ifc]
+    # save nodes not connected to the L2 node in the autorenumber_nodes list
+    foreach node_id $selected_nodes {
+	if { [[typemodel $node_id].layer] != "LINK" } {
+	    foreach iface [ifcList $node_id] {
+		set peer [getIfcPeer $node_id $iface]
 		if { $peer != "" && [[typemodel $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
-		    lappend autorenumber_ifcs "$node $ifc"
-		    if { [lsearch $autorenumber_nodes $node] == -1 } {
-			lappend autorenumber_nodes $node
+		    lappend autorenumber_ifcs "$node_id $iface"
+		    if { [lsearch $autorenumber_nodes $node_id] == -1 } {
+			lappend autorenumber_nodes $node_id
 		    }
 		}
 	    }
 	}
     }
 
-    #brisanje adresa selektiranih cvorova prije nove dodjele tako da ne bi
-    #utjecalo na detekciju postojecih podmreza
+    # delete the existing IP addresses
     foreach el $autorenumber_ifcs {
-	set node [lindex $el 0] 
-	set ifc [lindex $el 1]
-	setIfcIPv6addrs $node $ifc ""
+	lassign $el node_id iface
+	setIfcIPv6addrs $node_id $iface ""
     }
 
-    #dodijeljivanje adresa suceljima koja nisu spojena na link_layer cvorove
+    # assign IP addresses to interfaces not connected to L2 nodes
     foreach el $autorenumber_ifcs {
-	set node [lindex $el 0] 
-	set ifc [lindex $el 1]
-	set peer [getIfcPeer $node $ifc]
-	if { [lsearch $autorenumber_nodes $node] < [lsearch $autorenumber_nodes $peer] } {
+	lassign $el node_id iface
+	set peer [getIfcPeer $node_id $iface]
+	if { [lsearch $autorenumber_nodes $node_id] < [lsearch $autorenumber_nodes $peer] } {
 	    set changeAddrRange6 1
 	}
-	autoIPv6addr $node $ifc
+
+	autoIPv6addr $node_id $iface
 	set changed 1
 	set changeAddrRange6 0
     }
 
     set autorenumber 0
     set changeAddressRange6 0
-    
+
     redrawAll
     updateUndoLog
 }
@@ -2088,7 +2100,7 @@ proc changeAddressRange6 {} {
 # SYNOPSIS
 #  double1onGrid $c $x $y
 # FUNCTION
-#  As grid is layered above annotations this procedure is used to find 
+#  As grid is layered above annotations this procedure is used to find
 #  annotation object closest to cursor.
 # INPUTS
 #   * c -- tk canvas
@@ -2096,22 +2108,18 @@ proc changeAddressRange6 {} {
 #   * y -- double click y coordinate
 #****
 proc double1onGrid { c x y } {
-    set obj [$c find closest $x $y]
-    set tags [$c gettags $obj]
-    set node [lindex $tags 1]
-    if {[lsearch $tags grid] != -1 || [lsearch $tags background] != -1} {
+    set tags [$c gettags [$c find closest $x $y]]
+    if { [lsearch $tags grid] != -1 || [lsearch $tags background] != -1 } {
 	return
     }
+
+    set node_id [lindex $tags 1]
     # Is this really necessary?
-    set coords [getNodeCoords $node] 
-    set x1 [lindex $coords 0]
-    set y1 [lindex $coords 1]
-    set x2 [lindex $coords 2]
-    set y2 [lindex $coords 3]
-    if {$x < $x1 || $x > $x2 || $y < $y1 || $y > $y2} {
+    lassign [getNodeCoords $node_id] x1 y1 x2 y2
+    if { $x < $x1 || $x > $x2 || $y < $y1 || $y > $y2 } {
 	# cursor is not ON the closest object
 	return
-    } else {
-	annotationConfig $c $node
     }
+
+    annotationConfig $c $node_id
 }

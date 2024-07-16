@@ -23,7 +23,7 @@ proc showCfg { c node } {
 	    return
     }
     set lastObservedNode [winfo pointerxy .]
-    #Dont show popup window if 'None' or 'Route' is selected from 
+    #Dont show popup window if 'None' or 'Route' is selected from
     #the 'Show' menu
     #Also, dont show popup window if there is no node
     if { $showCfg == "None" || $showCfg == "route" || $node == "" } {
@@ -43,7 +43,7 @@ proc showCfg { c node } {
     set title "$node# $showCfg\n"
     append title $output
     #Call showCfgPopup
-    showCfgPopup $c $node $title $x $y    	
+    showCfgPopup $c $node $title $x $y
 }
 
 #****f* editor.tcl/showCfgPopup
@@ -92,33 +92,33 @@ proc showCfgPopup { c node title x y } {
     set nodeY [lindex [getNodeCoords $node] 1]
 
     set canvasRegion [$c cget -scrollregion]
-    set rx1 [lindex $canvasRegion 0]    
-    set ry1 [lindex $canvasRegion 1]    
-    set rx2 [lindex $canvasRegion 2]    
+    set rx1 [lindex $canvasRegion 0]
+    set ry1 [lindex $canvasRegion 1]
+    set rx2 [lindex $canvasRegion 2]
     set ry2 [lindex $canvasRegion 3]
 
     set vx1 [expr {round ([lindex [$c xview] 0]*($rx2-$rx1)+$rx1)}]
     set vx2 [expr {round ([lindex [$c xview] 1]*($rx2-$rx1)+$rx1)}]
     set vy1 [expr {round ([lindex [$c yview] 0]*($ry2-$ry1)+$ry1)}]
     set vy2 [expr {round ([lindex [$c yview] 1]*($ry2-$ry1)+$ry1)}]
-    
-    set vwidth [expr {abs($vx2 - $vx1)}] 
-    set vheight [expr {abs($vy2 - $vy1)}] 
+
+    set vwidth [expr {abs($vx2 - $vx1)}]
+    set vheight [expr {abs($vy2 - $vy1)}]
 
     set shift 40
 
     if {$nodeX > [expr {$vx1 + $vwidth/2 + 10}]} {
-	set newX [expr {$vx1+$shift}] 
+	set newX [expr {$vx1+$shift}]
     } else {
-	set newX [expr {$vx2-$width-$shift}] 
+	set newX [expr {$vx2-$width-$shift}]
     }
-    
+
     if {$nodeY > [expr {$vy1 + $vheight/2 + 10}]} {
-	set newY [expr {$vy1+$shift}] 
+	set newY [expr {$vy1+$shift}]
     } else {
-	set newY [expr {$vy2-$height-$shift}] 
+	set newY [expr {$vy2-$height-$shift}]
     }
-    
+
     if {$nodeX > [expr {$newX-$shift}] && $nodeX < [expr {$newX+$width+$shift}] \
 	&& $nodeY > [expr {$newY-$shift}] && $nodeY < \
 	[expr {$newY+$height+$shift}] } {
@@ -177,7 +177,7 @@ proc deleteAndShowPopup { c title x y } {
 proc showRoute { c node2 } {
     global activetool
     upvar 0 ::showConfig showCfg
-    upvar 0 ::traceRouteTime traceRouteTime  
+    upvar 0 ::traceRouteTime traceRouteTime
     #Route can only be drawn in exec mode
     if { [getFromRunning "oper_mode"] != "exec"} {
 	    return
@@ -225,7 +225,7 @@ proc showRoute { c node2 } {
 		    incr hop
 		    set cmd [concat "exec jexec " $nodeId ping -n -c 1 -m $hop -t 1 -o -s 56 $ipAddr]
 		    catch {
-			eval $cmd 
+			eval $cmd
 	    	    } result
 		    set adBeg [string first "from" $result]
 		    incr adBeg 5

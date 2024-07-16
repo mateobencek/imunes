@@ -131,7 +131,7 @@ proc redo {} {
 	if { $undolevel == 1 } {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	}
-	if {$redolevel <= $undolevel} {
+	if { $redolevel <= $undolevel } {
 	    .menubar.edit entryconfigure "Redo" -state disabled
 	}
 
@@ -154,14 +154,14 @@ proc redo {} {
 # FUNCTION
 #   Choose a node-specific interface base name.
 # INPUTS
-#   * lnode -- id of a "local" node
-#   * rnode -- id of a "remote" node
+#   * lnode_id -- id of a "local" node
+#   * rnode_id -- id of a "remote" node
 # RESULT
 #   * ifcName -- the name of the interface
 #****
-proc chooseIfName {lnode rnode} {
+proc chooseIfName { lnode_id rnode_id } {
 
-    return [[getNodeType $lnode].ifcName $lnode $rnode]
+    return [[getNodeType $lnode_id].ifcName $lnode_id $rnode_id]
 }
 
 #****f* editor.tcl/l3IfcName
@@ -172,18 +172,18 @@ proc chooseIfName {lnode rnode} {
 # FUNCTION
 #   Pick a default interface base name for a L3 node.
 # INPUTS
-#   * lnode -- id of a "local" node
-#   * rnode -- id of a "remote" node
+#   * lnode_id -- id of a "local" node
+#   * rnode_id -- id of a "remote" node
 # RESULT
 #   * ifcName -- the name of the interface
 #****
-proc l3IfcName {lnode rnode} {
+proc l3IfcName { lnode_id rnode_id } {
 
-    if { [getNodeType $lnode] in "ext extnat" } {
+    if { [getNodeType $lnode_id] in "ext extnat" } {
 	return "ext"
     }
 
-    if { [getNodeType $rnode] == "wlan" } {
+    if { [getNodeType $rnode_id] == "wlan" } {
 	return "wlan"
     } else {
 	return "eth"
@@ -194,27 +194,28 @@ proc l3IfcName {lnode rnode} {
 # NAME
 #   listLANNodes -- list LAN nodes
 # SYNOPSIS
-#   set l2peers [listLANNodes $l2node $l2peers]
+#   set l2peers [listLANNodes $l2node_id $l2peers]
 # FUNCTION
 #   Recursive function for finding all link layer nodes that are
 #   connected to node l2node. Returns the list of all link layer
 #   nodes that are on the same LAN as l2node.
 # INPUTS
-#   * l2node -- node id of a link layer node
+#   * l2node_id -- node id of a link layer node
 #   * l2peers -- old link layer nodes on the same LAN
 # RESULT
 #   * l2peers -- new link layer nodes on the same LAN
 #****
-proc listLANnodes { l2node l2peers } {
-    lappend l2peers $l2node
-    foreach ifc [ifcList $l2node] {
-	set peer [logicalPeerByIfc $l2node $ifc]
-	if {[[typemodel $peer].layer] == "LINK" &&  [getNodeType $peer] != "rj45"} {
-	    if { [lsearch $l2peers $peer] == -1 } {
-		set l2peers [listLANnodes $peer $l2peers]
+proc listLANNodes { l2node_id l2peers } {
+    lappend l2peers $l2node_id
+    foreach ifc [ifcList $l2node_id] {
+	set peer [logicalPeerByIfc $l2node_id $ifc]
+	if { [[typemodel $peer].layer] == "LINK" &&  [getNodeType $peer] != "rj45" } {
+	    if { $peer ni $l2peers } {
+		set l2peers [listLANNodes $peer $l2peers]
 	    }
 	}
     }
+
     return $l2peers
 }
 
@@ -238,16 +239,20 @@ proc checkIntRange { str low high } {
     if { $str == "" } {
 	return 1
     }
+
     set str [string trimleft $str 0]
     if { $str == "" } {
 	set str 0
     }
-    if { ![string is integer $str] } {
+
+    if { ! [string is integer $str] } {
 	return 0
     }
+
     if { $str < $low || $str > $high } {
 	return 0
     }
+
     return 1
 }
 
@@ -265,7 +270,7 @@ proc checkIntRange { str low high } {
 #   * count -- the parameter that causes flashes.
 #   It can be left blank.
 #****
-proc focusAndFlash {W {count 9}} {
+proc focusAndFlash { W { count 9 } } {
     global badentry
 
     set fg black
@@ -276,16 +281,18 @@ proc focusAndFlash {W {count 9}} {
     } else {
 	set badentry 1
     }
+
     focus -force $W
-    if {$count<1} {
+    if { $count < 1 } {
 	$W configure -foreground $fg -background $bg
 	set badentry 0
     } else {
-	if {$count%2} {
+	if { $count % 2 } {
 	    $W configure -foreground $bg -background $fg
 	} else {
 	    $W configure -foreground $fg -background $bg
 	}
+
 	after 200 [list focusAndFlash $W [expr {$count - 1}]]
     }
 }
@@ -302,11 +309,8 @@ proc focusAndFlash {W {count 9}} {
 #   * y -- zoom y coordinate
 #****
 proc setZoom { x y } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-
     set w .entry1
-    catch {destroy $w}
+    catch { destroy $w }
     toplevel $w -takefocus 1
 
     if { $x == 0 && $y == 0 } {
@@ -321,7 +325,6 @@ proc setZoom { x y } {
     wm title $w "Set zoom %"
     wm iconname $w "Set zoom %"
 
-    #dodan glavni frame "setzoom"
     ttk::frame $w.setzoom
     pack $w.setzoom -fill both -expand 1
 
@@ -340,7 +343,7 @@ proc setZoom { x y } {
     bind $w <Key-Return> "setZoomApply $w"
 
     ttk::entry $w.setzoom.e1
-    $w.setzoom.e1 insert 0 [expr {int($zoom * 100)}]
+    $w.setzoom.e1 insert 0 [expr {int([getFromRunning "zoom"] * 100)}]
     pack $w.setzoom.e1 -side top -pady 5 -padx 10 -fill x
 }
 
@@ -356,13 +359,12 @@ proc setZoom { x y } {
 #   * w -- tk widget (set zoom popup dialog box)
 #****
 proc setZoomApply { w } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-
     set newzoom [expr [$w.setzoom.e1 get] / 100.0]
-    if { $newzoom != $zoom } {
-	set zoom $newzoom
+    if { $newzoom != [getFromRunning "zoom"] } {
+	setToRunning "zoom" $newzoom
 	redrawAll
     }
+
     destroy $w
 }
 
@@ -378,8 +380,6 @@ proc setZoomApply { w } {
 #   * y -- zoom y coordinate
 #****
 proc selectZoom { x y } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
-
     global zoom_stops
 
     set values {}
@@ -388,7 +388,7 @@ proc selectZoom { x y } {
     }
 
     set w .entry1
-    catch {destroy $w}
+    catch { destroy $w }
     toplevel $w -takefocus 1
 
     if { $x == 0 && $y == 0 } {
@@ -417,7 +417,7 @@ proc selectZoom { x y } {
     bind $w <Key-Return> "selectZoomApply $w"
 
     ttk::combobox $w.selectzoom.e1 -values $values
-    $w.selectzoom.e1 insert 0 [expr {int($zoom * 100)}]
+    $w.selectzoom.e1 insert 0 [expr {int([getFromRunning "zoom"] * 100)}]
     pack $w.selectzoom.e1 -side top -pady 5 -padx 10 -fill x
 
     update
@@ -437,32 +437,35 @@ proc selectZoom { x y } {
 #   * w -- tk widget (select zoom popup dialog box)
 #****
 proc selectZoomApply { w } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global hasIM changed
 
     set tempzoom [$w.selectzoom.e1 get]
-
-    if {!$hasIM} {
+    if { ! $hasIM } {
 	global zoom_stops
+
 	set values {}
 	foreach z $zoom_stops {
 	    lappend values [expr {int($z*100)}]
 	}
+
 	if { $tempzoom > 400 || $tempzoom < 10 } {
 	    set tempzoom 100
 	}
+
 	if { [lsearch $values $tempzoom] == -1 } {
 	    set tempzoom [expr int($tempzoom/10)*10]
 	}
     }
 
     set newzoom [ expr $tempzoom / 100.0]
-    if { $newzoom != $zoom } {
-	set zoom $newzoom
+    if { $newzoom != [getFromRunning "zoom"] } {
+	setToRunning "zoom" $newzoom
+
 	redrawAll
 	set changed 1
 	updateUndoLog
     }
+
     destroy $w
 }
 
@@ -520,34 +523,26 @@ proc routerDefaultsApply { wi } {
 # NAME
 #   setCustomIcon -- set custom icon
 # SYNOPSIS
-#   setCustomIcon $node $iconName
+#   setCustomIcon $node_id $icon_name
 # FUNCTION
 #   Sets the custom icon to a node.
 # INPUTS
-#   * node -- node to change
-#   * iconName -- icon name
+#   * node_id -- node to change
+#   * icon_name -- icon name
 #****
-proc setCustomIcon { node iconName } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-    global $iconName
-
-    set i [lsearch [set $node] "customIcon *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i "customIcon $iconName"]
-    } else {
-	set $node [linsert [set $node] end "customIcon $iconName"]
-    }
+proc setCustomIcon { node_id icon_name } {
+    cfgSet "nodes" $node_id "custom_icon" $icon_name
 }
 
 #****f* editor.tcl/getCustomIcon
 # NAME
 #   getCustomIcon -- get custom icon
 # SYNOPSIS
-#   getCustomIcon $node
+#   getCustomIcon $node_id
 # FUNCTION
 #   Returns the custom icon from a node.
 # INPUTS
-#   * node -- node to get the icon from
+#   * node_id -- node to get the icon from
 #****
 proc getCustomIcon { node_id } {
     return [cfgGet "nodes" $node_id "custom_icon"]
@@ -557,19 +552,14 @@ proc getCustomIcon { node_id } {
 # NAME
 #   removeCustomIcon -- remove custom icon
 # SYNOPSIS
-#   removeCustomIcon $node
+#   removeCustomIcon $node_id
 # FUNCTION
 #   Removes the custom icon from a node.
 # INPUTS
-#   * node -- node to remove the icon from
+#   * node_id -- node to remove the icon from
 #****
-proc removeCustomIcon { node } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "customIcon *"]
-    if { $i >= 0 } {
-	set $node [lreplace [set $node] $i $i]
-    }
+proc removeCustomIcon { node_id } {
+    cfgUnset "nodes" $node_id "custom_icon"
 }
 
 #****f* editor.tcl/getMostDistantNodeCoordinates
@@ -583,12 +573,12 @@ proc removeCustomIcon { node } {
 proc getMostDistantNodeCoordinates {} {
     set x 0
     set y 0
-    foreach node [getFromRunning "node_list"] {
-	set coords [getNodeCoords $node]
-	if {[lindex $coords 0] > $x} {
+    foreach node_id [getFromRunning "node_list"] {
+	set coords [getNodeCoords $node_id]
+	if { [lindex $coords 0] > $x } {
 	    set x [lindex $coords 0]
 	}
-	if {[lindex $coords 1] > $y} {
+	if { [lindex $coords 1] > $y } {
 	    set y [lindex $coords 1]
 	}
     }
@@ -608,13 +598,10 @@ proc getMostDistantNodeCoordinates {} {
 #   Creates the tree with all network elements form the topology.
 #****
 proc topologyElementsTree {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-
     global showTree
-    set f .panwin.f2
 
-    if { !$showTree } {
+    set f .panwin.f2
+    if { ! $showTree } {
         .panwin forget $f
     }
 
@@ -626,7 +613,7 @@ proc topologyElementsTree {} {
 	    -yscrollcommand "$f.vscroll set"
 	ttk::scrollbar $f.hscroll -orient horizontal -command "$f.tree xview"
 	ttk::scrollbar $f.vscroll -orient vertical -command "$f.tree yview"
-	
+
 	focus $f.tree
 
 	pack $f.treegrid -side right -fill y
@@ -634,56 +621,57 @@ proc topologyElementsTree {} {
         grid $f.hscroll -in $f.treegrid -sticky nsew
 	grid columnconfig $f.treegrid 0 -weight 1
 	grid rowconfigure $f.treegrid 0 -weight 1
-	
-	$f.tree configure -columns { state MAC IPv4 IPv6 canvas }
+
+	$f.tree configure -columns { state nat MAC IPv4 IPv6 canvas }
 	$f.tree column #0 -width 200 -stretch 0
 	$f.tree column state -width 60 -anchor center -stretch 0
+	$f.tree column nat -width 40 -anchor center -stretch 0
         $f.tree column MAC -width 120 -anchor center -stretch 0
 	$f.tree column IPv4 -width 100 -anchor center -stretch 0
 	$f.tree column IPv6 -width 100 -anchor center -stretch 0
 	$f.tree column canvas -width 60 -anchor center -stretch 0
 	$f.tree heading #0 -text "(Expand All)"
 	$f.tree heading state -text "State"
+	$f.tree heading nat -text "NAT"
         $f.tree heading MAC -text "MAC address"
 	$f.tree heading IPv4 -text "IPv4 address"
 	$f.tree heading IPv6 -text "IPv6 address"
 	$f.tree heading canvas -text "Canvas"
 
-
-	#punjenje stabla podacima o cvorovima
+	# filling the tree with node info
         global nodetags
+
 	set nodetags ""
 	$f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
 	$f.tree focus nodes
 	$f.tree selection set nodes
-	foreach node [lsort -dictionary $node_list] {
-	    set type [getNodeType $node]
+	foreach node_id [lsort -dictionary [getFromRunning "node_list"]] {
+	    set type [getNodeType $node_id]
 	    if { $type != "pseudo" } {
-		$f.tree insert nodes end -id $node -text "[getNodeName $node]" -open false -tags $node
-		lappend nodetags $node
-		$f.tree set $node canvas [getCanvasName [getNodeCanvas $node]]
-		foreach ifc [lsort -dictionary [ifcList $node]] {
-		    $f.tree insert $node end -id $node$ifc -text "$ifc" -tags $node$ifc
-		    $f.tree set $node$ifc state [getIfcOperState $node $ifc]
-		    $f.tree set $node$ifc nat [getIfcNatState $node $ifc]
-		    $f.tree set $node$ifc IPv4 [getIfcIPv4addr $node $ifc]
-		    $f.tree set $node$ifc IPv6 [getIfcIPv6addr $node $ifc]
-                    $f.tree set $node$ifc MAC [getIfcMACaddr $node $ifc]
+		$f.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -open false -tags $node_id
+		lappend nodetags $node_id
+		$f.tree set $node_id canvas [getCanvasName [getNodeCanvas $node_id]]
+		foreach ifc [lsort -dictionary [ifcList $node_id]] {
+		    $f.tree insert $node_id end -id $node_id$ifc -text "$ifc" -tags $node_id$ifc
+		    $f.tree set $node_id$ifc state [getIfcOperState $node_id $ifc]
+		    $f.tree set $node_id$ifc nat [getIfcNatState $node_id $ifc]
+		    $f.tree set $node_id$ifc IPv4 [getIfcIPv4addr $node_id $ifc]
+		    $f.tree set $node_id$ifc IPv6 [getIfcIPv6addr $node_id $ifc]
+                    $f.tree set $node_id$ifc MAC [getIfcMACaddr $node_id $ifc]
 		}
 	    }
 	}
 
-	#punjenje stabla podacima o linkovima
+	# filling the tree with link info
 	global linktags
+
 	set linktags ""
 	$f.tree insert {} end -id links -text "Links" -open false -tags links
-	foreach link [lsort -dictionary $link_list] {
-	    set n0 [lindex [getLinkPeers $link] 0]
-	    set n1 [lindex [getLinkPeers $link] 1]
-	    set name0 [getNodeName $n0]
-	    set name1 [getNodeName $n1]
-	    $f.tree insert links end -id $link -text "From $name0 to $name1" -tags $link
-	    lappend linktags $link
+	foreach link_id [lsort -dictionary [getFromRunning "link_list"]] {
+	    lassign [getLinkPeers $link_id] node1_id node2_id
+	    $f.tree insert links end -id $link_id -text \
+		"From [getNodeName $node1_id] to [getNodeName $node2_id]" -tags $link_id
+	    lappend linktags $link_id
 	}
 
 	global expandtree
@@ -692,7 +680,6 @@ proc topologyElementsTree {} {
 	    "expandOrCollapseTree"
 
 	bindEventsToTree
-
     } else {
 	destroy $f.treegrid
 	destroy $f.tree $f.vscroll
@@ -712,14 +699,15 @@ proc topologyElementsTree {} {
 #****
 proc expandOrCollapseTree {} {
     global expandtree
+
     if { $expandtree == 0 } {
 	set expandtree 1
 	set f .panwin.f2
 	$f.tree heading #0 -text "(Collapse All)"
 	$f.tree item nodes -open true
 	$f.tree item links -open true
-	foreach node [$f.tree children nodes] {
-	    $f.tree item $node -open true	
+	foreach node_id [$f.tree children nodes] {
+	    $f.tree item $node_id -open true
 	}
     } else {
 	set expandtree 0
@@ -727,8 +715,8 @@ proc expandOrCollapseTree {} {
 	$f.tree heading #0 -text "(Expand All)"
 	$f.tree item nodes -open false
 	$f.tree item links -open false
-	foreach node [$f.tree children nodes] {
-	    $f.tree item $node -open false	
+	foreach node_id [$f.tree children nodes] {
+	    $f.tree item $node_id -open false
 	}
     }
 }
@@ -746,17 +734,17 @@ proc bindEventsToTree {} {
     global nodetags linktags
     set f .panwin.f2
     $f.tree tag bind nodes <Key-Down> \
-	"if {[llength $nodetags] != 0} {
+	"if { [llength $nodetags] != 0 } {
 	    selectNodeFromTree [lindex $nodetags 0]
 	}"
 
     $f.tree tag bind links <Key-Up> \
-	"if {[llength $nodetags] != 0} {
+	"if { [llength $nodetags] != 0 } {
 	    selectNodeFromTree [lindex $nodetags end]
 	}"
 
     $f.tree tag bind links <Key-Down> \
-	"if {[llength $linktags] != 0} {
+	"if { [llength $linktags] != 0 } {
 	    selectLinkPeersFromTree [lindex $linktags 0]
 	}"
 
@@ -774,14 +762,14 @@ proc bindEventsToTree {} {
 	$f.tree tag bind $n <1> \
 	      "selectNodeFromTree $n"
 	$f.tree tag bind $n <Key-Up> \
-	    "if {![string equal {} [$f.tree prev $n]]} {
+	    "if { ! [string equal {} [$f.tree prev $n]] } {
 		selectNodeFromTree [$f.tree prev $n]
 	    } else {
 		.panwin.f1.c dtag node selected
 		.panwin.f1.c delete -withtags selectmark
 	    }"
 	$f.tree tag bind $n <Key-Down> \
-	    "if {![string equal {} [$f.tree next $n]]} {
+	    "if { ! [string equal {} [$f.tree next $n]] } {
 		selectNodeFromTree [$f.tree next $n]
 	    } else {
 		.panwin.f1.c dtag node selected
@@ -807,14 +795,14 @@ proc bindEventsToTree {} {
 	$f.tree tag bind $l <1> \
 	    "selectLinkPeersFromTree $l"
 	$f.tree tag bind $l <Key-Up> \
-	    "if {![string equal {} [$f.tree prev $l]]} {
+	    "if { ! [string equal {} [$f.tree prev $l]] } {
 		selectLinkPeersFromTree [$f.tree prev $l]
 	    } else {
 		.panwin.f1.c dtag node selected
 		.panwin.f1.c delete -withtags selectmark
 	    }"
 	$f.tree tag bind $l <Key-Down> \
-	    "if {![string equal {} [$f.tree next $l]]} {
+	    "if { ! [string equal {} [$f.tree next $l]] } {
 		selectLinkPeersFromTree [$f.tree next $l]
 	    }"
 	$f.tree tag bind $l <Double-1> \
@@ -832,14 +820,14 @@ proc bindEventsToTree {} {
 # FUNCTION
 #   Selects icon of the node selected in the topology tree.
 #****
-proc selectNodeFromTree { n } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    set canvas [getNodeCanvas $n]
-    set curcanvas $canvas
+proc selectNodeFromTree { node_id } {
+    setToRunning "curcanvas" [getNodeCanvas $node_id]
     switchCanvas none
+
     .panwin.f1.c dtag node selected
     .panwin.f1.c delete -withtags selectmark
-    set obj [.panwin.f1.c find withtag "node && $n"]
+
+    set obj [.panwin.f1.c find withtag "node && $node_id"]
     selectNode .panwin.f1.c $obj
 }
 
@@ -852,17 +840,16 @@ proc selectNodeFromTree { n } {
 #   Selects icons of nodes that are endnodes
 #   of the link selected in the topology tree.
 #****
-proc selectLinkPeersFromTree { l } {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    set n0 [lindex [getLinkPeers $l] 0]
-    set n1 [lindex [getLinkPeers $l] 1]
-    set canvas [getNodeCanvas $n0]
-    set curcanvas $canvas
+proc selectLinkPeersFromTree { link_id } {
+    lassign [getLinkPeers $link_id] node1_id node2_id
+    setToRunning "curcanvas" [getNodeCanvas $node1_id]
     switchCanvas none
+
     .panwin.f1.c dtag node selected
     .panwin.f1.c delete -withtags selectmark
-    set obj0 [.panwin.f1.c find withtag "node && $n0"]
-    set obj1 [.panwin.f1.c find withtag "node && $n1"]
+
+    set obj0 [.panwin.f1.c find withtag "node && $node1_id"]
+    set obj1 [.panwin.f1.c find withtag "node && $node2_id"]
     selectNode .panwin.f1.c $obj0
     selectNode .panwin.f1.c $obj1
 }
@@ -876,8 +863,6 @@ proc selectLinkPeersFromTree { l } {
 #   Refreshes the topology tree.
 #****
 proc refreshTopologyTree {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
     global nodetags linktags
 
     set f .panwin.f2
@@ -889,32 +874,30 @@ proc refreshTopologyTree {} {
 
     set nodetags ""
     $f.tree insert {} end -id nodes -text "Nodes" -open true -tags nodes
-    foreach node [lsort -dictionary $node_list] {
-	set type [getNodeType $node]
+    foreach node_id [lsort -dictionary [getFromRunning "node_list"]] {
+	set type [getNodeType $node_id]
 	if { $type != "pseudo" } {
-	    $f.tree insert nodes end -id $node -text "[getNodeName $node]" -tags $node
-	    lappend nodetags $node
-	    $f.tree set $node canvas [getCanvasName [getNodeCanvas $node]]
-	    foreach ifc [lsort -dictionary [ifcList $node]] {
-		    $f.tree insert $node end -id $node$ifc -text "$ifc" -tags $node$ifc
-		    $f.tree set $node$ifc state [getIfcOperState $node $ifc]
-		    $f.tree set $node$ifc nat [getIfcNatState $node $ifc]
-		    $f.tree set $node$ifc IPv4 [getIfcIPv4addr $node $ifc]
-		    $f.tree set $node$ifc IPv6 [getIfcIPv6addr $node $ifc]
-                    $f.tree set $node$ifc MAC [getIfcMACaddr $node $ifc]
+	    $f.tree insert nodes end -id $node_id -text "[getNodeName $node_id]" -tags $node_id
+	    lappend nodetags $node_id
+	    $f.tree set $node_id canvas [getCanvasName [getNodeCanvas $node_id]]
+	    foreach ifc [lsort -dictionary [ifcList $node_id]] {
+		    $f.tree insert $node_id end -id $node_id$ifc -text "$ifc" -tags $node_id$ifc
+		    $f.tree set $node_id$ifc state [getIfcOperState $node_id $ifc]
+		    $f.tree set $node_id$ifc nat [getIfcNatState $node_id $ifc]
+		    $f.tree set $node_id$ifc IPv4 [getIfcIPv4addr $node_id $ifc]
+		    $f.tree set $node_id$ifc IPv6 [getIfcIPv6addr $node_id $ifc]
+                    $f.tree set $node_id$ifc MAC [getIfcMACaddr $node_id $ifc]
 	    }
 	}
     }
 
     set linktags ""
     $f.tree insert {} end -id links -text "Links" -open false -tags links
-    foreach link [lsort -dictionary $link_list] {
-	set n0 [lindex [getLinkPeers $link] 0]
-	set n1 [lindex [getLinkPeers $link] 1]
-	set name0 [getNodeName $n0]
-	set name1 [getNodeName $n1]
-	$f.tree insert links end -id $link -text "From $name0 to $name1" -tags $link
-	lappend linktags $link
+    foreach link_id [lsort -dictionary [getFromRunning "link_list"]] {
+	lassign [getLinkPeers $link_id] node1_id node2_id
+	$f.tree insert links end -id $link_id -text \
+	    "From [getNodeName $node1_id] to [getNodeName $node2_id]" -tags $link_id
+	lappend linktags $link_id
     }
 
     if { [$f.tree exists $selected] } {
@@ -938,8 +921,10 @@ proc refreshTopologyTree {} {
 #****
 proc attachToExperimentPopup {} {
     global selectedExperiment runtimeDir
-    set  ateDialog .attachToExperimentDialog
-    catch {destroy $ateDialog}
+
+    set ateDialog .attachToExperimentDialog
+    catch { destroy $ateDialog}
+
     toplevel $ateDialog
     wm transient $ateDialog .
     wm resizable $ateDialog 0 0
@@ -1000,12 +985,12 @@ proc attachToExperimentPopup {} {
 
     foreach exp [getResumableExperiments] {
 	$tree tag bind $exp <Key-Up> \
-	"if {![string equal {} [$tree prev $exp]]} {
+	"if { ! [string equal {} [$tree prev $exp]] } {
 	    updateScreenshotPreview $prevcan $runtimeDir/[$tree prev $exp]/screenshot.png
 	    set selectedExperiment [$tree prev $exp]
 	}"
 	$tree tag bind $exp <Key-Down> \
-	"if {![string equal {} [$tree next $exp]]} {
+	"if { ! [string equal {} [$tree next $exp]] } {
 	    updateScreenshotPreview $prevcan $runtimeDir/[$tree next $exp]/screenshot.png
 	    set selectedExperiment [$tree next $exp]
 	}"
@@ -1017,7 +1002,7 @@ proc attachToExperimentPopup {} {
     $tree focus $first
     set selectedExperiment $first
 
-    if {$selectedExperiment != ""} {
+    if { $selectedExperiment != "" } {
 	updateScreenshotPreview $prevcan $runtimeDir/$selectedExperiment/screenshot.png
     }
 
@@ -1027,7 +1012,7 @@ proc attachToExperimentPopup {} {
     ttk::button $wi.buttons.cancel -text "Cancel" -command "destroy $ateDialog"
     pack $wi.buttons.cancel $wi.buttons.resume -side right -expand 1
 
-    bind $ateDialog <Key-Return> {resumeSelectedExperiment $selectedExperiment; destroy .attachToExperimentDialog}
+    bind $ateDialog <Key-Return> { resumeSelectedExperiment $selectedExperiment; destroy .attachToExperimentDialog }
     bind $ateDialog <Key-Escape> "destroy $ateDialog"
 }
 
@@ -1058,7 +1043,7 @@ proc resumeAndDestroy {} {
 #****
 proc updateScreenshotPreview { pc image } {
     $pc delete "preview"
-    if {[file exists $image]} {
+    if { [file exists $image] } {
 	image create photo screenshot -file $image
 	$pc create image 150 105 -image screenshot -tags "preview"
     } else {
@@ -1079,8 +1064,8 @@ proc updateScreenshotPreview { pc image } {
 #****
 proc setActiveTool { tool } {
     global activetool mf ROOTDIR LIBDIR
-    set ungrouped {select link rectangle oval freeform text}
 
+    set ungrouped "select link rectangle oval freeform text"
     if { $activetool in $ungrouped } {
 	$mf.left.$activetool state !selected
     } elseif { [$activetool.layer] == "LINK" } {
@@ -1107,7 +1092,7 @@ proc setActiveTool { tool } {
 
     set activetool $tool
 
-    if { $tool in {"router" "pc" "host"} } {
+    if { $tool in "router pc host" } {
 	set state normal
     } else {
 	set state disabled
@@ -1118,23 +1103,23 @@ proc setActiveTool { tool } {
     }
 }
 
-proc launchBrowser {url} {
+proc launchBrowser { url } {
     global tcl_platform env
 
-    if {$tcl_platform(platform) eq "windows"} {
+    if { $tcl_platform(platform) eq "windows" } {
 	set command [list {*}[auto_execok start] {}]
 	set url [string map {& ^&} $url]
-    } elseif {$tcl_platform(os) eq "Darwin"} {
+    } elseif { $tcl_platform(os) eq "Darwin" } {
 	set command [list open]
     } else {
 	set command [list xdg-open]
     }
 
-    if {$tcl_platform(platform) eq "windows"} {
-	catch {exec {*}$command $url}
-    } elseif {"SUDO_USER" in [array names env]} {
-	catch {exec su - $env(SUDO_USER) /bin/sh -c "$command $url" > /dev/null 2> /dev/null &}
+    if { $tcl_platform(platform) eq "windows" } {
+	catch { exec {*}$command $url }
+    } elseif { "SUDO_USER" in [array names env] } {
+	catch { exec su - $env(SUDO_USER) /bin/sh -c "$command $url" > /dev/null 2> /dev/null & }
     } else {
-	catch {exec {*}$command $url > /dev/null 2> /dev/null &}
+	catch { exec {*}$command $url > /dev/null 2> /dev/null & }
     }
 }

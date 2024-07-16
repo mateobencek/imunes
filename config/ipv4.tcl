@@ -106,7 +106,7 @@ proc dec2bin { dec } {
 # INPUTS
 #   * bin -- binary number
 #****
-proc bin2dec { bin } {			
+proc bin2dec { bin } {
     set res 0
     foreach i $bin {
 	set res [expr {$res*2 + $i}]
@@ -272,7 +272,7 @@ proc autoIPv4addr { node iface } {
 
     set peer_node [logicalPeerByIfc $node $iface]
     if { [[typemodel $peer_node].layer] == "LINK"} {
-	foreach l2node [listLANnodes $peer_node {}] {
+	foreach l2node [listLANNodes $peer_node {}] {
 	    foreach ifc [ifcList $l2node] {
 		set peer [logicalPeerByIfc $l2node $ifc]
 		set peer_if [ifcByLogicalPeer $peer $l2node]

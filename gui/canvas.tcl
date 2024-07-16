@@ -110,9 +110,7 @@ proc setCanvasSize { canvas_id x y } {
 #   * size -- canvas size in the form of {x y}
 #****
 proc getCanvasSize { canvas_id } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault {900 620} $dict_cfg "canvases" $canvas_id "size"]
+    return [cfgGetWithDefault {900 620} "canvases" $canvas_id "size"]
 }
 
 #****f* canvas.tcl/getCanvasName
@@ -806,7 +804,7 @@ proc popupBkgApply { wi c } {
 	    set randNum [random 899 100]
 	    set destImgFile "background_$c_$randNum.gif"
 	}
-	
+
 	set size [getCanvasSize $c]
 	set sizex [lrange $size 0 0]
 	set sizey [lrange $size 1 1]
@@ -820,7 +818,7 @@ proc popupBkgApply { wi c } {
 	} else {
 	    set crop 0
 	}
-	
+
 	if {$bgsrcfile != ""} {
 	    switch $canvasBkgMode {
 		original {
@@ -840,8 +838,8 @@ proc popupBkgApply { wi c } {
 			  exec cmd /c convert $bgsrcfile -gravity $alignCanvasBkg -background white \
 			      -extent $sizex\x$sizey $destImgFile
 			}
-		    }	
-		
+		    }
+
 		    set bkgname [loadImage $destImgFile $c canvasBackground $bgsrcfile]
 		    if {$bkgname == 2} {
 			return 0
@@ -859,7 +857,7 @@ proc popupBkgApply { wi c } {
 			exec cmd /c convert $bgsrcfile -resize $sizex\x$sizey \
 			  -size $sizex\x$sizey xc:white +swap -gravity $alignCanvasBkg -composite $destImgFile
 		    }
-		
+
 		    set bkgname [loadImage $destImgFile $c canvasBackground $bgsrcfile]
 		    if {$bkgname == 2} {
 			return 0
@@ -914,7 +912,7 @@ proc popupBkgApply { wi c } {
 		}
 	    }
 	}
-	
+
 	if {!$winOS && $canvasBkgMode != "adjustC2I"} {
 	    exec rm $destImgFile
 	}

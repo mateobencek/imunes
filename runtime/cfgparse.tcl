@@ -712,7 +712,7 @@ proc loadCfg { cfg } {
 			custom-config {
 			    cfgUnset $dict_object $field
 			    set cfg ""
-			
+
 			    foreach zline [split $value {
 }] {
 				if { [string index "$zline" 0] == "	" } {
@@ -1272,6 +1272,12 @@ proc cfgGet { args } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
     return [dictGet $dict_cfg {*}$args]
+}
+
+proc cfgGetWithDefault { default_value args } {
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+    return [getWithDefault $default_value $dict_cfg {*}$args]
 }
 
 proc cfgSet { args } {

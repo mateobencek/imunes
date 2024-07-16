@@ -248,6 +248,7 @@ proc $MODULE.configGUI { c node_id } {
 	tk_dialog .dialog1 "IMUNES warning" \
 	    "This node has no interfaces." \
 	    info 0 Dismiss
+
 	return
     }
 

@@ -1204,7 +1204,7 @@ proc createNodeLogIfcs { node } {
 # SYNOPSIS
 #   configureICMPoptions $node
 # FUNCTION
-#  Configures the necessary ICMP sysctls in the given node. 
+#  Configures the necessary ICMP sysctls in the given node.
 # INPUTS
 #   * node -- node id
 #****

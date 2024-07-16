@@ -167,9 +167,9 @@ proc createExperimentFiles { eid } {
     global currentFileBatch execMode runtimeDir
     set basedir "$runtimeDir/$eid"
     file mkdir $basedir
-    
+
     writeDataToFile $basedir/timestamp [clock format [clock seconds]]
-    
+
     dumpLinksToFile $basedir/links
 
     if { $execMode == "interactive" } {

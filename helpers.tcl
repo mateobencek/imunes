@@ -1,7 +1,7 @@
 proc getPrettyUsage { options } {
     set usage "Usage:
     imunes \[OPTION...\] \[.imn FILE\]
-	
+
 Options:
 "
     foreach opt $options {
@@ -183,7 +183,7 @@ proc setPlatformVariables {} {
 	"*win*" {
 	    set isOSwin true
 	}
-    } 
+    }
 }
 
 proc prepareVroot {} {

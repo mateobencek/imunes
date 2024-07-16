@@ -1014,7 +1014,7 @@ proc ipsecCfggen { node } {
 
     foreach ipsecCfg $ipsecCfgList {
 	set cryptoalg ""
-	
+
 	set sourceSA [getConfig $ipsecCfg "SA-source-address"]
 	set destSA [getConfig $ipsecCfg "SA-destination-address"]
 	set ipsecalg [getConfig $ipsecCfg "ipsec-algorithm"]
@@ -1053,7 +1053,7 @@ proc ipsecCfggen { node } {
 	    $outboundspi != "" } {
 	    lappend cfg "add $sourceSA $destSA $ipsecalgorithm
 	    $inboundspi $cryptoalg $psk;"
-		
+
 	    lappend cfg "add $destSA $sourceSA $ipsecalgorithm
 	    $outboundspi $cryptoalg $psk;"
 	}

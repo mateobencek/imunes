@@ -56,7 +56,7 @@ proc cutSelection {} {
 #****
 proc copySelection {} {
     global curcfg
-	
+
     if { [selectedNodes] == {} } {
 	return
     }

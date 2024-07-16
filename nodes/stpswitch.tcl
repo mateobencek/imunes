@@ -253,55 +253,55 @@ proc $MODULE.cfggen { node_id } {
 	}
 
 	lappend cfg "ifconfig \$bridgeName addm $ifc up"
-	
+
 	if {[getBridgeIfcStp $node_id $ifc] == "1"} {
 	    lappend cfg "ifconfig \$bridgeName stp $ifc"
 	} else {
 	    lappend cfg "ifconfig \$bridgeName -stp $ifc"
 	}
-	
+
 	if {[getBridgeIfcDiscover $node_id $ifc] == "1"} {
 	    lappend cfg "ifconfig \$bridgeName discover $ifc"
 	} else {
 	    lappend cfg "ifconfig \$bridgeName -discover $ifc"
 	}
-	
+
 	if {[getBridgeIfcLearn $node_id $ifc] == "1"} {
 	    lappend cfg "ifconfig \$bridgeName learn $ifc"
 	} else {
 	    lappend cfg "ifconfig \$bridgeName -learn $ifc"
 	}
-	
+
 	if {[getBridgeIfcSticky $node_id $ifc] == "1"} {
 	    lappend cfg "ifconfig \$bridgeName sticky $ifc"
 	} else {
 	    lappend cfg "ifconfig \$bridgeName -sticky $ifc"
 	}
-	
+
 	if {[getBridgeIfcPrivate $node_id $ifc] == "1"} {
 	    lappend cfg "ifconfig \$bridgeName private $ifc"
 	} else {
 	    lappend cfg "ifconfig \$bridgeName -private $ifc"
 	}
-	
+
 	if {[getBridgeIfcEdge $node_id $ifc] == "1"} {
 	    lappend cfg "ifconfig \$bridgeName edge $ifc"
 	} else {
 	    lappend cfg "ifconfig \$bridgeName -edge $ifc"
 	}
-	
+
 	if {[getBridgeIfcAutoedge $node_id $ifc] == "1"} {
 	    lappend cfg "ifconfig \$bridgeName autoedge $ifc"
 	} else {
 	    lappend cfg "ifconfig \$bridgeName -autoedge $ifc"
 	}
-	
+
 	if {[getBridgeIfcPtp $node_id $ifc] == "1"} {
 	    lappend cfg "ifconfig \$bridgeName ptp $ifc"
 	} else {
 	    lappend cfg "ifconfig \$bridgeName -ptp $ifc"
 	}
-	
+
 	if {[getBridgeIfcAutoptp $node_id $ifc] == "1"} {
 	    lappend cfg "ifconfig \$bridgeName autoptp $ifc"
 	} else {
@@ -313,10 +313,10 @@ proc $MODULE.cfggen { node_id } {
 
 	set pathcost [getBridgeIfcPathcost $node_id $ifc]
 	lappend cfg "ifconfig \$bridgeName ifpathcost $ifc $pathcost"
-	
+
 	set maxaddr [getBridgeIfcMaxaddr $node_id $ifc]
 	lappend cfg "ifconfig \$bridgeName ifmaxaddr $ifc $maxaddr"
-	
+
 	lappend cfg ""
     }
 

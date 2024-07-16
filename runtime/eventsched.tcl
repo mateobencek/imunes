@@ -40,7 +40,7 @@ proc startEventScheduling {} {
     set stop_sched false
     .menubar.events entryconfigure "Start scheduling" -state disabled
     .menubar.events entryconfigure "Stop scheduling" -state normal
-    .bottom.cpu_load config -text "0" 
+    .bottom.cpu_load config -text "0"
     evsched
 }
 
@@ -78,7 +78,7 @@ proc evsched {} {
     upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
 
     # XXX temp hack, init should be called when experiment is started
-    
+
     if {$stop_sched} {
 	return
     }
@@ -100,9 +100,9 @@ proc evsched {} {
     set need_sort 1
 
     if { $oper_mode == "exec"}  {
-	.bottom.cpu_load config -text "$curtime" 
+	.bottom.cpu_load config -text "$curtime"
     } else {
-	.bottom.cpu_load config -text "" 
+	.bottom.cpu_load config -text ""
     }
 
     foreach event $eventqueue {
@@ -351,9 +351,9 @@ proc getElementEvents { element } {
 #****
 proc setElementEvents { element events } {
     upvar 0 ::cf::[set ::curcfg]::$element $element
-    
+
     set cfg [formatForExec $events]
-    
+
     set i [lsearch [set $element] "events *"]
     if { $i >= 0 } {
 	set $element [lreplace [set $element] $i $i "events {$cfg}"]
@@ -418,21 +418,21 @@ proc elementsEventsEditor {} {
     upvar 0 ::cf::[set ::curcfg]::stop_sched stop_sched
     global shownElement
     set shownElement links
-    
+
     set eventsPopup .eventspopup
     catch {destroy $eventsPopup}
     toplevel $eventsPopup
     wm transient $eventsPopup .
     wm title $eventsPopup "Events editor"
     wm iconname $eventsPopup "Events editor"
-    
+
     ttk::frame $eventsPopup.events
     pack $eventsPopup.events -fill both -expand 1
 
     set pwi [ttk::panedwindow $eventsPopup.events.eventconf -orient horizontal]
-    
+
     pack $pwi -fill both -expand 1
-    
+
     #left and right pane
     ttk::frame $pwi.left -relief groove -borderwidth 3
     ttk::frame $pwi.right -relief groove -borderwidth 3
@@ -445,7 +445,7 @@ proc elementsEventsEditor {} {
 	    -height 15 -show tree \
 	    -yscrollcommand "$pwi.left.vscroll set"
     ttk::scrollbar $pwi.left.vscroll -orient vertical -command "$pwi.left.tree yview"
-	
+
     focus $pwi.left.tree
 
     pack $pwi.left.treegrid -side right -fill y
@@ -479,21 +479,21 @@ proc elementsEventsEditor {} {
 # 	    lappend eventnodetags $node
 # 	}
 #     }
-      
+
     text $pwi.right.text -bg white -width 42 -height 15 -takefocus 0 -state disabled
     pack $pwi.right.text -expand 1 -fill both
-    
+
     bindEventsToEventEditor $pwi $pwi.right.text
-    
+
     set eventButtons [ttk::frame $eventsPopup.events.buttons]
     ttk::button $eventButtons.apply -text "Apply" -command {
 	    saveElementEvents .eventspopup.events.eventconf.right.text
     }
     ttk::button $eventButtons.close -text "Close" -command "destroy $eventsPopup"
-    
+
     set startText "Start scheduling"
     set stopText "Stop scheduling"
-    
+
     if { $stop_sched } {
 	ttk::button $eventButtons.start_stop \
 	-text $startText -command {
@@ -509,7 +509,7 @@ proc elementsEventsEditor {} {
 	    $eventButtons.start_stop configure -text [startStopText $eventButtons.start_stop]
 	}
     }
-    
+
     pack $eventButtons.apply $eventButtons.close \
       $eventButtons.start_stop -side left -pady 4 -padx 5
     pack $eventButtons
@@ -627,17 +627,17 @@ proc loadElementEvents { element text } {
 proc saveElementEvents { text } {
     set selected [.eventspopup.events.eventconf.left.tree selection]
     set events [$text get 0.0 end]
-    
+
     set checkFailed 0
-    
+
     if {[string match -nocase "*l*" $selected]} {
 	set checkFailed [checkEventsSyntax $events link]
     } elseif {[string match -nocase "*n*" $selected]} {
 	set checkFailed [checkEventsSyntax $events node]
     }
-    
+
     set errline [$text get $checkFailed.0 $checkFailed.end]
-    
+
     if { $checkFailed != 0 } {
 	    tk_dialog .dialog1 "IMUNES warning" \
 	        "Syntax error in line $checkFailed:
@@ -645,7 +645,7 @@ proc saveElementEvents { text } {
 	    info 0 OK
 	    return
     }
-    
+
     if { $selected != "nodes" && $selected != "links"} {
 	setElementEvents $selected $events
     }
@@ -666,12 +666,12 @@ proc saveElementEvents { text } {
 proc bindEventsToEventEditor { pwi text } {
     global eventnodetags eventlinktags
     set f $pwi.left
-    
+
     $f.tree tag bind links <1> \
 	    "$text configure -state disabled"
     $f.tree tag bind links <Key-Down> \
-	    "loadElementEvents [lindex $eventlinktags 0] $text" 
-    
+	    "loadElementEvents [lindex $eventlinktags 0] $text"
+
     foreach l $eventlinktags {
 	$f.tree tag bind $l <1> \
 	    "loadElementEvents $l $text"
@@ -680,7 +680,7 @@ proc bindEventsToEventEditor { pwi text } {
 		loadElementEvents [$f.tree prev $l] $text
 	    } else {
 		$text configure -state disabled
-	    }" 
+	    }"
 	$f.tree tag bind $l <Key-Down> \
 	    "if {![string equal {} [$f.tree next $l]]} {
 		loadElementEvents [$f.tree next $l] $text
@@ -692,27 +692,27 @@ proc bindEventsToEventEditor { pwi text } {
 #     $f.tree tag bind nodes <1> \
 # 	    "$text configure -state disabled"
 #     $f.tree tag bind nodes <Key-Up> \
-# 	    "loadElementEvents [lindex $eventlinktags 0] $text" 
+# 	    "loadElementEvents [lindex $eventlinktags 0] $text"
 #     $f.tree tag bind nodes <Key-Down> \
-# 	    "loadElementEvents [lindex $eventlinktags 0] $text" 
-#     
+# 	    "loadElementEvents [lindex $eventlinktags 0] $text"
+#
 #     foreach n $eventnodetags {
 # 	set type [getNodeType $n]
 # 	global selectedIfc
 # 	$f.tree tag bind $n <1> \
-# 	      "loadElementEvents $n $text"   
+# 	      "loadElementEvents $n $text"
 # 	$f.tree tag bind $n <Key-Up> \
 # 	    "if {![string equal {} [$f.tree prev $n]]} {
 # 		loadElementEvents [$f.tree prev $n] $text
 # 	    } else {
 # 		$text configure -state disabled
-# 	    }" 
+# 	    }"
 # 	$f.tree tag bind $n <Key-Down> \
 # 	    "if {![string equal {} [$f.tree next $n]]} {
 # 		loadElementEvents [$f.tree next $n] $text
 # 	    } else {
 # 		$text configure -state disabled
-# 	    }"           
+# 	    }"
 #     }
 }
 
@@ -729,7 +729,7 @@ proc bindEventsToEventEditor { pwi text } {
 #****
 proc checkEventsSyntax { text type } {
      set text [split $text "\n"]
-     
+
      switch -exact $type {
 	link {
 	    set regularExpressions [list bandwidth delay ber loss width duplicate color]
@@ -740,7 +740,7 @@ proc checkEventsSyntax { text type } {
 	    set regularExpressions [list ]
 	}
      }
-     
+
      set i 0
      foreach line $text {
 	incr i
@@ -749,8 +749,8 @@ proc checkEventsSyntax { text type } {
 	}
 	set splitLine [split $line " "]
 	if {[llength $line] == 4} {
-	    if {![string is integer [lindex $splitLine 0]]} { 
-		return $i 
+	    if {![string is integer [lindex $splitLine 0]]} {
+		return $i
 	    }
 	    if {[lindex $splitLine 1] ni $regularExpressions} {
 		return $i
@@ -759,12 +759,12 @@ proc checkEventsSyntax { text type } {
 		return $i
 	    }
 	    if {![string is integer [lindex $splitLine 3]] \
-		&& [lindex $splitLine 3] ni $colors } { 
-		return $i 
+		&& [lindex $splitLine 3] ni $colors } {
+		return $i
 	    }
 	} elseif {[llength $line] == 6} {
-	    if {![string is integer [lindex $splitLine 0]]} { 
-		return $i 
+	    if {![string is integer [lindex $splitLine 0]]} {
+		return $i
 	    }
 	    if {[lindex $splitLine 1] ni $regularExpressions} {
 		return $i
@@ -772,19 +772,19 @@ proc checkEventsSyntax { text type } {
 	    if {[lindex $splitLine 2] ni $functions} {
 		return $i
 	    }
-	    if {![string is integer [lindex $splitLine 3]]} { 
-		return $i 
+	    if {![string is integer [lindex $splitLine 3]]} {
+		return $i
 	    }
-	    if {![string is integer [lindex $splitLine 4]]} { 
-		return $i 
+	    if {![string is integer [lindex $splitLine 4]]} {
+		return $i
 	    }
-	    if {![string is integer [lindex $splitLine 5]]} { 
-		return $i 
+	    if {![string is integer [lindex $splitLine 5]]} {
+		return $i
 	    }
 	} else {
 	    return $i
 	}
      }
-     
+
      return 0
 }

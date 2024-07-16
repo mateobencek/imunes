@@ -43,7 +43,7 @@ proc redrawAll {} {
 	    if { [getNodeCanvas $obj] == $curcanvas } {
 		drawAnnotation $obj
 	    }
-	} 
+	}
     }
 
     # Grid
@@ -81,6 +81,7 @@ proc redrawAll {} {
 	    drawNode $node_id
 	}
     }
+
     foreach link [getFromRunning "link_list"] {
 	set nodes [getLinkPeers $link]
 	if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
@@ -105,7 +106,7 @@ proc redrawAll {} {
 #   Draws the specified node. Draws node's image (router pc
 #   host lanswitch frswitch rj45 hub pseudo) and label.
 #   The visibility of the label depends on the showNodeLabels
-#   variable for all types of nodes and on invisible variable 
+#   variable for all types of nodes and on invisible variable
 #   for pseudo nodes.
 # INPUTS
 #   * node_id -- node id
@@ -150,14 +151,14 @@ proc drawNode { node_id } {
 	}
 
 	foreach ifc [ifcList $node_id] {
-	    if {[string trim $ifc 0123456789] == "wlan"} {
+	    if { [string trim $ifc 0123456789] == "wlan" } {
 		set labelstr [format "%s %s" $labelstr [getIfcIPv4addr $node_id $ifc]]
 	    }
 	}
 	set label [.panwin.f1.c create text $x $y -fill blue \
 	    -text "$labelstr" \
 	    -tags "nodelabel $node_id"]
-	
+
     } else {
 	set pnode [getIfcPeer [getNodeMirror $node_id] "0"]
 	set pcanvas [getNodeCanvas $pnode]
@@ -181,7 +182,7 @@ proc drawNode { node_id } {
     if { $invisible == 1 && [getNodeType $node_id] == "pseudo" } {
 	.panwin.f1.c itemconfigure $label -state hidden
     }
-    if {[getNodeType $node_id] == "cloud"} {
+    if { [getNodeType $node_id] == "cloud" } {
 	setCloudParts $node_id 1
     }
 }
@@ -192,9 +193,9 @@ proc drawNode { node_id } {
 # SYNOPSIS
 #   drawLink link_id
 # FUNCTION
-#   Draws the specified link. An arrow is displayed for links 
+#   Draws the specified link. An arrow is displayed for links
 #   connected to pseudo nodes. If the variable invisible
-#   is specified link connecting a pseudo node stays hidden. 
+#   is specified link connecting a pseudo node stays hidden.
 # INPUTS
 #   * link_id -- link id
 #****
@@ -259,11 +260,11 @@ proc calcAnglePoints { x1 y1 x2 y2 } {
 	set arad [expr {atan(($y2-$y1)/($x2-$x1))}]
     }
     set ang [expr {$arad*180/3.14159}]
-    if {$ang < 0} {
+    if { $ang < 0 } {
 	set ang [expr {$ang+360}]
     }
     set ang [expr {360-$ang}]
-    if {$ang > 225 && $ang < 315 || $ang > 45 && $ang < 135 || $ang == 360} {
+    if { $ang > 225 && $ang < 315 || $ang > 45 && $ang < 135 || $ang == 360 } {
 	set ang 0
     }
     return $ang
@@ -288,8 +289,8 @@ proc calcAngle { link } {
 #   address and IPv6 address.
 # INPUTS
 #   * lnode1 -- node id of a node where the interface resides
-#   * lnode2 -- node id of the node that is connected by this 
-#   interface. 
+#   * lnode2 -- node id of the node that is connected by this
+#   interface.
 #****
 proc updateIfcLabel { lnode1 lnode2 } {
     global showIfNames showIfIPaddrs showIfIPv6addrs
@@ -323,7 +324,7 @@ proc updateIfcLabel { lnode1 lnode2 } {
 	set str "${str}NAT-"
     }
     foreach elem $labelstr {
-	if {$str in "{} * NAT- *NAT-" } {
+	if { $str in "{} * NAT- *NAT-" } {
 	    set str "$str[set elem]"
 	} else {
 	    set str "$str\r[set elem]"
@@ -345,7 +346,7 @@ proc updateIfcLabel { lnode1 lnode2 } {
 #   * link -- link id of the link whose labels are updated.
 #****
 proc updateLinkLabel { link } {
-    global showLinkLabels linkJitterConfiguration 
+    global showLinkLabels linkJitterConfiguration
 
     set labelstr ""
     set bwstr "[getLinkBandwidthString $link]"
@@ -373,13 +374,15 @@ proc updateLinkLabel { link } {
 	lappend labelstr "dup=$dup%"
     }
     set str ""
+
     foreach elem $labelstr {
-	if {$str == ""} {
+	if { $str == "" } {
 	    set str "$str[set elem]"
 	} else {
 	    set str "$str\r[set elem]"
 	}
     }
+
     set ang [calcAngle $link]
     .panwin.f1.c itemconfigure "linklabel && $link" -text $str -angle $ang
     if { $showLinkLabels == 0} {
@@ -396,15 +399,16 @@ proc updateLinkLabel { link } {
 #   Redraws all links on the current canvas.
 #****
 proc redrawAllLinks {} {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
+    set curcanvas [getFromRunning "curcanvas"]
 
-    foreach link $link_list {
-	set nodes [getLinkPeers $link]
-	if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
-	    [getNodeCanvas [lindex $nodes 1]] != $curcanvas } {
+    foreach link [getFromRunning "link_list"] {
+	lassign [getLinkPeers $link] node1_id node2_id
+	if { [getNodeCanvas $node1_id] != $curcanvas ||
+	    [getNodeCanvas $node2_id] != $curcanvas } {
+
 	    continue
 	}
+
 	redrawLink $link
     }
 }
@@ -452,7 +456,7 @@ proc redrawLink { link_id } {
 	updateIfcLabel $lnode1 $lnode2
     }
 
-    if {[getNodeType $lnode2] != "pseudo"} {
+    if { [getNodeType $lnode2] != "pseudo" } {
 	updateIfcLabelParams $link_id $lnode2 $lnode1 $x2 $y2 $x1 $y1
 	updateIfcLabel $lnode2 $lnode1
     }
@@ -532,18 +536,18 @@ proc updateIfcLabelParams { link_id lnode1 lnode2 x1 y1 x2 y2 } {
 # NAME
 #   connectWithNode -- connect with a node
 # SYNOPSIS
-#   connectWithNode $nodes $node
+#   connectWithNode $nodes $target_node_id
 # FUNCTION
 #   This procedure calls newGUILink procedure to connect all given nodes with
 #   the one node.
 # INPUTS
 #   * nodes -- list of all node ids to connect
-#   * node -- node id of the node to connect to
+#   * target_node_id -- node id of the node to connect to
 #****
-proc connectWithNode { nodes node } {
-    foreach n $nodes {
-	if { $n != $node } {
-	    newGUILink $n $node
+proc connectWithNode { nodes target_node_id } {
+    foreach node_id $nodes {
+	if { $node_id != $target_node_id } {
+	    newGUILink $node_id $target_node_id
 	}
     }
 }
@@ -554,8 +558,8 @@ proc connectWithNode { nodes node } {
 # SYNOPSIS
 #   newGUILink $lnode1 $lnode2
 # FUNCTION
-#   This procedure is called to create a new link between 
-#   nodes lnode1 and lnode2. Nodes can be on the same canvas 
+#   This procedure is called to create a new link between
+#   nodes lnode1 and lnode2. Nodes can be on the same canvas
 #   or on different canvases. The result of this function
 #   is directly visible in GUI.
 # INPUTS
@@ -619,9 +623,10 @@ proc changeIconPopup {} {
     upvar 0 ::cf::[set ::curcfg]::image_list image_list
     global chicondialog alignCanvasBkg iconsrcfile wi
     global ROOTDIR LIBDIR
-    
+
     set chicondialog .chiconDialog
-    catch {destroy $chicondialog}
+    catch { destroy $chicondialog}
+
     toplevel $chicondialog
     wm transient $chicondialog .
     wm resizable $chicondialog 0 0
@@ -629,54 +634,54 @@ proc changeIconPopup {} {
     wm iconname $chicondialog "Set custom icon"
 
     set wi [ttk::frame $chicondialog.changebgframe]
-    
+
     ttk::panedwindow $wi.iconconf -orient horizontal
     pack $wi.iconconf -fill both
-    
+
     #left and right pane
     ttk::frame $wi.iconconf.left -relief groove -borderwidth 3
     ttk::frame $wi.iconconf.right -relief groove -borderwidth 3
-    
+
     #right pane definition
     ttk::frame $wi.iconconf.right.spacer -height 20
     pack $wi.iconconf.right.spacer -fill both
     ttk::label $wi.iconconf.right.l -text "Icon preview"
     pack $wi.iconconf.right.l -anchor center
-    
+
     set prevcan [canvas $wi.iconconf.right.pc -bd 0 -relief sunken -highlightthickness 0 \
     		-width 100 -height 100 -background white]
     pack $prevcan -anchor center
-    
+
     ttk::label $wi.iconconf.right.l2 -text "Size:"
     pack $wi.iconconf.right.l2 -anchor center
-    
+
     #left pane definition
     #upper left frame with treeview
     ttk::frame $wi.iconconf.left.up
     pack $wi.iconconf.left.up -anchor w -expand 1 -fill both
-    
+
     ttk::frame $wi.iconconf.left.up.grid
     pack $wi.iconconf.left.up.grid -expand 1 -fill both
-    
+
     set tree $wi.iconconf.left.up.tree
     ttk::treeview $tree -columns "type" -height 5 -selectmode browse \
     	-xscrollcommand "$wi.iconconf.left.up.hscroll set"\
         -yscrollcommand "$wi.iconconf.left.up.vscroll set"
     ttk::scrollbar $wi.iconconf.left.up.hscroll -orient horizontal -command "$wi.iconconf.left.up.tree xview"
     ttk::scrollbar $wi.iconconf.left.up.vscroll -orient vertical -command "$wi.iconconf.left.up.tree yview"
-    
+
     grid $wi.iconconf.left.up.tree $wi.iconconf.left.up.vscroll -in $wi.iconconf.left.up.grid -sticky nsew
     #disabled for now, if the addition of new columns happens it will be useful
     #grid $wi.iconconf.left.up.hscroll -in $wi.iconconf.left.up.grid -sticky nsew
     grid columnconfig $wi.iconconf.left.up.grid 0 -weight 1
     grid rowconfigure $wi.iconconf.left.up.grid 0 -weight 1
-    
+
     $tree heading #0 -text "Image name"
-    $tree column #0 -width 100 -minwidth 100 
-    $tree heading type -text "Type" 
+    $tree column #0 -width 100 -minwidth 100
+    $tree heading type -text "Type"
     $tree column type -width 90 -stretch 0 -minwidth 90
     focus $tree
-    
+
     foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] {
 	set filename [lindex [split $file /] end]
 	$tree insert {} end -id $file -text $filename -values [list "library icon"] \
@@ -685,10 +690,11 @@ proc changeIconPopup {} {
 	  "updateIconPreview $prevcan $wi.iconconf.right.l2 $file
 	   set iconsrcfile \"$file\""
     }
-    
+
     foreach img $image_list {
-	if {$img != "" && [string match "*img*" $img] == 1 && \
-	  [getImageType $img] == "customIcon"} {
+	if { $img != "" && [string match "*img*" $img] == 1 && \
+	  [getImageType $img] == "customIcon" } {
+
 	    $tree insert {} end -id $img -text $img -values [list "custom icon"] \
 	      -tags "$img"
 	    $tree tag bind $img <1> \
@@ -696,34 +702,35 @@ proc changeIconPopup {} {
 	       set iconsrcfile $img"
 	}
     }
-    
+
     foreach file [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] {
 	$tree tag bind $file <Key-Up> \
-	    "if {![string equal {} [$tree prev $file]]} {
+	    "if { ! [string equal {} [$tree prev $file]] } {
 		updateIconPreview $prevcan $wi.iconconf.right.l2 [$tree prev $file]
 		set iconsrcfile [$tree prev $file]
 	     }"
 	$tree tag bind $file <Key-Down> \
-	    "if {![string equal {} [$tree next $file]]} {
+	    "if { ! [string equal {} [$tree next $file]] } {
 		updateIconPreview $prevcan $wi.iconconf.right.l2 [$tree next $file]
 		set iconsrcfile [$tree next $file]
 	     }"
     }
-    
+
     set first [lindex [glob -directory $ROOTDIR/$LIBDIR/icons/normal/ *.gif] 0]
     $tree selection set $first
     $tree focus $first
-        
+
     foreach img $image_list {
-	if {$img != "" && [string match "*img*" $img] == 1 && \
-	  [getImageType $img] == "customIcon"} {
+	if { $img != "" && [string match "*img*" $img] == 1 && \
+	  [getImageType $img] == "customIcon" } {
+
 	    $tree tag bind $img <Key-Up> \
-		"if {![string equal {} [$tree prev $img]]} {
+		"if { ! [string equal {} [$tree prev $img]] } {
 		    updateIconPreview $prevcan $wi.iconconf.right.l2 [$tree prev $img]
 		    set iconsrcfile [$tree prev $img]
 		}"
 	    $tree tag bind $img <Key-Down> \
-		"if {![string equal {} [$tree next $img]]} {
+		"if { ! [string equal {} [$tree next $img]] } {
 		    updateIconPreview $prevcan $wi.iconconf.right.l2 [$tree next $img]
 		    set iconsrcfile [$tree next $img]
 		}"
@@ -734,7 +741,7 @@ proc changeIconPopup {} {
     ttk::frame $wi.iconconf.left.center
     pack $wi.iconconf.left.center -anchor w
     ttk::label $wi.iconconf.left.center.l -text "Custom icon file:"
-    
+
     #down left frame with entry and button
     ttk::frame $wi.iconconf.left.down
     ttk::frame $wi.iconconf.left.down.left
@@ -742,8 +749,8 @@ proc changeIconPopup {} {
     pack $wi.iconconf.left.down -fill both -padx 10
     pack $wi.iconconf.left.down.left $wi.iconconf.left.down.right \
 	-side left -anchor n -padx 2
-    
-    
+
+
     ttk::entry $wi.iconconf.left.down.left.e -width 25 -textvariable iconFile
     ttk::button $wi.iconconf.left.down.right.b -text "Browse" -width 8 \
 	-command {
@@ -770,7 +777,7 @@ proc changeIconPopup {} {
 	    set iconsrcfile [tk_getOpenFile -parent $chicondialog -filetypes $fType]
 	    $wi.iconconf.left.down.left.e delete 0 end
 	    $wi.iconconf.left.down.left.e insert 0 "$iconsrcfile"
-	    if {$iconsrcfile != ""} {
+	    if { $iconsrcfile != "" } {
 		image create photo iconprev -file $iconsrcfile
 		set image_h [image height iconprev]
 		set image_w [image width iconprev]
@@ -788,23 +795,23 @@ proc changeIconPopup {} {
 		updateIconPreview $prevcan $imgsize $iconsrcfile
 	    }
     }
-    
-    if {$iconsrcfile != ""} {
+
+    if { $iconsrcfile != "" } {
 	set prevcan $wi.iconconf.right.pc
 	set imgsize $wi.iconconf.right.l2
 	updateIconPreview $prevcan $imgsize $iconsrcfile
-    }    
-        
+    }
+
     #packing left side
     pack $wi.iconconf.left.center.l -anchor w -pady 2
     pack $wi.iconconf.left.down.left.e -pady 6
     pack $wi.iconconf.left.down.right.b -pady 4
     pack $wi -fill both
-    
-    
+
+
     #adding panes to paned window
     $wi.iconconf add $wi.iconconf.left
-    $wi.iconconf add $wi.iconconf.right  
+    $wi.iconconf add $wi.iconconf.right
 
     #lower frame that contains buttons
     ttk::frame $wi.buttons
@@ -816,8 +823,8 @@ proc changeIconPopup {} {
     ttk::button $wi.buttons.remove -text "Remove custom icon" -command \
 	 "destroy $chicondialog; setDefaultIcon"
     pack $wi.buttons.remove $wi.buttons.cancel $wi.buttons.apply -side right -expand 1
-    
-    bind $chicondialog <Key-Return> {popupIconApply $chicondialog $iconsrcfile}
+
+    bind $chicondialog <Key-Return> { popupIconApply $chicondialog $iconsrcfile }
     bind $chicondialog <Key-Escape> "destroy $chicondialog"
 }
 
@@ -835,18 +842,18 @@ proc changeIconPopup {} {
 #****
 proc updateIconPreview { pc imgsize image } {
     $pc delete "preview"
-    
+
     if { ![string match -nocase "*.*" $image] } {
 	image create photo iconprev -data [getImageData $image]
     } else {
 	image create photo iconprev -file $image
     }
-    
+
     set image_h [image height iconprev]
     set image_w [image width iconprev]
-    
+
     $imgsize configure -text "Size: $image_w*$image_h"
-    
+
     $pc create image 50 50 -anchor center -image iconprev -tags "preview"
 }
 
@@ -856,7 +863,7 @@ proc updateIconPreview { pc imgsize image } {
 # SYNOPSIS
 #   popupIconApply $dialog $image
 # FUNCTION
-#   This procedure is called when the button apply is pressed in 
+#   This procedure is called when the button apply is pressed in
 #   change icon popup dialog box.
 # INPUTS
 #   * dialog -- tk dialog
@@ -868,22 +875,22 @@ proc popupIconApply { dialog image } {
 	set nodelist [selectedNodes]
 	if { [string match -nocase "*.*" $image] } {
 	    set imgname [loadImage $image "" customIcon $image]
-	    foreach node $nodelist {
-		set icon [getCustomIcon $node]
+	    foreach node_id $nodelist {
+		set icon [getCustomIcon $node_id]
 		if { $icon != "" } {
-		    removeImageReference $icon $node
+		    removeImageReference $icon $node_id
 		}
-		setCustomIcon $node $imgname
-		setImageReference $imgname $node
+		setCustomIcon $node_id $imgname
+		setImageReference $imgname $node_id
 	    }
 	} else {
-	    foreach node $nodelist {
-		set icon [getCustomIcon $node]
+	    foreach node_id $nodelist {
+		set icon [getCustomIcon $node_id]
 		if { $icon != "" } {
-		    removeImageReference $icon $node
+		    removeImageReference $icon $node_id
 		}
-		setCustomIcon $node $image
-		setImageReference $image $node
+		setCustomIcon $node_id $image
+		setImageReference $image $node_id
 	    }
 	}
 	redrawAll
@@ -902,10 +909,10 @@ proc popupIconApply { dialog image } {
 #   Updates custom icon references.
 #****
 proc updateCustomIconReferences {} {
-    foreach node [getFromRunning "node_list"] {
-	set icon [getCustomIcon $node]
+    foreach node_id [getFromRunning "node_list"] {
+	set icon [getCustomIcon $node_id]
 	if { $icon != "" } {
-	    setImageReference $icon $node
+	    setImageReference $icon $node_id
 	}
     }
 }
@@ -920,6 +927,7 @@ proc updateCustomIconReferences {} {
 #****
 proc updateIconSize {} {
   global all_modules_list
+
   foreach b $all_modules_list {
     global $b iconSize
     set $b [image create photo -file [$b.icon $iconSize]]
@@ -943,7 +951,7 @@ proc selectZoomPopupMenu { x y } {
     .button3menu delete 0 end
 
     set sel_zoom $zoom
-    
+
     foreach z $zoom_stops {
 	.button3menu add radiobutton -label [expr {int($z*100)}] \
 	  -variable sel_zoom -value $z \
@@ -987,15 +995,15 @@ proc align2grid {} {
 		redrawAll
 		return
 	    }
-	    set node [lindex [.panwin.f1.c gettags [lindex $node_objects 0]] 1]
+	    set node_id [lindex [.panwin.f1.c gettags [lindex $node_objects 0]] 1]
 	    set node_objects [lreplace $node_objects 0 0]
-	    setNodeCoords $node "$x $y"
+	    setNodeCoords $node_id "$x $y"
 	    set dy 32
 	    if { [lsearch {router hub lanswitch rj45} \
-		[getNodeType $node]] >= 0 } {
+		[getNodeType $node_id]] >= 0 } {
 		set dy 24
 	    }
-	    setNodeLabelCoords $node "$x [expr {$y + $dy}]"
+	    setNodeLabelCoords $node_id "$x [expr {$y + $dy}]"
 	}
     }
 }
@@ -1008,16 +1016,16 @@ proc align2grid {} {
 # FUNCTION
 #   This procedure rearranges the position of nodes in imunes.
 #   It can be used to rearrange all the nodes or only the selected
-#   nodes. 
+#   nodes.
 # INPUTS
 #   * mode -- when set to "selected" only the selected nodes will be
 #   rearranged.
 #****
 proc rearrange { mode } {
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global autorearrange_enabled sizex sizey
+
+    set curcanvas [getFromRunning "curcanvas"]
+    set zoom [getFromRunning "zoom"]
 
     set autorearrange_enabled 1
     .menubar.tools entryconfigure "Auto rearrange all" -state disabled
@@ -1045,12 +1053,12 @@ proc rearrange { mode } {
 	set objects [.panwin.f1.c find withtag $tagmatch]
 	set peer_objects [.panwin.f1.c find withtag node]
 	foreach obj $peer_objects {
-	    set node [lindex [.panwin.f1.c gettags $obj] 1]
-	    set coords [.panwin.f1.c coords $obj]
-	    set x [expr {[lindex $coords 0] / $zoom}]
-	    set y [expr {[lindex $coords 1] / $zoom}]
-	    set x_t($node) $x
-	    set y_t($node) $y
+	    set node_id [lindex [.panwin.f1.c gettags $obj] 1]
+	    lassign [.panwin.f1.c coords $obj] x y
+	    set x [expr {$x / $zoom}]
+	    set y [expr {$y / $zoom}]
+	    set x_t($node_id) $x
+	    set y_t($node_id) $y
 
 	    if { $x > 0 } {
 		set fx [expr {1000 / ($x * $x + 100)}]
@@ -1075,16 +1083,16 @@ proc rearrange { mode } {
 	    } else {
 		set fy [expr {$fy - 10}]
 	    }
-	    set fx_t($node) $fx
-	    set fy_t($node) $fy
+	    set fx_t($node_id) $fx
+	    set fy_t($node_id) $fy
 	}
 
 	foreach obj $objects {
-	    set node [lindex [.panwin.f1.c gettags $obj] 1]
+	    set node_id [lindex [.panwin.f1.c gettags $obj] 1]
 	    set i [lsearch -exact $peer_objects $obj]
 	    set peer_objects [lreplace $peer_objects $i $i]
-	    set x $x_t($node)
-	    set y $y_t($node)
+	    set x $x_t($node_id)
+	    set y $y_t($node_id)
 	    foreach other_obj $peer_objects {
 		set other [lindex [.panwin.f1.c gettags $other_obj] 1]
 		set o_x $x_t($other)
@@ -1095,26 +1103,28 @@ proc rearrange { mode } {
 		set d2 [expr {$d * $d}]
 		set p_fx [expr {1000.0 * $dx / ($d2 * $d + 100)}]
 		set p_fy [expr {1000.0 * $dy / ($d2 * $d + 100)}]
-		if {[linkByPeers $node $other] != ""} {
+		if {[linkByPeers $node_id $other] != ""} {
 		    set p_fx [expr {$p_fx - $dx * $d2 * .0000000005}]
 		    set p_fy [expr {$p_fy - $dy * $d2 * .0000000005}]
 		}
-		set fx_t($node) [expr {$fx_t($node) + $p_fx}]
-		set fy_t($node) [expr {$fy_t($node) + $p_fy}]
+		set fx_t($node_id) [expr {$fx_t($node_id) + $p_fx}]
+		set fy_t($node_id) [expr {$fy_t($node_id) + $p_fy}]
 		set fx_t($other) [expr {$fx_t($other) - $p_fx}]
 		set fy_t($other) [expr {$fy_t($other) - $p_fy}]
 	    }
 
-	    foreach link $link_list {
+	    foreach link [getFromRunning "link_list"] {
 		set nodes [getLinkPeers $link]
 		if { [getNodeCanvas [lindex $nodes 0]] != $curcanvas ||
 		  [getNodeCanvas [lindex $nodes 1]] != $curcanvas ||
 		  [getLinkMirror $link] != "" } {
+
 		    continue
 		}
 		set peers [getLinkPeers $link]
-		if {[getNodeType [lindex $peers 0]] == "wlan" ||
-		  [getNodeType [lindex $peers 1]] == "wlan"} {
+		if { [getNodeType [lindex $peers 0]] == "wlan" ||
+		    [getNodeType [lindex $peers 1]] == "wlan" } {
+
 		    continue
 		}
 		set coords0 [getNodeCoords [lindex $peers 0]]
@@ -1127,45 +1137,45 @@ proc rearrange { mode } {
 		set dy [expr {$y - $o_y}]
 		set d [expr {hypot($dx, $dy)}]
 		set d2 [expr {$d * $d}]
-		set fx_t($node) \
-		    [expr {$fx_t($node) + 500.0 * $dx / ($d2 * $d + 100)}]
-		set fy_t($node) \
-		    [expr {$fy_t($node) + 500.0 * $dy / ($d2 * $d + 100)}]
+		set fx_t($node_id) \
+		    [expr {$fx_t($node_id) + 500.0 * $dx / ($d2 * $d + 100)}]
+		set fy_t($node_id) \
+		    [expr {$fy_t($node_id) + 500.0 * $dy / ($d2 * $d + 100)}]
 	    }
 	}
 
 	foreach obj $objects {
-	    set node [lindex [.panwin.f1.c gettags $obj] 1]
-	    if { [catch "set v_t($node)" v] } {
+	    set node_id [lindex [.panwin.f1.c gettags $obj] 1]
+	    if { [catch "set v_t($node_id)" v] } {
 		set vx 0.0
 		set vy 0.0
 	    } else {
-		set vx [lindex $v_t($node) 0]
-		set vy [lindex $v_t($node) 1]
+		set vx [lindex $v_t($node_id) 0]
+		set vy [lindex $v_t($node_id) 1]
 	    }
-	    set vx [expr {$vx + 1000.0 * $fx_t($node) * $dt}]
-	    set vy [expr {$vy + 1000.0 * $fy_t($node) * $dt}]
+	    set vx [expr {$vx + 1000.0 * $fx_t($node_id) * $dt}]
+	    set vy [expr {$vy + 1000.0 * $fy_t($node_id) * $dt}]
 	    set dampk [expr {0.5 + ($vx * $vx + $vy * $vy) * 0.00001}]
 	    set vx [expr {$vx * exp( - $dampk * $dt)}]
 	    set vy [expr {$vy * exp( - $dampk * $dt)}]
 	    set dx [expr {$vx * $dt}]
 	    set dy [expr {$vy * $dt}]
-	    set x [expr {$x_t($node) + $dx}]
-	    set y [expr {$y_t($node) + $dy}]
-	    set v_t($node) "$vx $vy"
+	    set x [expr {$x_t($node_id) + $dx}]
+	    set y [expr {$y_t($node_id) + $dy}]
+	    set v_t($node_id) "$vx $vy"
 
-	    setNodeCoords $node "$x $y"
+	    setNodeCoords $node_id "$x $y"
 	    set e_dx [expr {$dx * $zoom}]
 	    set e_dy [expr {$dy * $zoom}]
 	    .panwin.f1.c move $obj $e_dx $e_dy
-	    set img [.panwin.f1.c find withtag "selectmark && $node"]
+	    set img [.panwin.f1.c find withtag "selectmark && $node_id"]
 	    .panwin.f1.c move $img $e_dx $e_dy
-	    set img [.panwin.f1.c find withtag "nodelabel && $node"]
+	    set img [.panwin.f1.c find withtag "nodelabel && $node_id"]
 	    .panwin.f1.c move $img $e_dx $e_dy
 	    set x [expr {[lindex [.panwin.f1.c coords $img] 0] / $zoom}]
 	    set y [expr {[lindex [.panwin.f1.c coords $img] 1] / $zoom}]
-	    setNodeLabelCoords $node "$x $y"
-	    .panwin.f1.c addtag need_redraw withtag "link && $node"
+	    setNodeLabelCoords $node_id "$x $y"
+	    .panwin.f1.c addtag need_redraw withtag "link && $node_id"
 	}
 	foreach link [.panwin.f1.c find withtag "link && need_redraw"] {
 	    redrawLink [lindex [.panwin.f1.c gettags $link] 1]
@@ -1183,16 +1193,16 @@ proc rearrange { mode } {
     .bottom.mbuf config -text ""
 }
 
-#****f* editor.tcl/switchCanvas 
+#****f* editor.tcl/switchCanvas
 # NAME
 #   switchCanvas -- switch canvas
 # SYNOPSIS
 #   switchCanvas $direction
 # FUNCTION
-#   This procedure switches the canvas in one of the defined 
+#   This procedure switches the canvas in one of the defined
 #   directions (previous, next, first and last).
 # INPUTS
-#   * direction -- the direction of switching canvas. Can be: prev -- 
+#   * direction -- the direction of switching canvas. Can be: prev --
 #   previus, next -- next, first -- first, last -- last.
 #****
 proc switchCanvas { direction } {
@@ -1281,13 +1291,13 @@ proc switchCanvas { direction } {
 # SYNOPSIS
 #   animate
 # FUNCTION
-#   This function animates the selectbox. The animation looks 
+#   This function animates the selectbox. The animation looks
 #   different for edit and exec mode.
 #****
 proc animate {} {
     global animatephase
 
-    catch {.panwin.f1.c itemconfigure "selectmark || selectbox" -dashoffset $animatephase} err
+    catch { .panwin.f1.c itemconfigure "selectmark || selectbox" -dashoffset $animatephase } err
     if { $err != "" } {
 	puts "IMUNES was closed unexpectedly before experiment termination was completed."
 	puts "Clean all running experiments with the 'cleanupAll' command."
@@ -1317,49 +1327,49 @@ proc animate {} {
 #   * dir -- zoom direction (up or down)
 #****
 proc zoom { dir } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global zoom_stops
-    # set i [lsearch $stops $zoom]
+
+    set zoom [getFromRunning "zoom"]
     set minzoom [lindex $zoom_stops 0]
     set maxzoom [lindex $zoom_stops [expr [llength $zoom_stops] - 1]]
     switch -exact -- $dir {
 	"down" {
-	    if {$zoom > $maxzoom} {
-		set zoom $maxzoom
-	    } elseif {$zoom < $minzoom} {
+	    if { $zoom > $maxzoom } {
+		setToRunning "zoom" $maxzoom
+	    } elseif { $zoom < $minzoom } {
 		; # leave it unchanged
 	    } else {
 		set newzoom $minzoom
 		foreach z $zoom_stops {
-		    if {$zoom <= $z} {
+		    if { $zoom <= $z } {
 			break
 		    } else {
 			set newzoom $z
 		    }
 		}
-		set zoom $newzoom 
+		setToRunning "zoom" $newzoom
 	    }
 	    redrawAll
 	}
 	"up" {
-	    if {$zoom < $minzoom} {
-		set zoom $minzoom
-	    } elseif {$zoom > $maxzoom} {
+	    if { $zoom < $minzoom } {
+		setToRunning "zoom" $minzoom
+	    } elseif { $zoom > $maxzoom } {
 		; # leave it unchanged
 	    } else {
 		foreach z [lrange $zoom_stops 1 end] {
 		    set newzoom $z
-		    if {$zoom < $z} {
+		    if { $zoom < $z } {
 			break
 		    }
 		}
-		set zoom $newzoom 
+		setToRunning "zoom" $newzoom
 	    }
 	    redrawAll
 	}
 	default {
 	    if { $i < [expr [llength $zoom_stops] - 1] } {
-		set zoom [lindex $zoom_stops [expr $i + 1]]
+		setToRunning "zoom" [lindex $zoom_stops [expr $i + 1]]
 		redrawAll
 	    }
 	}

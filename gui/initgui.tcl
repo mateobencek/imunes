@@ -852,8 +852,8 @@ menu .menubar.events -tearoff  0
 .menubar.events add command -label "Start scheduling" -underline 0 \
 	-state normal -command "startEventScheduling"
 .menubar.events add command -label "Stop scheduling" -underline 1 \
-	-state disabled -command "stopEventScheduling" 
-.menubar.events add separator	
+	-state disabled -command "stopEventScheduling"
+.menubar.events add separator
 .menubar.events add command -label "Event editor" -underline 0 \
 	-command "elementsEventsEditor"
 #
@@ -866,9 +866,9 @@ menu .menubar.experiment -tearoff 0
 	-command "setOperMode edit" -state disabled
 .menubar.experiment add command -label "Restart" -underline 0 \
 	-command "setOperMode edit; setOperMode exec" -state disabled
-.menubar.experiment add separator	
+.menubar.experiment add separator
 .menubar.experiment add command -label "Attach to experiment" -underline 0 \
-	-command "attachToExperimentPopup" 
+	-command "attachToExperimentPopup"
 
 #
 # Help
@@ -942,11 +942,11 @@ foreach b {select link} {
 
     # hover status line
     set msg ""
-    if { $b == "select" } { 
-	set msg "Select tool" 
+    if { $b == "select" } {
+	set msg "Select tool"
     } elseif { $b == "link"  } {
 	set msg "Create link"
-    } 
+    }
 
     bind $mf.left.$b <Any-Enter> ".bottom.textbox config -text {$msg}"
     bind $mf.left.$b <Any-Leave> ".bottom.textbox config -text {}"
@@ -1055,7 +1055,7 @@ bind $mf.hframe.t <Double-1> {
 #	-bd 1 -width 14
 
 ttk::scrollbar $mf.hframe.scroll -orient horiz -command "$c xview"
-ttk::scrollbar $mf.vframe.scroll -command "$c yview" 
+ttk::scrollbar $mf.vframe.scroll -command "$c yview"
 ttk::scrollbar $mf.hframe.ts -orient horiz -command ".panwin.f1.hframe.t xview"
 pack $mf.hframe.ts -side left -padx 0 -pady 0
 pack $mf.hframe.t -side left -padx 0 -pady 0 -fill both -expand true
@@ -1179,4 +1179,4 @@ bind . <Control-i> {
     redrawAll
 }
 
-focus -force . 
+focus -force .

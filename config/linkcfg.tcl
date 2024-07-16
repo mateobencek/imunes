@@ -108,7 +108,7 @@ proc linkByPeers { node1 node2 } {
 proc removeLink { link_id } {
     set pnodes [getLinkPeers $link_id]
     foreach node_id $pnodes iface [getLinkPeersIfaces $link_id] {
-	if { [getNodeType $node_id] in "extelem"} {
+	if { [getNodeType $node_id] in "extelem" } {
 	    cfgUnset "nodes" $node_id "ifaces" $iface
 	    continue
 	}
@@ -132,7 +132,7 @@ proc removeLink { link_id } {
 	foreach lifc [logIfcList $node_id] {
 	    switch -exact [getLogIfcType $node_id $lifc] {
 		vlan {
-		    if {[getIfcVlanDev $node_id $lifc] == $iface} {
+		    if { [getIfcVlanDev $node_id $lifc] == $iface } {
 			cfgUnset "nodes" $node_id "logifaces" $lifc
 		    }
 		}
@@ -170,9 +170,7 @@ proc removeLink { link_id } {
 #   * link_direct -- returns 0 if link is not a direct link and 1 if it is
 #****
 proc getLinkDirect { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-
-    return [getWithDefault 0 $dict_cfg "links" $link_id "direct"]
+    return [cfgGetWithDefault 0 "links" $link_id "direct"]
 }
 
 #****f* linkcfg.tcl/setLinkDirect
@@ -270,10 +268,9 @@ proc setLinkBandwidth { link_id bandwidth } {
 #   * color -- link color
 #****
 proc getLinkColor { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
     global defLinkColor
 
-    return [getWithDefault $defLinkColor $dict_cfg "links" $link_id "color"]
+    return [cfgGetWithDefault $defLinkColor "links" $link_id "color"]
 }
 
 #****f* linkcfg.tcl/setLinkColor
@@ -302,10 +299,9 @@ proc setLinkColor { link_id color } {
 #   * link -- link id
 #****
 proc getLinkWidth { link_id } {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
     global defLinkWidth
 
-    return [getWithDefault $defLinkWidth $dict_cfg "links" $link_id "width"]
+    return [cfgGetWithDefault $defLinkWidth "links" $link_id "width"]
 }
 
 #****f* linkcfg.tcl/setLinkWidth
@@ -678,6 +674,7 @@ proc setLinkDup { link_id duplicate } {
 proc linkResetConfig { link_id } {
     setLinkBandwidth $link_id ""
     setLinkBER $link_id ""
+    setLinkLoss $link_id ""
     setLinkDelay $link_id ""
     setLinkDup $link_id ""
 
@@ -885,7 +882,9 @@ proc newLink { lnode1 lnode2 } {
 	[getNodeType $lnode2] == "lanswitch" || \
 	[string first eth "$ifname1 $ifname2"] != -1) && \
 	[getNodeType $lnode1] != "rj45" && \
-	[getNodeType $lnode2] != "rj45" } {
+	[getNodeType $lnode2] != "rj45" &&
+	$defEthBandwidth != 0 } {
+
 	cfgSet "links" $link_id "bandwidth" $defEthBandwidth
     } elseif { [string first ser "$ifname1 $ifname2"] != -1 } {
 	cfgSet "links" $link_id "bandwidth" $defSerBandwidth
@@ -893,10 +892,10 @@ proc newLink { lnode1 lnode2 } {
     }
     lappendToRunning "link_list" $link_id
 
-    if {[info procs [getNodeType $lnode1].confNewIfc] != ""} {
+    if { [info procs [getNodeType $lnode1].confNewIfc] != "" } {
 	[getNodeType $lnode1].confNewIfc $lnode1 $ifname1
     }
-    if {[info procs [getNodeType $lnode2].confNewIfc] != ""} {
+    if { [info procs [getNodeType $lnode2].confNewIfc] != "" } {
 	[getNodeType $lnode2].confNewIfc $lnode2 $ifname2
     }
 
@@ -912,12 +911,12 @@ proc newLink { lnode1 lnode2 } {
 #   Returns the link id of the link connecting the node's interface.
 # INPUTS
 #   * node -- node id
-#   * ifc -- interface
+#   * iface -- interface
 # RESULT
 #   * link -- link id.
 #****
-proc linkByIfc { node ifc } {
-    set peer [getIfcPeer $node $ifc]
+proc linkByIfc { node iface } {
+    set peer [getIfcPeer $node $iface]
     foreach link [getFromRunning "link_list"] {
 	set endpoints [getLinkPeers $link]
 	if { $endpoints == "$node $peer" } {
