@@ -6420,6 +6420,7 @@ proc configGUI_packetConfigDelete { } {
 proc configGUI_routingProtocols { wi node } {
     global ripEnable ripngEnable ospfEnable ospf6Enable
     global guielements
+
     lappend guielements configGUI_routingModel
     ttk::frame $wi.routing -relief groove -borderwidth 2 -padding 2
     ttk::frame $wi.routing.protocols -padding 2
@@ -6430,10 +6431,10 @@ proc configGUI_routingProtocols { wi node } {
     ttk::checkbutton $wi.routing.protocols.ospf -text "ospfv2" -variable ospfEnable
     ttk::checkbutton $wi.routing.protocols.ospf6 -text "ospfv3" -variable ospf6Enable
 
-    set ripEnable [getNodeProtocolRip $node]
-    set ripngEnable [getNodeProtocolRipng $node]
-    set ospfEnable [getNodeProtocolOspfv2 $node]
-    set ospf6Enable [getNodeProtocolOspfv3 $node]
+    set ripEnable [getNodeProtocol $node "rip"]
+    set ripngEnable [getNodeProtocol $node "ripng"]
+    set ospfEnable [getNodeProtocol $node "ospf"]
+    set ospf6Enable [getNodeProtocol $node "ospf6"]
     if { [getFromRunning "oper_mode"] != "edit" } {
 	$wi.routing.protocols.rip configure -state disabled
 	$wi.routing.protocols.ripng configure -state disabled

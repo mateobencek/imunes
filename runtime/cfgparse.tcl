@@ -371,6 +371,8 @@ proc loadCfg { cfg } {
 			    set croutes6 {}
 			    set vlan false
 			    set bridge_name ""
+			    set nat64 false
+			    set tayga_mappings {}
 			    foreach zline [split $value {
 }] {
 				if { [string index "$zline" 0] == "	" } {
@@ -512,6 +514,23 @@ proc loadCfg { cfg } {
 				    }
 				}
 
+				if { $nat64 } {
+				    switch -glob -- $zline {
+					" taygaMapping *" {
+					    lappend tayga_mappings [lrange $zline 1 end]
+					}
+					"!" {
+					    if { $tayga_mappings != {} } {
+						cfgSet $dict_object $object "nat64" "taygaMappings" $tayga_mappings
+					    }
+					    set nat64 false
+					}
+					default {
+					    cfgSet $dict_object $object "nat64" [lindex $zline 0] [lrange $zline 1 end]
+					}
+				    }
+				}
+
 				if { $bridge_name != "" } {
 				    switch -glob -- $zline {
 					" stp" -
@@ -569,6 +588,9 @@ proc loadCfg { cfg } {
 				    }
 				    "stp-enabled *" {
 					cfgSet $dict_object $object "stp_enabled" [lindex $zline end]
+				    }
+				    "nat64" {
+					set nat64 true
 				    }
 				}
 
@@ -1438,7 +1460,7 @@ proc getJsonType { key_name } {
 	return "dictionary"
     } elseif { $key_name in "custom_config croutes4 croutes6 ipv4_addrs ipv6_addrs services" } {
 	return "array"
-    } elseif { $key_name in "vlan ipsec" } {
+    } elseif { $key_name in "vlan ipsec nat64" } {
 	return "inner_dictionary"
     }
 
