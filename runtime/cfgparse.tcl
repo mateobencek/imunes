@@ -1262,7 +1262,7 @@ proc dictUnset { dictionary args } {
     try {
 	dict unset dictionary {*}$args
     } on error {} {
-	return {}
+	return $dictionary
     } on ok retv {
 	return $retv
     }
