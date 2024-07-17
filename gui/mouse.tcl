@@ -157,16 +157,16 @@ proc selectNode { c obj } {
     $c addtag selected withtag "node && $node_id"
     if { [getNodeType $node_id] == "pseudo" } {
 	set bbox [$c bbox "nodelabel && $node_id"]
-    } elseif { [getNodeType $node_id] == "rectangle" } {
+    } elseif { [getAnnotationType $node_id] == "rectangle" } {
 	$c addtag selected withtag "rectangle && $node_id"
 	set bbox [$c bbox "rectangle && $node_id"]
-    } elseif { [getNodeType $node_id] == "text" } {
+    } elseif { [getAnnotationType $node_id] == "text" } {
 	$c addtag selected withtag "text && $node_id"
 	set bbox [$c bbox "text && $node_id"]
-    } elseif { [getNodeType $node_id] == "oval" } {
+    } elseif { [getAnnotationType $node_id] == "oval" } {
 	$c addtag selected withtag "oval && $node_id"
 	set bbox [$c bbox "oval && $node_id"]
-    } elseif { [getNodeType $node_id] == "freeform" } {
+    } elseif { [getAnnotationType $node_id] == "freeform" } {
 	$c addtag selected withtag "freeform && $node_id"
 	set bbox [$c bbox "freeform && $node_id"]
     } else {
@@ -177,10 +177,11 @@ proc selectNode { c obj } {
 	return
     }
 
-    set bx1 [expr {[lindex $bbox 0] - 2}]
-    set by1 [expr {[lindex $bbox 1] - 2}]
-    set bx2 [expr {[lindex $bbox 2] + 1}]
-    set by2 [expr {[lindex $bbox 3] + 1}]
+    lassign $bbox bx1 by1 bx2 by2
+    set bx1 [expr {$bx1 - 2}]
+    set by1 [expr {$by1 - 2}]
+    set bx2 [expr {$bx2 + 1}]
+    set by2 [expr {$by2 + 1}]
     $c delete -withtags "selectmark && $node_id"
     $c create line $bx1 $by1 $bx2 $by1 $bx2 $by2 $bx1 $by2 $bx1 $by1 \
 	-dash {6 4} -fill black -width 1 -tags "selectmark $node_id"
@@ -921,9 +922,7 @@ proc button1 { c x y button } {
 
     set curobj [$c find withtag current]
     set curtype [lindex [$c gettags current] 0]
-    if { $curtype == "node" || $curtype == "oval" ||
-	 $curtype == "rectangle" || $curtype == "text" ||
-	 $curtype == "freeform" || ( $curtype == "nodelabel" &&
+    if { $curtype in "node oval rectangle text freeform" || ( $curtype == "nodelabel" &&
 	 [getNodeType [lindex [$c gettags $curobj] 1]] == "pseudo") } {
 
 	set node_id [lindex [$c gettags current] 1]
@@ -936,14 +935,14 @@ proc button1 { c x y button } {
 		$c dtag $node_id selected
 		$c delete -withtags "selectmark && $node_id"
 	    }
-	} elseif { !$wasselected } {
-	    foreach node_type { "node" "text" "oval" "rectangle" "freeform"} {
+	} elseif { ! $wasselected } {
+	    foreach node_type "node text oval rectangle freeform" {
 		$c dtag $node_type selected
 	    }
 	    $c delete -withtags selectmark
 	}
 
-	if { $activetool == "select" && !$wasselected } {
+	if { $activetool == "select" && ! $wasselected } {
 	    selectNode $c $curobj
 	}
     } elseif { $curtype == "selectmark" } {
@@ -1315,9 +1314,7 @@ proc button1-release { c x y } {
 		}
 	    }
 	}
-    } elseif { $activetool == "rectangle" || $activetool == "oval" \
-	|| $activetool == "text" || $activetool =="freeform" } {
-
+    } elseif { $activetool in "rectangle oval text freeform" } {
 	popupAnnotationDialog $c 0 "false"
     }
 
@@ -1392,7 +1389,7 @@ proc button1-release { c x y } {
 		    set outofbounds 1
 		}
 
-		setNodeCoords $node_id "$x1 $y1 $x2 $y2"
+		setAnnotationCoords $node_id "$x1 $y1 $x2 $y2"
 	    }
 
 	    if { [lindex [$c gettags $node_id] 0] == "rectangle" } {
@@ -1422,7 +1419,7 @@ proc button1-release { c x y } {
 		    set outofbounds 1
 		}
 
-		setNodeCoords $node_id "$x1 $y1 $x2 $y2"
+		setAnnotationCoords $node_id "$x1 $y1 $x2 $y2"
 	    }
 
 	    if { [lindex [$c gettags $node_id] 0] == "freeform"} {
@@ -1466,7 +1463,7 @@ proc button1-release { c x y } {
                     set i [expr {$i+2}]
                 }
 
-                setNodeCoords $node_id $newcoords
+                setAnnotationCoords $node_id $newcoords
 	    }
 
 	    if { [lindex [$c gettags $node_id] 0] == "text"} {
@@ -1492,7 +1489,7 @@ proc button1-release { c x y } {
 		    set outofbounds 1
 		}
 
-		setNodeCoords $node_id "$x1 $y1"
+		setAnnotationCoords $node_id "$x1 $y1"
 	    }
 
 	    $c move "selectmark && $node_id" $dx $dy
@@ -1793,20 +1790,24 @@ proc deleteSelection {} {
 	return
     }
 
-    catch {unset viewid}
+    catch { unset viewid }
     .panwin.f1.c config -cursor watch; update
 
     foreach lnode [selectedNodes] {
 	if { $lnode != "" } {
 	    removeNodeGUI $lnode
 	}
-	if { [isAnnotation $lnode] } {
-	    deleteAnnotation [getFromRunning "curcanvas"] [getNodeType $lnode] $lnode
+
+	set type [getAnnotationType $lnode]
+	if { $type != "" } {
+	    deleteAnnotation $lnode $type
 	}
 	set changed 1
     }
+
     raiseAll .panwin.f1.c
     updateUndoLog
+
     .panwin.f1.c config -cursor left_ptr
     .bottom.textbox config -text ""
 }
@@ -1821,14 +1822,14 @@ proc deleteSelection {} {
 #****
 proc removeIPv4nodes {} {
     global changed
-    set nodelist [selectedNodes]
 
-    foreach node_id $nodelist {
+    foreach node_id [selectedNodes] {
 	setStatIPv4routes $node_id ""
 	foreach iface [ifcList $node_id] {
 	    setIfcIPv4addrs $node_id $iface ""
 	}
     }
+
     redrawAll
     set changed 1
     updateUndoLog
@@ -1844,9 +1845,8 @@ proc removeIPv4nodes {} {
 #****
 proc removeIPv6nodes {} {
     global changed
-    set nodelist [selectedNodes]
 
-    foreach node_id $nodelist {
+    foreach node_id [selectedNodes] {
 	setStatIPv6routes $node_id ""
 	foreach iface [ifcList $node_id] {
 	    setIfcIPv6addrs $node_id $iface ""
@@ -2115,7 +2115,7 @@ proc double1onGrid { c x y } {
 
     set node_id [lindex $tags 1]
     # Is this really necessary?
-    lassign [getNodeCoords $node_id] x1 y1 x2 y2
+    lassign [getAnnotationCoords $node_id] x1 y1 x2 y2
     if { $x < $x1 || $x > $x2 || $y < $y1 || $y > $y2 } {
 	# cursor is not ON the closest object
 	return

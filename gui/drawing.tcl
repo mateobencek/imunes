@@ -39,9 +39,9 @@ proc redrawAll {} {
     }
 
     if { $showAnnotations == 1 } {
-	foreach obj [getFromRunning "annotation_list"] {
-	    if { [getNodeCanvas $obj] == $curcanvas } {
-		drawAnnotation $obj
+	foreach annotation_id [getFromRunning "annotation_list"] {
+	    if { [getAnnotationCanvas $annotation_id] == $curcanvas } {
+		drawAnnotation $annotation_id
 	    }
 	}
     }
