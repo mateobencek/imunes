@@ -373,6 +373,7 @@ proc loadCfg { cfg } {
 			    set bridge_name ""
 			    set nat64 false
 			    set tayga_mappings {}
+			    set packgen false
 			    foreach zline [split $value {
 }] {
 				if { [string index "$zline" 0] == "	" } {
@@ -531,6 +532,23 @@ proc loadCfg { cfg } {
 				    }
 				}
 
+				if { $packgen } {
+				    switch -glob -- $zline {
+					" packetrate *" {
+					    cfgSet $dict_object $object "packgen" [lindex $zline 0] [lrange $zline 1 end]
+					}
+					"!" {
+					    set packgen false
+					}
+					default {
+					    lassign [split $zline ':'] id packet_data
+					    set id [string trim $id]
+					    set packet_data [string trim $packet_data]
+					    cfgSet $dict_object $object "packgen" "packets" $id $packet_data
+					}
+				    }
+				}
+
 				if { $bridge_name != "" } {
 				    switch -glob -- $zline {
 					" stp" -
@@ -591,6 +609,10 @@ proc loadCfg { cfg } {
 				    }
 				    "nat64" {
 					set nat64 true
+				    }
+				    "packets" -
+				    "packet generator" {
+					set packgen true
 				    }
 				}
 
@@ -1273,6 +1295,13 @@ proc cfgSet { args } {
     return $dict_cfg
 }
 
+# to forcefully set empty values to a dictionary key
+proc cfgSetEmpty { args } {
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+    set dict_cfg [dictSet $dict_cfg {*}$args]
+}
+
 proc cfgLappend { args } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
@@ -1460,7 +1489,7 @@ proc getJsonType { key_name } {
 	return "dictionary"
     } elseif { $key_name in "custom_config croutes4 croutes6 ipv4_addrs ipv6_addrs services" } {
 	return "array"
-    } elseif { $key_name in "vlan ipsec nat64" } {
+    } elseif { $key_name in "vlan ipsec nat64 packgen" } {
 	return "inner_dictionary"
     }
 

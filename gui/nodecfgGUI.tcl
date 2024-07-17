@@ -5771,7 +5771,9 @@ proc configGUI_ifcRuleConfigDelete { } {
 
     set ifc [.popup.nbook tab current -text]
     set rule [.popup.nbook.nf$ifc.panwin.f1.tree selection]
-
+    if { $rule == "" } {
+	return
+    }
 
     removeFilterIfcRule $curnode $ifc $rule
     set next [.popup.nbook.nf$ifc.panwin.f1.tree next $rule]
@@ -6043,10 +6045,12 @@ proc configGUI_addTreePackgen { wi node } {
 
     #Creating new items
 
-    foreach packet [lsort -integer [packgenPackets $node]] {
-	$wi.panwin.f1.tree insert {} end -id $packet -text "$packet" -tags $packet
+    set all_packets [packgenPackets $node]
+    set sorted [lsort -integer [dict keys $all_packets]]
+    foreach packet_id $sorted {
+	$wi.panwin.f1.tree insert {} end -id $packet_id -text "$packet_id" -tags $packet_id
 	foreach column $packgentreecolumns {
-	    $wi.panwin.f1.tree set $packet [lindex $column 0] [getPackgenPacket[lindex $column 0] $node $packet]
+	    $wi.panwin.f1.tree set $packet_id [lindex $column 0] [getPackgenPacket[lindex $column 0] $node $packet_id]
 	}
     }
 
@@ -6054,8 +6058,7 @@ proc configGUI_addTreePackgen { wi node } {
     #selected in the topology tree and calling procedure configGUI_showIfcInfo with that
     #interfaces as the second argument
     global selectedPackgenPacket
-    if {[llength [packgenPackets $node]] != 0 && $selectedPackgenPacket == ""} {
-	set sorted [lsort -integer [packgenPackets $node]]
+    if { [llength $all_packets] != 0 && $selectedPackgenPacket == "" } {
 	if { $sorted != "" } {
 	    $wi.panwin.f1.tree focus [lindex $sorted 0]
 	    $wi.panwin.f1.tree selection set [lindex $sorted 0]
@@ -6064,18 +6067,18 @@ proc configGUI_addTreePackgen { wi node } {
 	}
     }
     #binding for tags $ifc
-    foreach packet [lsort -integer [packgenPackets $node]] {
-	$wi.panwin.f1.tree tag bind $packet <1> \
-	  "$wi.panwin.f1.tree focus $packet
-	   $wi.panwin.f1.tree selection set $packet
-           configGUI_showPacketInfo $wi.panwin.f2 0 $node $packet"
-	$wi.panwin.f1.tree tag bind $packet <Key-Up> \
-	    "if {![string equal {} [$wi.panwin.f1.tree prev $packet]]} {
-		configGUI_showPacketInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree prev $packet]
+    foreach packet_id $sorted {
+	$wi.panwin.f1.tree tag bind $packet_id <1> \
+	  "$wi.panwin.f1.tree focus $packet_id
+	   $wi.panwin.f1.tree selection set $packet_id
+           configGUI_showPacketInfo $wi.panwin.f2 0 $node $packet_id"
+	$wi.panwin.f1.tree tag bind $packet_id <Key-Up> \
+	    "if { ! [string equal {} [$wi.panwin.f1.tree prev $packet_id]] } {
+		configGUI_showPacketInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree prev $packet_id]
 	    }"
-	$wi.panwin.f1.tree tag bind $packet <Key-Down> \
-	    "if {![string equal {} [$wi.panwin.f1.tree next $packet]]} {
-		configGUI_showPacketInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree next $packet]
+	$wi.panwin.f1.tree tag bind $packet_id <Key-Down> \
+	    "if { ! [string equal {} [$wi.panwin.f1.tree next $packet_id]] } {
+		configGUI_showPacketInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree next $packet_id]
 	     }"
     }
 
@@ -6093,27 +6096,30 @@ proc configGUI_refreshPacketsTree { } {
     set packet [.popup.nbook.nf$tab.panwin.f1.tree selection]
     set wi .popup.nbook.nf$tab
     $wi.panwin.f1.tree delete [$wi.panwin.f1.tree children {}]
-    foreach pac [lsort -integer [packgenPackets $node]] {
-	$wi.panwin.f1.tree insert {} end -id $pac -text "$pac" -tags $pac
+
+    set sorted [lsort -integer [dict keys [packgenPackets $node]]]
+    foreach packet_id $sorted {
+	$wi.panwin.f1.tree insert {} end -id $packet_id -text "$packet_id" -tags $packet_id
 	foreach column $packgentreecolumns {
-	    $wi.panwin.f1.tree set $pac [lindex $column 0] [getPackgenPacket[lindex $column 0] $node $pac]
+	    $wi.panwin.f1.tree set $packet_id [lindex $column 0] [getPackgenPacket[lindex $column 0] $node $packet_id]
 	}
     }
-    foreach pac [lsort -integer [packgenPackets $node]] {
-	$wi.panwin.f1.tree tag bind $pac <1> \
-	  "$wi.panwin.f1.tree focus $pac
-	   $wi.panwin.f1.tree selection set $pac
-           configGUI_showPacketInfo $wi.panwin.f2 0 $node $pac"
-	$wi.panwin.f1.tree tag bind $pac <Key-Up> \
-	    "if {![string equal {} [$wi.panwin.f1.tree prev $pac]]} {
-		configGUI_showPacketInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree prev $pac]
+
+    foreach packet_id $sorted {
+	$wi.panwin.f1.tree tag bind $packet_id <1> \
+	  "$wi.panwin.f1.tree focus $packet_id
+	   $wi.panwin.f1.tree selection set $packet_id
+           configGUI_showPacketInfo $wi.panwin.f2 0 $node $packet_id"
+	$wi.panwin.f1.tree tag bind $packet_id <Key-Up> \
+	    "if { ! [string equal {} [$wi.panwin.f1.tree prev $packet_id]] } {
+		configGUI_showPacketInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree prev $packet_id]
 	    }"
-	$wi.panwin.f1.tree tag bind $pac <Key-Down> \
-	    "if {![string equal {} [$wi.panwin.f1.tree next $pac]]} {
-		configGUI_showPacketInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree next $pac]
+	$wi.panwin.f1.tree tag bind $packet_id <Key-Down> \
+	    "if { ! [string equal {} [$wi.panwin.f1.tree next $packet_id]] } {
+		configGUI_showPacketInfo $wi.panwin.f2 0 $node [$wi.panwin.f1.tree next $packet_id]
 	     }"
     }
-    set sorted [lsort -integer [packgenPackets $node]]
+
     set first [lindex $sorted 0]
     if { $first != "" } {
 	$wi.panwin.f1.tree focus $first
@@ -6299,7 +6305,7 @@ proc configGUI_packetConfigApply { add dup } {
 
     if { $pac == "" } {
 	if { $add != 0 && $dup == 0} {
-	    set new_pac "10:"
+	    set new_pac ""
 	    addPackgenPacket $curnode 10 $new_pac
 	    set changed 1
 	    return 10
@@ -6313,7 +6319,7 @@ proc configGUI_packetConfigApply { add dup } {
 
     set old_pacnum $pac
 
-    if { [checkRuleNum $pacnum] != 1 } {
+    if { [checkPacketNum $pacnum] != 1 } {
 	tk_dialog .dialog1 "IMUNES warning" \
 	    "Packet ID irregular." \
 	info 0 Dismiss
@@ -6324,13 +6330,18 @@ proc configGUI_packetConfigApply { add dup } {
     foreach line [split $text "\n"] {
 	set line [string map {":" " " "." " "} [string trim $line]]
 
+	if { $line == "" } {
+	    continue
+	}
+
 	# Attempt to detect & preprocess lines pasted from Wireshark
-	if {[string is xdigit [string range $line 0 3]] &&
-	  [string range $line 4 5] eq "  "} {
-	    if {[string range $line 29 30] eq "  "} {
+	if { [string is xdigit [string range $line 0 3]] &&
+	    [string range $line 4 5] eq "  " } {
+
+	    if { [string range $line 29 30] eq "  " } {
 		set line [string replace $line 29 29]
 	    }
-	    set line [string range $line 6 end]
+	    set line [string trim [string range $line 6 end]]
 	}
 	foreach byte [split $line " "] {
 	    if {$byte == "" || ![string is xdigit $byte]} {
@@ -6340,36 +6351,40 @@ proc configGUI_packetConfigApply { add dup } {
 	}
     }
 
-# XXX fixme!
-if {0} {
+    if { $pdata == "" } {
+	set pdata [string trim $text]
+    }
+
+    if { [string length $pdata] % 2 } {
+	set pdata "${pdata}0"
+    }
+
     if { [checkPacketData $pdata] != 1 } {
 	tk_dialog .dialog1 "IMUNES warning" \
 	    "Packet data irregular." \
-	info 0 Dismiss
+	    info 0 Dismiss
+
 	return
     }
-}
 
     if { $pacnum != $old_pacnum } {
 	set pacNumChanged 1
     } else {
 	if { $add != 0 } {
-	    set l [lsort -integer [packgenPackets $curnode]]
-	    set pacnum [expr {[lindex $l end] + 10}]
+	    set sorted [lsort -integer [dict keys [packgenPackets $curnode]]]
+	    set pacnum [expr {[lindex $sorted end] + 10}]
 	    if { $dup == 0 } {
 		set pdata ""
 	    } else {
-		if { [llength $l] == 0 } {
+		if { [llength $sorted] == 0 } {
 		    return
 		}
 	    }
 	}
     }
+
     if { $pacNumChanged == 1 } {
-	set l [packgenPackets $curnode]
-	set i [lsearch $l $old_pacnum]
-	set l [lreplace $l $i $i]
-	if { $pacnum in $l} {
+	if { $pacnum in [removeFromList [dict keys [packgenPackets $curnode]] $old_pacnum] } {
 	    tk_dialog .dialog1 "IMUNES warning" \
 		"Packet ID already exists." \
 	    info 0 Dismiss
@@ -6377,26 +6392,17 @@ if {0} {
 	}
     }
 
-#    set pdata [string map { ":" " " "." " " } $pdata]
-#
-#    $wi.if$pac.rconfig.pval delete 1.0 end
-#    $wi.if$pac.rconfig.pval insert end $pdata
-
     set old_packet [getPackgenPacket $curnode $old_pacnum]
-    set new_packet "$pacnum:$pdata"
+    set new_packet $pdata
 
-    if { $new_packet != $old_packet } {
+    if { $add || $dup || $pacNumChanged || $new_packet != $old_packet } {
 	set changed 1
-#	if { $apply == 1} {
-	    if { $add == 0 } {
-		removePackgenPacket $curnode $old_pacnum
-		addPackgenPacket $curnode $pacnum $new_packet
-		return $pacnum
-	    } else {
-		addPackgenPacket $curnode $pacnum $new_packet
-		return $pacnum
-	    }
-#	}
+	if { $add == 0 } {
+	    removePackgenPacket $curnode $old_pacnum
+	}
+	addPackgenPacket $curnode $pacnum $new_packet
+
+	return $pacnum
     }
 }
 
@@ -6404,6 +6410,9 @@ proc configGUI_packetConfigDelete { } {
     global curnode
 
     set pac [.popup.nbook.nfConfiguration.panwin.f1.tree selection]
+    if { $pac == "" } {
+	return
+    }
 
     removePackgenPacket $curnode $pac
     set next [.popup.nbook.nfConfiguration.panwin.f1.tree next $pac]
