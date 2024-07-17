@@ -1311,9 +1311,9 @@ proc image% { image percent img_name } {
 	set fname "original.gif"
 	$image write $fname
 	if { ! $winOS } {
-	    exec convert $fname -resize $percent\% zoom_$percent.gif
+	    exec magick $fname -resize $percent\% zoom_$percent.gif
 	} else {
-	    exec cmd /c convert $fname -resize $percent\% zoom_$percent.gif
+	    exec cmd /c magick $fname -resize $percent\% zoom_$percent.gif
 	}
 
 	set im2 [image create photo -file zoom_$percent.gif]

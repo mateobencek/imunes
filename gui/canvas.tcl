@@ -202,17 +202,10 @@ proc removeCanvasBkg { canvas_id } {
 #   * target -- the object that uses the image
 #****
 proc setImageReference { img target } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
+    set ref_list [getImageReferences $img]
+    lappend ref_list $target
 
-    set i [lsearch [set $img] "referencedBy *"]
-    if { $i >= 0 } {
-	set ref_list [getImageReferences $img]
-	lappend ref_list $target
-	set ref_list [lsort -unique $ref_list]
-	set $img [lreplace [set $img] $i $i "referencedBy {$ref_list}"]
-    } else {
-	set $img [linsert [set $img] 0 "referencedBy {$target}"]
-    }
+    cfgSet "images" $img "referencedBy" [lsort -unique $ref_list]
 }
 
 #****f* canvas.tcl/getImageReferences
@@ -228,13 +221,7 @@ proc setImageReference { img target } {
 #   * entry -- list of references to the image
 #****
 proc getImageReferences { img } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set entry [lrange [lsearch -inline [set $img] "referencedBy *"] 1 end]
-    set entry [string trim $entry \{\}]
-    set entry [split $entry " "]
-
-    return $entry
+    return [cfgGet "images" $img "referencedBy"]
 }
 
 #****f* canvas.tcl/removeImageReference
@@ -249,21 +236,7 @@ proc getImageReferences { img } {
 #   * target -- the object that references the image
 #****
 proc removeImageReference { img target } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set entry [lrange [lsearch -inline [set $img] "referencedBy *"] 1 end]
-    set entry [string trim $entry \{\}]
-    set entry [split $entry " "]
-
-    set j [lsearch $entry "$target"]
-    if { $j >= 0 } {
-	set entry [lreplace $entry $j $j ]
-    }
-
-    set i [lsearch [set $img] "referencedBy *"]
-    if { $i >= 0 } {
-	set $img [lreplace [set $img] $i $i "referencedBy {$entry}"]
-    }
+    cfgSet "images" $img "referencedBy" [removeFromList [getImageReferences $img] $target]
 }
 
 #****f* canvas.tcl/setImageType
@@ -278,14 +251,7 @@ proc removeImageReference { img target } {
 #   * type -- type of the image
 #****
 proc setImageType { img type } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set i [lsearch [set $img] "type *"]
-    if { $i >= 0 } {
-	set $img [lreplace [set $img] $i $i "type {$type}"]
-    } else {
-	set $img [linsert [set $img] 0 "type {$type}"]
-    }
+    cfgSet "images" $img "type" $type
 }
 
 #****f* canvas.tcl/getImageType
@@ -301,10 +267,7 @@ proc setImageType { img type } {
 #   * imageType -- the type of the image
 #****
 proc getImageType { img } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set entry [lrange [lsearch -inline [set $img] "type *"] 1 end]
-    return [string trim $entry \{\}]
+    return [cfgGet "images" $img "type"]
 }
 
 #****f* canvas.tcl/setImageData
@@ -319,20 +282,14 @@ proc getImageType { img } {
 #   * path -- path to image file
 #****
 proc setImageData { img path } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
     set f [open $path]
     fconfigure $f -translation binary
 
     set data [read -nonewline $f]
-    set enc_data [base64::encode $data]
-    set enc_data [string map {"\n" "\n          "} $enc_data]
-    set i [lsearch [set $img] "data *"]
-    if { $i >= 0 } {
-	set $img [lreplace [set $img] $i $i "data {$enc_data}"]
-    } else {
-	set $img [linsert [set $img] 0 "data {$enc_data}"]
-    }
+    set enc_data [base64::encode -maxlen 0 $data]
+    #set enc_data [string map {"\n" "\n          "} $enc_data]
+
+    cfgSet "images" $img "data" $enc_data
 }
 
 #****f* canvas.tcl/getImageData
@@ -348,12 +305,11 @@ proc setImageData { img path } {
 #   * data -- image data
 #****
 proc getImageData { img } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set entry [lrange [lsearch -inline [set $img] "data *"] 1 end]
+    set entry [cfgGet "images" $img "data"]
     set enc [string trim $entry \{\}]
     set enc [string trim $enc " "]
     set data [base64::decode $enc]
+
     return $data
 }
 
@@ -370,20 +326,14 @@ proc getImageData { img } {
 #   * zoom -- zoom percentage
 #****
 proc setImageZoomData { img path zoom } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
     set f [open $path]
     fconfigure $f -translation binary
 
     set data [read -nonewline $f]
-    set enc_data [base64::encode $data]
-    set enc_data [string map {"\n" "\n          "} $enc_data]
-    set i [lsearch [set $img] "zoom_$zoom *"]
-    if { $i >= 0 } {
-	set $img [lreplace [set $img] $i $i "zoom_$zoom {$enc_data}"]
-    } else {
-	set $img [linsert [set $img] end "zoom_$zoom {$enc_data}"]
-    }
+    set enc_data [base64::encode -maxlen 0 $data]
+    #set enc_data [string map {"\n" "\n          "} $enc_data]
+
+    cfgSet "images" $img "zoom_$zoom" $enc_data
 }
 
 #****f* canvas.tcl/getImageZoomData
@@ -400,12 +350,11 @@ proc setImageZoomData { img path zoom } {
 #   * data -- image zoom data
 #****
 proc getImageZoomData { img zoom } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set entry [lrange [lsearch -inline [set $img] "zoom_$zoom *"] 1 end]
+    set entry [cfgGet "images" $img "zoom_$zoom"]
     set enc [string trim $entry \{\}]
     set enc [string trim $enc " "]
     set data [base64::decode $enc]
+
     return $data
 }
 
@@ -421,14 +370,7 @@ proc getImageZoomData { img zoom } {
 #   * file -- image filename
 #****
 proc setImageFile { img file } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set i [lsearch [set $img] "file *"]
-    if { $i >= 0 } {
-	set $img [lreplace [set $img] $i $i "file {$file}"]
-    } else {
-	set $img [linsert [set $img] 0 "file {$file}"]
-    }
+    cfgSet "images" $img "file" $file
 }
 
 #****f* canvas.tcl/getImageFile
@@ -444,10 +386,7 @@ proc setImageFile { img file } {
 #   * file -- image filename
 #****
 proc getImageFile { img } {
-    upvar 0 ::cf::[set ::curcfg]::$img $img
-
-    set entry [lrange [lsearch -inline [set $img] "file *"] 1 end]
-    return [string trim $entry \{\}]
+    return [cfgGet "images" $img "file"]
 }
 
 #****f* canvas.tcl/loadImage
@@ -467,7 +406,7 @@ proc getImageFile { img } {
 #   * imageName -- name of the variable which now contains the image
 #****
 proc loadImage { path ref type file } {
-    upvar 0 ::cf::[set ::curcfg]::image_list image_list
+    set image_list [getFromRunning "image_list"]
 
     if { [file exists $path] != 1 } {
 	after idle {.dialog1.msg configure -wraplength 4i}
@@ -477,26 +416,16 @@ proc loadImage { path ref type file } {
 	return 2
     }
 
-    set i [lsearch -all -glob $image_list "img_*"]
-    set i [lindex $i end]
-    set count [string range [lindex $image_list $i] 4 end]
-    if {$count != ""} {
-	incr count
-    } else {
-	set count 0
-    }
-
-    set imgname "img_$count"
-    upvar 0 ::cf::[set ::curcfg]::$imgname $imgname
-    set $imgname {}
-
-    lappend image_list $imgname
+    set imgname [newObjectId "image"]
+    lappendToRunning "image_list" $imgname
 
     setImageData $imgname $path
     setImageFile $imgname [relpath $file]
+
     if { $ref != "" } {
 	setImageReference $imgname $ref
     }
+
     setImageType $imgname $type
 
     return $imgname
@@ -528,12 +457,13 @@ proc random { range start } {
 #   Select image file and configure the current canvas background.
 #****
 proc changeBkgPopup {} {
-    upvar 0 ::cf::[set ::curcfg]::curcanvas curcanvas
     global wi canvasBkgMode chbgdialog cc alignCanvasBkg bgsrcfile winOS hasIM
 
+    set curcanvas [getFromRunning "curcanvas"]
     set cc $curcanvas
     set chbgdialog .chbgDialog
-    catch {destroy $chbgdialog}
+    catch { destroy $chbgdialog }
+
     toplevel $chbgdialog
     wm transient $chbgdialog .
     wm resizable $chbgdialog 0 0
@@ -657,7 +587,6 @@ proc changeBkgPopup {} {
       $wi.bgconf.left.down.r.align.s.e -padx 10 -side left
     pack $wi.bgconf.left.down.r.align.s -pady 3
 
-
     #lower left frame with options
     ttk::frame $wi.bgconf.left.down.l
 
@@ -686,7 +615,7 @@ proc changeBkgPopup {} {
 
     #bottom frame with information about imagemagick
     ttk::frame $wi.bgconf.left.downdown
-    if {!$hasIM} {
+    if { ! $hasIM } {
 	set canvasBkgMode "adjustC2I"
 	$wi.bgconf.left.down.l.original configure -state disabled
 	$wi.bgconf.left.down.l.str_shr configure -state disabled
@@ -824,18 +753,18 @@ proc popupBkgApply { wi c } {
 		original {
 		    if {$crop == 1} {
 			if {!$winOS} {
-			    exec convert $bgsrcfile -gravity $alignCanvasBkg -background white \
+			    exec magick $bgsrcfile -gravity $alignCanvasBkg -background white \
 			      -extent $sizex\x$sizey $destImgFile
 			} else {
-			    exec cmd /c convert $bgsrcfile -gravity $alignCanvasBkg -background white \
+			    exec cmd /c magick $bgsrcfile -gravity $alignCanvasBkg -background white \
 			      -extent $sizex\x$sizey $destImgFile
 			}
 		    } else {
 			if {!$winOS} {
-			    exec convert $bgsrcfile -gravity $alignCanvasBkg -background white \
+			    exec magick $bgsrcfile -gravity $alignCanvasBkg -background white \
 			      -extent $sizex\x$sizey $destImgFile
 			} else {
-			  exec cmd /c convert $bgsrcfile -gravity $alignCanvasBkg -background white \
+			  exec cmd /c magick $bgsrcfile -gravity $alignCanvasBkg -background white \
 			      -extent $sizex\x$sizey $destImgFile
 			}
 		    }
@@ -851,10 +780,10 @@ proc popupBkgApply { wi c } {
 		}
 		str_shr {
 		    if {!$winOS} {
-			exec convert $bgsrcfile -resize $sizex\x$sizey \
+			exec magick $bgsrcfile -resize $sizex\x$sizey \
 			  -size $sizex\x$sizey xc:white +swap -gravity $alignCanvasBkg -composite $destImgFile
 		    } else {
-			exec cmd /c convert $bgsrcfile -resize $sizex\x$sizey \
+			exec cmd /c magick $bgsrcfile -resize $sizex\x$sizey \
 			  -size $sizex\x$sizey xc:white +swap -gravity $alignCanvasBkg -composite $destImgFile
 		    }
 
@@ -896,9 +825,9 @@ proc popupBkgApply { wi c } {
 		}
 		adjustI2C {
 		    if {!$winOS} {
-			exec convert $bgsrcfile -resize $sizex\x$sizey\! $destImgFile
+			exec magick $bgsrcfile -resize $sizex\x$sizey\! $destImgFile
 		    } else {
-			exec cmd /c convert $bgsrcfile -resize $sizex\x$sizey\! $destImgFile
+			exec cmd /c magick $bgsrcfile -resize $sizex\x$sizey\! $destImgFile
 		    }
 
 		    set bkgname [loadImage $destImgFile $c canvasBackground $bgsrcfile]

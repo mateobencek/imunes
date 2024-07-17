@@ -398,28 +398,30 @@ proc readConfigFile {} {
 
 ;#proc relpath {basedir target} {
 proc relpath { target } {
-    upvar 0 ::cf::[set ::curcfg]::current_file current_file
+    set basedir [getFromRunning "current_file"]
 
-    set basedir $current_file
     # Try and make a relative path to a target file/dir from base directory
     set bparts [file split [file normalize $basedir]]
     set tparts [file split [file normalize $target]]
 
-    if {[lindex $bparts 0] eq [lindex $tparts 0]} {
+    if { [lindex $bparts 0] eq [lindex $tparts 0] } {
 	# If the first part doesn't match - there is no good relative path
 	set blen [expr {[llength $bparts] - 1}]
 	set tlen [llength $tparts]
 	for {set i 1} {$i < $blen && $i < $tlen} {incr i} {
 	    if {[lindex $bparts $i] ne [lindex $tparts $i]} { break }
 	}
+
 	set path [lrange $tparts $i end]
 	for {} {$i < $blen} {incr i} {
 	    set path [linsert $path 0 ..]
 	}
+
 	# Full name:
 	# [file normalize [join $path [file separator]]]
 	# Relative file name:
 	return [join $path [file separator]]
     }
+
     return $target
 }

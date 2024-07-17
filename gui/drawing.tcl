@@ -620,12 +620,11 @@ proc raiseAll { c } {
 #   Creates a popup dialog to change an icon.
 #****
 proc changeIconPopup {} {
-    upvar 0 ::cf::[set ::curcfg]::image_list image_list
     global chicondialog alignCanvasBkg iconsrcfile wi
     global ROOTDIR LIBDIR
 
     set chicondialog .chiconDialog
-    catch { destroy $chicondialog}
+    catch { destroy $chicondialog }
 
     toplevel $chicondialog
     wm transient $chicondialog .
@@ -691,6 +690,7 @@ proc changeIconPopup {} {
 	   set iconsrcfile \"$file\""
     }
 
+    set image_list [getFromRunning "image_list"]
     foreach img $image_list {
 	if { $img != "" && [string match "*img*" $img] == 1 && \
 	  [getImageType $img] == "customIcon" } {
@@ -808,7 +808,6 @@ proc changeIconPopup {} {
     pack $wi.iconconf.left.down.right.b -pady 4
     pack $wi -fill both
 
-
     #adding panes to paned window
     $wi.iconconf add $wi.iconconf.left
     $wi.iconconf add $wi.iconconf.right
@@ -843,7 +842,7 @@ proc changeIconPopup {} {
 proc updateIconPreview { pc imgsize image } {
     $pc delete "preview"
 
-    if { ![string match -nocase "*.*" $image] } {
+    if { ! [string match -nocase "*.*" $image] } {
 	image create photo iconprev -data [getImageData $image]
     } else {
 	image create photo iconprev -file $image
@@ -871,6 +870,7 @@ proc updateIconPreview { pc imgsize image } {
 #****
 proc popupIconApply { dialog image } {
     global changed
+
     if { $image != "" } {
 	set nodelist [selectedNodes]
 	if { [string match -nocase "*.*" $image] } {
@@ -880,6 +880,7 @@ proc popupIconApply { dialog image } {
 		if { $icon != "" } {
 		    removeImageReference $icon $node_id
 		}
+
 		setCustomIcon $node_id $imgname
 		setImageReference $imgname $node_id
 	    }
@@ -893,10 +894,12 @@ proc popupIconApply { dialog image } {
 		setImageReference $image $node_id
 	    }
 	}
+
 	redrawAll
 	set changed 1
 	updateUndoLog
     }
+
     destroy $dialog
 }
 

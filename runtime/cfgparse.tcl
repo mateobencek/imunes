@@ -1053,6 +1053,13 @@ proc loadCfg { cfg } {
 			    lappend $object "type {$value}"
 			}
 			data {
+			    set enc [string trim $value \{\}]
+			    set enc [string trim $enc " "]
+			    set enc [string map {"\n" {}} $enc]
+			    set data [base64::decode $enc]
+			    set enc_data [base64::encode -maxlen 0 $data]
+			    cfgSet $dict_object $object $field $enc_data
+
 			    lappend $object "data {$value}"
 			}
 		    }
@@ -1149,9 +1156,15 @@ proc newObjectId { type } {
 	set link_list [getFromRunning "link_list"]
 	set annotation_list [getFromRunning "annotation_list"]
 	set canvas_list [getFromRunning "canvas_list"]
+	set image_list [getFromRunning "image_list"]
     }
 
-    set mark [string range [set type] 0 0]
+    if { $type == "image" } {
+	set mark "img_"
+    } else {
+	set mark [string range [set type] 0 0]
+    }
+
     set id 0
     while { [lsearch [set [set type]_list] "$mark$id"] != -1 } {
 	incr id
@@ -1171,6 +1184,7 @@ proc loadCfgJson { json_cfg } {
     setToRunning "node_list" [getNodeList]
     setToRunning "link_list" [getLinkList]
     setToRunning "annotation_list" [getAnnotationList]
+    setToRunning "image_list" [getImageList]
 
     # Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering
     # used addresses in lists.
@@ -1432,55 +1446,67 @@ proc setToUndolog { undolevel { value "" } } {
 proc getOption { property } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    return [dictGet $dict_cfg options $property]
+    return [dictGet $dict_cfg "option" $property]
 }
 
 proc getCanvasList { } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    return [dict keys [dictGet $dict_cfg canvases]]
+    return [dict keys [dictGet $dict_cfg "canvases"]]
 }
 
 proc getCanvasProperty { canvas_id property } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    return [dictGet $dict_cfg canvases $canvas_id $property]
+    return [dictGet $dict_cfg "canvases" $canvas_id $property]
 }
 
 proc getNodeList { } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    return [dict keys [dictGet $dict_cfg nodes]]
+    return [dict keys [dictGet $dict_cfg "nodes"]]
 }
 
 proc getNodeProperty { node_id property } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    return [dictGet $dict_cfg nodes $node_id $property]
+    return [dictGet $dict_cfg "nodes" $node_id $property]
 }
 
 proc getLinkList { } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    return [dict keys [dictGet $dict_cfg links]]
+    return [dict keys [dictGet $dict_cfg "links"]]
 }
 
 proc getLinkProperty { link_id property } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    return [dictGet $dict_cfg links $link_id $property]
+    return [dictGet $dict_cfg "links" $link_id $property]
 }
 
 proc getAnnotationList { } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    return [dict keys [dictGet $dict_cfg annotations]]
+    return [dict keys [dictGet $dict_cfg "annotations"]]
 }
 
 proc getAnnotationProperty { annotation_id property } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
-    return [dictGet $dict_cfg annotations $annotation_id $property]
+    return [dictGet $dict_cfg "annotations" $annotation_id $property]
+}
+
+proc getImageList { } {
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+    return [dict keys [dictGet $dict_cfg "images"]]
+}
+
+proc getImageProperty { image_id property } {
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+
+    return [dictGet $dict_cfg "images" $image_id $property]
 }
 
 #########################################################################
@@ -1491,7 +1517,7 @@ proc getAnnotationProperty { annotation_id property } {
 # * array - JSON array
 # * inner_dictionary - dictionary inside of an object
 proc getJsonType { key_name } {
-    if { $key_name in "canvases nodes links annotations custom_configs ipsec_configs logifaces ifaces" } {
+    if { $key_name in "canvases nodes links annotations images custom_configs ipsec_configs logifaces ifaces" } {
 	return "dictionary"
     } elseif { $key_name in "custom_config croutes4 croutes6 ipv4_addrs ipv6_addrs services" } {
 	return "array"
