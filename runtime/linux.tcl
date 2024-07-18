@@ -86,6 +86,7 @@ proc writeDataToNodeFile { node path data } {
 #****
 proc execCmdNode { node cmd } {
     catch { eval [concat "exec docker exec " [getFromRunning "eid"].$node $cmd] } output
+
     return $output
 }
 
@@ -1515,20 +1516,24 @@ proc ipsecFilesToNode { node local_cert ipsecret_file } {
 
     if { $local_cert != "" } {
 	set trimmed_local_cert [lindex [split $local_cert /] end]
+
 	set fileId [open $trimmed_local_cert "r"]
 	set trimmed_local_cert_data [read $fileId]
-	writeDataToNodeFile $node /etc/ipsec.d/certs/$trimmed_local_cert $trimmed_local_cert_data
 	close $fileId
+
+	writeDataToNodeFile $node /etc/ipsec.d/certs/$trimmed_local_cert $trimmed_local_cert_data
     }
 
     if { $ipsecret_file != "" } {
 	set trimmed_local_key [lindex [split $ipsecret_file /] end]
+
 	set fileId [open $trimmed_local_key "r"]
 	set trimmed_local_key_data "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n"
 	set trimmed_local_key_data "$trimmed_local_key_data[read $fileId]\n"
 	set trimmed_local_key_data "$trimmed_local_key_data: RSA $trimmed_local_key"
-	writeDataToNodeFile $node /etc/ipsec.d/private/$trimmed_local_key $trimmed_local_key_data
 	close $fileId
+
+	writeDataToNodeFile $node /etc/ipsec.d/private/$trimmed_local_key $trimmed_local_key_data
     }
 
     writeDataToNodeFile $node /etc/ipsec.conf $ipsecConf
@@ -1538,6 +1543,7 @@ proc ipsecFilesToNode { node local_cert ipsecret_file } {
 proc sshServiceStartCmds {} {
     lappend cmds "dpkg-reconfigure openssh-server"
     lappend cmds "service ssh start"
+
     return $cmds
 }
 
