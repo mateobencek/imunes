@@ -475,7 +475,6 @@ proc deployCfg {} {
 
     set node_list [getFromRunning "node_list"]
     set link_list [getFromRunning "link_list"]
-    set eid [getFromRunning "eid"]
 
     set progressbarCount 0
     set nodeCount [llength $node_list]
@@ -520,6 +519,7 @@ proc deployCfg {} {
     set maxProgressbasCount [expr {5*$allNodeCount + 1*$l2nodeCount + 5*$l3nodeCount + 2*$linkCount}]
 
     set w ""
+    set eid [getFromRunning "eid"]
     if { $execMode != "batch" } {
 	set w .startup
 	catch { destroy $w }

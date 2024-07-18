@@ -1026,7 +1026,11 @@ proc attachToExperimentPopup {} {
 #****
 proc resumeAndDestroy {} {
     global selectedExperiment
-    resumeSelectedExperiment $selectedExperiment
+
+    if { $selectedExperiment != "" } {
+	resumeSelectedExperiment $selectedExperiment
+    }
+
     destroy .attachToExperimentDialog
 }
 

@@ -187,8 +187,6 @@ proc setOperMode { mode } {
 	return
     }
 
-    set eid [getFromRunning "eid"]
-
     if { ! [getFromRunning "cfg_deployed"] && $mode == "exec" } {
 	if { ! $isOSlinux && ! $isOSfreebsd } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
@@ -270,7 +268,7 @@ proc setOperMode { mode } {
 	    exit
 	}
 
-	.bottom.experiment_id configure -text "Experiment ID = $eid"
+	.bottom.experiment_id configure -text "Experiment ID = [getFromRunning "eid"]"
     } else {
 	if { [getFromRunning "oper_mode"] != "edit"} {
 	    global regular_termination
@@ -278,6 +276,7 @@ proc setOperMode { mode } {
 	    wm protocol . WM_DELETE_WINDOW {
 	    }
 
+	    set eid [getFromRunning "eid"]
 	    if { $regular_termination } {
 		terminateAllNodes $eid
 	    } else {

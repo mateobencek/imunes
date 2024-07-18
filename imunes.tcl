@@ -180,6 +180,7 @@ if { $isOSlinux } {
 	exit
     }
 }
+
 if { $isOSfreebsd } {
     safeSourceFile $ROOTDIR/$LIBDIR/runtime/freebsd.tcl
     if { $initMode == 1 } {
@@ -207,10 +208,12 @@ foreach file [glob -directory $ROOTDIR/$LIBDIR/config *.tcl] {
 foreach file $l2nodes {
     safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
 }
+
 # L3 nodes
 foreach file $l3nodes {
     safeSourceFile "$ROOTDIR/$LIBDIR/nodes/$file.tcl"
 }
+
 # additional nodes
 safeSourceFile "$ROOTDIR/$LIBDIR/nodes/localnodes.tcl"
 safeSourceFile "$ROOTDIR/$LIBDIR/nodes/annotations.tcl"
@@ -275,12 +278,14 @@ readConfigFile
 # Initialization should be complete now, so let's start doing something...
 #
 
-if {$execMode == "interactive"} {
+if { $execMode == "interactive" } {
     safePackageRequire Tk "To run the IMUNES GUI, Tk must be installed."
+
     foreach file "canvas copypaste drawing editor help theme linkcfgGUI \
 	mouse nodecfgGUI widgets" {
 	safeSourceFile "$ROOTDIR/$LIBDIR/gui/$file.tcl"
     }
+
     source "$ROOTDIR/$LIBDIR/gui/initgui.tcl"
     source "$ROOTDIR/$LIBDIR/gui/topogen.tcl"
     if { $debug == 1 } {
@@ -292,35 +297,38 @@ if {$execMode == "interactive"} {
 	setToRunning "current_file" $argv
 	openFile
     }
+
     updateProjectMenu
     # Fire up the animation loop
     animate
     # Event scheduler - should be started / stopped on per-experiment base?
 #     evsched
 } else {
-    if {$argv != ""} {
-	if { ![file exists $argv] } {
+    if { $argv != "" } {
+	if { ! [file exists $argv] } {
 	    puts "Error: file '$argv' doesn't exist"
 	    exit
 	}
+
 	global currentFileBatch
 	set currentFileBatch $argv
-	set fileId [open $argv r]
-	set cfg ""
-	foreach entry [read $fileId] {
-	    lappend cfg $entry
-	}
-	close $fileId
 
-	set curcfg [newObjectId cfg]
+	set curcfg [newObjectId "cfg"]
 	lappend cfg_list $curcfg
-	namespace eval ::cf::[set curcfg] {}
 
-	loadCfgLegacy $cfg
+	namespace eval ::cf::[set curcfg] {}
+	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+	set dict_cfg [dict create]
+	set dict_run [dict create]
+
+	lappendToRunning "cfg_list" $curcfg
+	readCfgJson $currentFileBatch
 
 	if { [checkExternalInterfaces] } {
 	    return
 	}
+
 	if { [allSnapshotsAvailable] == 1 } {
 	    deployCfg
 	    createExperimentFilesFromBatch
@@ -328,21 +336,19 @@ if {$execMode == "interactive"} {
     } else {
 	set configFile "$runtimeDir/$eid_base/config.imn"
 	if { [file exists $configFile] && $regular_termination } {
-	    set fileId [open $configFile r]
-	    set cfg ""
-	    foreach entry [read $fileId] {
-		lappend cfg $entry
-	    }
-	    close $fileId
-
-	    set curcfg [newObjectId cfg]
+	    set curcfg [newObjectId "cfg"]
 	    lappend cfg_list $curcfg
+
 	    namespace eval ::cf::[set curcfg] {}
-	    upvar 0 ::cf::[set ::curcfg]::eid eid
-	    set eid $eid_base
+	    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
+	    set dict_cfg [dict create]
+	    set dict_run [dict create]
+	    lappendToRunning "cfg_list" $curcfg
 
-	    loadCfgLegacy $cfg
+	    readCfgJson $configFile
 
+	    setToRunning "eid" $eid_base
 	    terminateAllNodes $eid_base
 	} else {
 	    vimageCleanup $eid_base
