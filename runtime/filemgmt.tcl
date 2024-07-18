@@ -201,7 +201,7 @@ proc openFile {} {
     if { $cfg_version == "" } {
 	puts "Loading legacy .imn configuration..."
 	puts "This configuration will be saved as a new version (version $CFG_VERSION)."
-	loadCfg ""
+	loadCfgLegacy ""
 	set fileName [file tail $current_file]
 	set fileId [open $current_file r]
 	set cfg ""
@@ -209,7 +209,7 @@ proc openFile {} {
 	    lappend cfg $entry
 	}
 	close $fileId
-	loadCfg $cfg
+	loadCfgLegacy $cfg
     } elseif { $cfg_version < $CFG_VERSION } {
 	puts "Loading older .imn configuration (version $cfg_version)..."
 	puts "This configuration will be saved as a new version ($CFG_VERSION)."

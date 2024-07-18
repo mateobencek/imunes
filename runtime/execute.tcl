@@ -58,13 +58,12 @@ proc genExperimentId { } {
 #   * returns 0 if everything is ok, otherwise it returns 1.
 #****
 proc checkExternalInterfaces {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global execMode isOSlinux
 
     set extifcs [getHostIfcList]
 
     set nodes_ifcpairs {}
-    foreach node $node_list {
+    foreach node [getFromRunning "node_list"] {
 	if { [getNodeType $node] == "rj45" } {
 	    lappend nodes_ifcpairs [list $node [list 0 [getNodeName $node]]]
 	} elseif { [getNodeType $node] == "extelem" } {
@@ -163,8 +162,9 @@ proc execCmdsNode { node cmds } {
 #   * eid -- experiment id
 #****
 proc createExperimentFiles { eid } {
-    upvar 0 ::cf::[set ::curcfg]::currentFile currentFile
     global currentFileBatch execMode runtimeDir
+
+    set current_file [getFromRunning "current_file"]
     set basedir "$runtimeDir/$eid"
     file mkdir $basedir
 
@@ -173,8 +173,8 @@ proc createExperimentFiles { eid } {
     dumpLinksToFile $basedir/links
 
     if { $execMode == "interactive" } {
-	if { $currentFile != "" } {
-	    writeDataToFile $basedir/name [file tail $currentFile]
+	if { $current_file != "" } {
+	    writeDataToFile $basedir/name [file tail $current_file]
 	}
     } else {
 	if { $currentFileBatch != "" } {
@@ -204,10 +204,9 @@ proc createExperimentFiles { eid } {
 #****
 proc saveRunningConfigurationInteractive { eid } {
     global runtimeDir
+
     set fileName "$runtimeDir/$eid/config.imn"
-    set fileId [open $fileName w]
-    dumpCfg file $fileId
-    close $fileId
+    saveCfgJson $fileName
 }
 
 #****f* exec.tcl/saveRunningConfigurationBatch
@@ -223,6 +222,7 @@ proc saveRunningConfigurationInteractive { eid } {
 #****
 proc saveRunningConfigurationBatch { eid } {
     global currentFileBatch runtimeDir
+
     set fileName "$runtimeDir/$eid/config.imn"
     exec cp $currentFileBatch $fileName
 }
@@ -239,13 +239,15 @@ proc saveRunningConfigurationBatch { eid } {
 #****
 proc createExperimentScreenshot { eid } {
     global runtimeDir
+
     set fileName "$runtimeDir/$eid/screenshot.png"
-    set error [catch {eval image create photo screenshot -format window \
-	-data .panwin.f1.c} err]
-    if { ($error == 0) } {
+    set error [catch { eval image create photo screenshot -format window \
+	-data .panwin.f1.c } err]
+    if { $error == 0 } {
 	screenshot write $fileName -format png
-	catch {exec magick $fileName -resize 300x210\! $fileName\2}
-	catch {exec mv $fileName\2 $fileName}
+
+	catch { exec magick $fileName -resize 300x210\! $fileName\2 }
+	catch {  exec mv $fileName\2 $fileName }
     }
 }
 
@@ -258,8 +260,7 @@ proc createExperimentScreenshot { eid } {
 #   Creates all needed files to run the experiments in batch mode.
 #****
 proc createExperimentFilesFromBatch {} {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-    createExperimentFiles $eid
+    createExperimentFiles [getFromRunning "eid"]
 }
 
 #****f* freebsd.tcl/l3node.nghook
@@ -470,10 +471,11 @@ proc l3node.ipsecInit { node } {
 #   configuration the old one is removed (vimageCleanup procedure).
 #****
 proc deployCfg {} {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::link_list link_list
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
+
+    set node_list [getFromRunning "node_list"]
+    set link_list [getFromRunning "link_list"]
+    set eid [getFromRunning "eid"]
 
     set progressbarCount 0
     set nodeCount [llength $node_list]
@@ -509,6 +511,7 @@ proc deployCfg {} {
 	    incr pseudoNodesCount
 	}
     }
+
     set l2nodeCount [llength $l2nodes]
     set l3nodeCount [llength $l3nodes]
     set allNodes [concat $l2nodes $l3nodes]
@@ -517,16 +520,19 @@ proc deployCfg {} {
     set maxProgressbasCount [expr {5*$allNodeCount + 1*$l2nodeCount + 5*$l3nodeCount + 2*$linkCount}]
 
     set w ""
-    if {$execMode != "batch"} {
+    if { $execMode != "batch" } {
 	set w .startup
-	catch {destroy $w}
+	catch { destroy $w }
 	toplevel $w -takefocus 1
 	wm transient $w .
 	wm title $w "Starting experiment $eid..."
+
 	message $w.msg -justify left -aspect 1200 \
 	    -text "Starting up virtual nodes and links."
+
 	pack $w.msg
 	update
+
 	ttk::progressbar $w.p -orient horizontal -length 250 \
 	    -mode determinate -maximum $maxProgressbasCount -value $progressbarCount
 	pack $w.p
@@ -603,6 +609,7 @@ proc deployCfg {} {
 	services start "NODECONF"
     } on error err {
 	finishExecuting 0 "$err" $w
+
 	return
     }
 
@@ -619,12 +626,11 @@ proc deployCfg {} {
 }
 
 proc prepareSystem {} {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global eid_base
     global execMode
 
     set running_eids [getResumableExperiments]
-    if {$execMode != "batch"} {
+    if { $execMode != "batch" } {
 	set eid ${eid_base}[string range $::curcfg 1 end]
 	while { $eid in $running_eids } {
 	    set eid_base [genExperimentId]
@@ -639,6 +645,8 @@ proc prepareSystem {} {
 	}
     }
 
+    setToRunning "eid" $eid
+
     loadKernelModules
     prepareVirtualFS
     prepareDevfs
@@ -647,7 +655,6 @@ proc prepareSystem {} {
 }
 
 proc instantiateNodes { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
@@ -655,6 +662,7 @@ proc instantiateNodes { nodes nodeCount w } {
 	displayBatchProgress $batchStep $nodeCount
 
 	if { [info procs [typemodel $node].instantiate] != "" } {
+	    set eid [getFromRunning "eid"]
 	    try {
 		[typemodel $node].instantiate $eid $node
 	    } on error err {
@@ -682,7 +690,6 @@ proc instantiateNodes { nodes nodeCount w } {
 }
 
 proc waitForInstantiateNodes { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
@@ -718,7 +725,6 @@ proc waitForInstantiateNodes { nodes nodeCount w } {
 }
 
 proc setupNodeNamespaces { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
@@ -726,6 +732,7 @@ proc setupNodeNamespaces { nodes nodeCount w } {
 	displayBatchProgress $batchStep $nodeCount
 
 	if { [info procs [typemodel $node].setupNamespace] != "" } {
+	    set eid [getFromRunning "eid"]
 	    try {
 		[typemodel $node].setupNamespace $eid $node
 	    } on error err {
@@ -737,7 +744,7 @@ proc setupNodeNamespaces { nodes nodeCount w } {
 	incr batchStep
 	incr progressbarCount
 
-	if {$execMode != "batch"} {
+	if { $execMode != "batch" } {
 	    statline "Creating namespace for [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
@@ -746,14 +753,13 @@ proc setupNodeNamespaces { nodes nodeCount w } {
 
     if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
 proc waitForNamespaces { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
@@ -769,7 +775,7 @@ proc waitForNamespaces { nodes nodeCount w } {
 	    incr progressbarCount
 
 	    set name [getNodeName $node]
-	    if {$execMode != "batch"} {
+	    if { $execMode != "batch" } {
 		statline "Namespace for $name created"
 		$w.p configure -value $progressbarCount
 		update
@@ -782,19 +788,19 @@ proc waitForNamespaces { nodes nodeCount w } {
 
     if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
 proc initConfigureNodes { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
+	set eid [getFromRunning "eid"]
 
 	try {
 	    [typemodel $node].initConfigure $eid $node
@@ -806,7 +812,7 @@ proc initConfigureNodes { nodes nodeCount w } {
 	incr batchStep
 	incr progressbarCount
 
-	if {$execMode != "batch"} {
+	if { $execMode != "batch" } {
 	    statline "Starting initial configuration on [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
@@ -815,14 +821,13 @@ proc initConfigureNodes { nodes nodeCount w } {
 
     if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
 proc waitForInitConf { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
@@ -838,7 +843,7 @@ proc waitForInitConf { nodes nodeCount w } {
 	    incr progressbarCount
 
 	    set name [getNodeName $node]
-	    if {$execMode != "batch"} {
+	    if { $execMode != "batch" } {
 		statline "Initial networking on $name configured"
 		$w.p configure -value $progressbarCount
 		update
@@ -851,7 +856,7 @@ proc waitForInitConf { nodes nodeCount w } {
 
     if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
@@ -860,15 +865,15 @@ proc waitForInitConf { nodes nodeCount w } {
 proc copyFilesToNodes { nodes nodeCount w } {}
 
 proc createNodesInterfaces { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
     foreach node $nodes {
 	displayBatchProgress $batchStep $nodeCount
 
-	if {[info procs [typemodel $node].createIfcs] != ""} {
+	if { [info procs [typemodel $node].createIfcs] != "" } {
 	    set ifcs [ifcList $node]
+	    set eid [getFromRunning "eid"]
 	    try {
 		[typemodel $node].createIfcs $eid $node $ifcs
 	    } on error err {
@@ -880,7 +885,7 @@ proc createNodesInterfaces { nodes nodeCount w } {
 	incr batchStep
 	incr progressbarCount
 
-	if {$execMode != "batch"} {
+	if { $execMode != "batch" } {
 	    statline "Creating physical ifcs on node [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
@@ -889,7 +894,7 @@ proc createNodesInterfaces { nodes nodeCount w } {
 
     if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
@@ -948,7 +953,7 @@ proc createLinks { links linkCount w } {
 
     if { $linkCount > 0 } {
 	displayBatchProgress $batchStep $linkCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
@@ -992,7 +997,7 @@ proc configureLinks { links linkCount w } {
 	incr batchStep
 	incr progressbarCount
 
-	if {$execMode != "batch"} {
+	if { $execMode != "batch" } {
 	    statline $msg
 	    $w.p configure -value $progressbarCount
 	    update
@@ -1003,22 +1008,19 @@ proc configureLinks { links linkCount w } {
 
     if { $linkCount > 0 } {
 	displayBatchProgress $batchStep $linkCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
 }
 
 proc executeConfNodes { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
     set subnet_gws {}
     set nodes_l2data [dict create]
     foreach node $nodes {
-	upvar 0 ::cf::[set ::curcfg]::$node $node
-
 	displayBatchProgress $batchStep $nodeCount
 
 	if { [getAutoDefaultRoutesStatus $node] == "enabled" } {
@@ -1029,7 +1031,8 @@ proc executeConfNodes { nodes nodeCount w } {
 	    setDefaultIPv6routes $node $all_routes6
 	}
 
-	if {[info procs [typemodel $node].start] != ""} {
+	if { [info procs [typemodel $node].start] != "" } {
+	    set eid [getFromRunning "eid"]
 	    try {
 		[typemodel $node].start $eid $node
 	    } on error err {
@@ -1041,7 +1044,7 @@ proc executeConfNodes { nodes nodeCount w } {
 	incr batchStep
 	incr progressbarCount
 
-	if {$execMode != "batch"} {
+	if { $execMode != "batch" } {
 	    $w.p configure -value $progressbarCount
 	    statline "Starting configuration on node [getNodeName $node]"
 	    update
@@ -1050,7 +1053,7 @@ proc executeConfNodes { nodes nodeCount w } {
 
     if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
@@ -1068,14 +1071,12 @@ proc executeConfNodes { nodes nodeCount w } {
 #   * node -- node id
 #****
 proc generateHostsFile { node } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
-    upvar 0 ::cf::[set ::curcfg]::etchosts etchosts
     global hostsAutoAssign
 
     if { $hostsAutoAssign == 1 } {
 	if { [[typemodel $node].virtlayer] == "VIMAGE" } {
-	    if { $etchosts == "" } {
-		foreach iter $node_list {
+	    if { [getFromRunning "etc_hosts"] == "" } {
+		foreach iter [getFromRunning "node_list"] {
 		    if { [[typemodel $iter].virtlayer] == "VIMAGE" } {
 			foreach ifc [ifcList $iter] {
 			    if { $ifc != "" } {
@@ -1083,24 +1084,26 @@ proc generateHostsFile { node } {
 				set ipv6 [lindex [split [getIfcIPv6addr $iter $ifc] "/"] 0]
 				set ifname [getNodeName $iter]
 				if { $ipv4 != "" } {
-				    set etchosts "$etchosts$ipv4	$ifname\n"
+				    setToRunning "etc_hosts" "$etchosts$ipv4	$ifname\n"
 				}
+
 				if { $ipv6 != "" } {
-				    set etchosts "$etchosts$ipv6	$ifname\n"
+				    setToRunning "etc_hosts" "$etchosts$ipv6	$ifname\n"
 				}
+
 				break
 			    }
 			}
 		    }
 		}
 	    }
-	    writeDataToNodeFile $node /etc/hosts $etchosts
+
+	    writeDataToNodeFile $node /etc/hosts [getFromRunning "etc_hosts"]
 	}
     }
 }
 
 proc waitForConfStart { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
@@ -1116,7 +1119,7 @@ proc waitForConfStart { nodes nodeCount w } {
 	    incr progressbarCount
 
 	    set name [getNodeName $node]
-	    if {$execMode != "batch"} {
+	    if { $execMode != "batch" } {
 		statline "Node $name configured"
 		$w.p configure -value $progressbarCount
 		update
@@ -1129,7 +1132,7 @@ proc waitForConfStart { nodes nodeCount w } {
 
     if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
@@ -1138,11 +1141,12 @@ proc waitForConfStart { nodes nodeCount w } {
 proc finishExecuting { status msg w } {
     global progressbarCount execMode
 
-    catch {pipesClose}
-    if {$execMode == "batch"} {
+    catch { pipesClose }
+    if { $execMode == "batch" } {
 	puts $msg
     } else {
-	catch {destroy $w}
+	catch { destroy $w }
+
 	set progressbarCount 0
 	if { ! $status } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
@@ -1153,7 +1157,6 @@ proc finishExecuting { status msg w } {
 }
 
 proc checkForErrors { nodes nodeCount w } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set batchStep 0
@@ -1169,7 +1172,7 @@ proc checkForErrors { nodes nodeCount w } {
 	incr progressbarCount
 
 	set name [getNodeName $node]
-	if {$execMode != "batch"} {
+	if { $execMode != "batch" } {
 	    statline "Node $name checked - $msg"
 	    $w.p configure -value $progressbarCount
 	    update
@@ -1179,7 +1182,7 @@ proc checkForErrors { nodes nodeCount w } {
 
     if { $nodeCount > 0 } {
 	displayBatchProgress $batchStep $nodeCount
-	if {$execMode == "batch"} {
+	if { $execMode == "batch" } {
 	    statline ""
 	}
     }
@@ -1210,14 +1213,14 @@ proc checkForErrors { nodes nodeCount w } {
 #   * node -- node id
 #****
 proc startNodeFromMenu { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
     global progressbarCount execMode
 
     set progressbarCount 0
     set w ""
-    if {$execMode != "batch"} {
+    if { $execMode != "batch" } {
 	set w .startup
-	catch {destroy $w}
+	catch { destroy $w }
+
 	toplevel $w -takefocus 1
 	wm transient $w .
 	wm title $w "Starting node $node..."
@@ -1225,6 +1228,7 @@ proc startNodeFromMenu { node } {
 	    -text "Starting up virtual nodes and links."
 	pack $w.msg
 	update
+
 	ttk::progressbar $w.p -orient horizontal -length 250 \
 	    -mode determinate -maximum 1 -value $progressbarCount
 	pack $w.p
@@ -1238,6 +1242,7 @@ proc startNodeFromMenu { node } {
     pipesCreate
     services start "NODEINST" $node
     services start "LINKINST" $node
+
     set allNodeCount 1
     try {
 	executeConfNodes $node 1 $w
@@ -1247,6 +1252,7 @@ proc startNodeFromMenu { node } {
 	finishExecuting 0 "$err" $w
 	return
     }
+
     services start "NODECONF" $node
     pipesClose
 

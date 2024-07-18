@@ -377,27 +377,29 @@ proc configGUI_addTree { wi node } {
 #****
 proc showLogIfcMenu { ifc } {
     global button3logifc_ifc
+
     set button3logifc_ifc $ifc
     .button3logifc delete 0 end
-    .button3logifc add command -label "Remove interface $ifc" \
-	-command {
-	    global curnode logIfcs button3logifc_ifc changed
-	    set changed 0
-	    set ifc $button3logifc_ifc
-	    if { $ifc != "lo0" } {
-		netconfClearSection $curnode "interface $ifc"
+    .button3logifc add command -label "Remove interface $ifc" -command {
+	global curnode logIfcs button3logifc_ifc changed
 
-		set wi .popup.nbook.nfInterfaces.panwin
-		set logIfcs [lsort [logIfcList $curnode]]
-		configGUI_refreshIfcsTree $wi.f1.tree $curnode
-		configGUI_showIfcInfo $wi.f2 0 $curnode logIfcFrame
-		$wi.f1.tree selection set logIfcFrame
-	    } else {
-		tk_dialog .dialog1 "IMUNES warning" \
-		    "The loopback interface lo0 cannot be deleted!" \
+	set changed 0
+	set ifc $button3logifc_ifc
+	if { $ifc != "lo0" } {
+	    cfgUnset "nodes" $curnode "logifaces" $ifc
+
+	    set wi .popup.nbook.nfInterfaces.panwin
+	    set logIfcs [lsort [logIfcList $curnode]]
+
+	    configGUI_refreshIfcsTree $wi.f1.tree $curnode
+	    configGUI_showIfcInfo $wi.f2 0 $curnode logIfcFrame
+	    $wi.f1.tree selection set logIfcFrame
+	} else {
+	    tk_dialog .dialog1 "IMUNES warning" \
+		"The loopback interface lo0 cannot be deleted!" \
 		info 0 Dismiss
-	    }
 	}
+    }
 
     set x [winfo pointerx .]
     set y [winfo pointery .]
@@ -434,7 +436,7 @@ proc configGUI_refreshIfcsTree { wi node } {
 	}
     }
 
-    if {[[typemodel $node].virtlayer] == "VIMAGE"} {
+    if { [[typemodel $node].virtlayer] == "VIMAGE" } {
 	$wi insert {} end -id logIfcFrame -text \
 	    "Logical Interfaces" -open true -tags logIfcFrame
 
@@ -539,7 +541,7 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 
     #if there is already some frame shown below the list of interfaces and
     #parameters shown in that frame are not parameters of selected interface
-    if {$shownifcframe != "" && $ifc != $shownifc } {
+    if { $shownifcframe != "" && $ifc != $shownifc } {
         if { $phase == 0 } {
 	    set badentry 0
 	    if { $ifc != "" } {
@@ -560,9 +562,10 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 	foreach guielement $guielements {
             #calling "apply" procedures to check if some parameters of previously
 	    #selected interface have been changed
-            if { [llength $guielement] == 2 } {
+            if { [llength $guielement] == 2 && [lindex $guielement 1] in [allIfcList $node] } {
 		global brguielements
-		if {$guielement ni $brguielements} {
+
+		if { $guielement ni $brguielements } {
 		    [lindex $guielement 0]\Apply $wi $node [lindex $guielement 1]
 		}
 	    }
@@ -570,18 +573,21 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 
 	#creating popup window with warning about unsaved changes
 	if { $changed == 1 && $apply == 0 } {
- 	    configGUI_saveChangesPopup $wi $node $shownifc
+	    configGUI_saveChangesPopup $wi $node $shownifc
+	    if { $cancel == 0 } {
+		[string trimright $wi .f2].f1.tree selection set $ifc
+	    }
 	}
 
 	#if user didn't select Cancel in the popup about saving changes on previously selected interface
 	if { $cancel == 0 } {
 	    foreach guielement $guielements {
-		set ind [lsearch $guielements $guielement]
-		#delete corresponding elements from thi list guielements
-		if {[lsearch $guielement $shownifc] != -1} {
-		    set guielements [lreplace $guielements $ind $ind]
+		#delete corresponding elements from the guielements list
+		if { $shownifc in $guielement } {
+		    set guielements [removeFromList $guielements $guielement]
 		}
 	    }
+
 	    #delete frame that is already shown below the list of interfaces (shownifcframe)
 	    destroy $shownifcframe
 
@@ -589,8 +595,8 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 	#set focus and selection on that interface whose parameters are already shown
 	#below the list of interfaces
 	} else {
-	     [string trimright $wi .f2].f1.tree selection set $shownifc
-	     [string trimright $wi .f2].f1.tree focus $shownifc
+	    [string trimright $wi .f2].f1.tree selection set $shownifc
+	    [string trimright $wi .f2].f1.tree focus $shownifc
 	}
     }
 
@@ -599,11 +605,12 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 	set type [getNodeType $node]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
-	if {$ifc != "" && $ifc != $shownifc} {
+	if { $ifc != "" && $ifc != $shownifc } {
 	    if { [isIfcLogical $node $ifc] } {
 		#logical interfaces
 		configGUI_ifcMainFrame $wi $node $ifc
 		logical.configInterfacesGUI $wi $node $ifc
+
 		set wi1 [string trimright $wi ".f2"]
 		set h [winfo height $wi1]
 		set pos [expr $h-160]
@@ -611,6 +618,7 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 	    } elseif { $ifc != "logIfcFrame" } {
 		#physical interfaces
 		configGUI_ifcMainFrame $wi $node $ifc
+
 		$type.configInterfacesGUI $wi $node $ifc
 		set wi1 [string trimright $wi ".f2"]
 		set h [winfo height $wi1]
@@ -619,6 +627,7 @@ proc configGUI_showIfcInfo { wi phase node ifc } {
 	    } else {
 		#manage logical interfaces
 		configGUI_logicalInterfaces $wi $node $ifc
+
 		set wi1 [string trimright $wi ".f2"]
 		set h [winfo height $wi1]
 		set pos [expr $h-100]
@@ -780,6 +789,7 @@ proc configGUI_logicalInterfaces { wi node ifc } {
 #****
 proc configGUI_saveChangesPopup { wi node ifc } {
     global guielements treecolumns apply cancel changed
+
     set answer [tk_messageBox -message "Do you want to save changes on interface $ifc?" \
         -icon question -type yesnocancel \
         -detail "Select \"Yes\" to save changes before choosing another interface"]
@@ -794,7 +804,8 @@ proc configGUI_saveChangesPopup { wi node ifc } {
 		    [lindex $guielement 0]\Apply $wi $node [lindex $guielement 1]
 		}
 	    }
-	    #nbook - da li prozor sadrzi notebook
+
+	    # nbook - does it contain a notebook element
 	    set nbook [lsearch [pack slaves .popup] .popup.nbook]
 	    if { $changed == 1 } {
                 if { $nbook != -1 && $treecolumns != "" } {
@@ -802,14 +813,17 @@ proc configGUI_saveChangesPopup { wi node ifc } {
 		} elseif { $nbook == -1 && $treecolumns != "" } {
 		    configGUI_refreshIfcsTree .popup.panwin.f1.tree $node
 		}
+
 	        redrawAll
 	        updateUndoLog
             }
 	}
+
         #discard changes
 	no {
 	    set cancel 0
 	}
+
         #get back on editing that interface
         cancel {
 	    set cancel 1
@@ -1111,10 +1125,12 @@ proc configGUI_ifcMainFrame { wi node ifc } {
 proc configGUI_ifcEssentials { wi node ifc } {
     global guielements
     lappend guielements "configGUI_ifcEssentials $ifc"
+
     global ifoper$ifc
     set ifoper$ifc [getIfcOperState $node $ifc]
     ttk::checkbutton $wi.if$ifc.label.state -text "up" \
 	-variable ifoper$ifc -padding 4 -onvalue "up" -offvalue "down"
+
     global ifnat$ifc
     set ifnat$ifc [getIfcNatState $node $ifc]
     ttk::checkbutton $wi.if$ifc.label.nat -text "nat" \
@@ -1966,31 +1982,34 @@ proc configGUI_ifcEssentialsApply { wi node ifc } {
     #apply - indicates if this procedure needs to save changes (1)
     #        or just to check if some interface parameters have been changed (0)
     #
+
     global [subst ifoper$ifc]
     set ifoperstate [subst $[subst ifoper$ifc]]
     set oldifoperstate [getIfcOperState $node $ifc]
     if { $ifoperstate != $oldifoperstate } {
-	if {$apply == 1} {
+	if { $apply == 1 } {
 	    setIfcOperState $node $ifc $ifoperstate
 	}
 	set changed 1
     }
+
     global [subst ifnat$ifc]
     set ifnatstate [subst $[subst ifnat$ifc]]
     set oldifnatstate [getIfcNatState $node $ifc]
     if { $ifnatstate != $oldifnatstate } {
-	if {$apply == 1} {
+	if { $apply == 1 } {
 	    setIfcNatState $node $ifc $ifnatstate
 	}
 	set changed 1
     }
+
     set mtu [$wi.if$ifc.label.mtuv get]
     set oldmtu [getIfcMTU $node $ifc]
-    if {![string first vlan $ifc]} {
+    if { ! [string first vlan $ifc] } {
 	set par_ifc [getIfcVlanDev $node $ifc]
 	set par_mtu [getIfcMTU $node $par_ifc]
 	if { $par_mtu < $mtu } {
-	    if { $apply == 1} {
+	    if { $apply == 1 } {
 		tk_dialog .dialog1 "IMUNES warning" \
 		    "Vlan interface can't have MTU bigger than the parent interface $par_ifc (MTU = $par_mtu)" \
 		info 0 Dismiss
@@ -1999,8 +2018,9 @@ proc configGUI_ifcEssentialsApply { wi node ifc } {
 	    return
 	}
     }
+
     if { $mtu != $oldmtu } {
-        if {$apply == 1} {
+        if { $apply == 1 } {
 	    setIfcMTU $node $ifc $mtu
 	}
 	set changed 1
@@ -2071,9 +2091,11 @@ proc configGUI_ifcMACAddressApply { wi node ifc } {
     } else {
         set macaddr $entry
     }
+
     if { [checkMACAddr $macaddr] == 0 } {
 	return
     }
+
     set dup 0
     if { $macaddr in [getFromRunning "mac_used_list"] } {
 	foreach n [getFromRunning "node_list"] {
@@ -2086,6 +2108,7 @@ proc configGUI_ifcMACAddressApply { wi node ifc } {
 	    }
 	}
     }
+
     set oldmacaddr [getIfcMACaddr $node $ifc]
     if { $macaddr != $oldmacaddr } {
         if { $apply == 1 && $dup != 0 && $macaddr != "" } {
@@ -2093,9 +2116,10 @@ proc configGUI_ifcMACAddressApply { wi node ifc } {
 	        "Provided MAC address already exists on node's [lindex $dup 0] interface [lindex $dup 1]" \
 	    info 0 Dismiss
         }
-	if {$apply == 1} {
+
+	if { $apply == 1 } {
 	    setIfcMACaddr $node $ifc $macaddr
-	 }
+	}
 	set changed 1
     }
 }
@@ -2115,6 +2139,7 @@ proc configGUI_ifcMACAddressApply { wi node ifc } {
 #****
 proc configGUI_ifcIPv4AddressApply { wi node ifc } {
     global changed apply
+
     set ipaddrs [formatIPaddrList [$wi.if$ifc.ipv4.addr get]]
     foreach ipaddr $ipaddrs {
 	if { [checkIPv4Net $ipaddr] == 0 } {
@@ -2146,12 +2171,14 @@ proc configGUI_ifcIPv4AddressApply { wi node ifc } {
 #****
 proc configGUI_ifcIPv6AddressApply { wi node ifc } {
     global changed apply
+
     set ipaddrs [formatIPaddrList [$wi.if$ifc.ipv6.addr get]]
     foreach ipaddr $ipaddrs {
 	if { [checkIPv6Net $ipaddr] == 0 } {
 	    return
 	}
     }
+
     set oldipaddrs [getIfcIPv6addrs $node $ifc]
     if { $ipaddrs != $oldipaddrs } {
 	if {$apply == 1} {
@@ -2175,6 +2202,7 @@ proc configGUI_ifcIPv6AddressApply { wi node ifc } {
 #****
 proc configGUI_ifcDirectionApply { wi node ifc } {
     global changed apply externalifc
+
     global [subst ifdirect$ifc]
     set ifdirectstate [subst $[subst ifdirect$ifc]]
     set oldifdirectstate [getIfcDirect $node $ifc]
@@ -2182,8 +2210,9 @@ proc configGUI_ifcDirectionApply { wi node ifc } {
 	if { $ifdirectstate == "external" } {
 	    setIfcDirect $node $externalifc "internal"
 	}
+
 	set externalifc $ifc
-	if {$apply == 1} {
+	if { $apply == 1 } {
 	    setIfcDirect $node $ifc $ifdirectstate
 	}
 	set changed 1
@@ -5082,11 +5111,11 @@ proc configGUI_showBridgeIfcInfo { wi phase node ifc } {
 }
 
 
-#****f* nodecfgGUI.tcl/configGUI_saveChangesPopup
+#****f* nodecfgGUI.tcl/configGUI_saveBridgeChangesPopup
 # NAME
-#   configGUI_saveChangesPopup
+#   configGUI_saveBridgeChangesPopup
 # SYNOPSIS
-#   configGUI_saveChangesPopup $wi $node $ifc
+#   configGUI_saveBridgeChangesPopup $wi $node $ifc
 # FUNCTION
 #   Creates a popup window with the warning about
 #   unsaved changes on previously selected interface.
@@ -5161,7 +5190,6 @@ proc configGUI_addNotebookFilter { wi node labels } {
 
     bind $wi.nbook <<NotebookTabChanged>> \
 	"notebookSize $wi $node"
-#    vraca popis tabova
 
     set tabs [$wi.nbook tabs]
 
@@ -5436,7 +5464,7 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node ifc rule } {
 
     #if there is already some frame shown below the list of interfaces and
     #parameters shown in that frame are not parameters of selected interface
-    if {$shownruleframe != "" && $rule != $shownrule } {
+    if { $shownruleframe != "" && $rule != $shownrule } {
         if { $phase == 0 } {
 	    set badentry 0
 	    if { $rule != "" } {
@@ -5464,7 +5492,11 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node ifc rule } {
 
 	#creating popup window with warning about unsaved changes
 	if { $changed == 1 && $apply == 0 } {
+	    # TODO: fix this (new popup for these types of elements)
  	    configGUI_saveChangesPopup $wi $node $shownrule
+	    if { $cancel == 0 } {
+		[string trimright $wi .f2].f1.tree selection set $rule
+	    }
 	}
 
 	#if user didn't select Cancel in the popup about saving changes on previously selected interface
@@ -5472,10 +5504,11 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node ifc rule } {
 	    foreach guielement $filterguielements {
 		set ind [lsearch $filterguielements $guielement]
 		#delete corresponding elements from thi list filterguielements
-		if {[lsearch $guielement $shownrule] != -1} {
+		if { [lsearch $guielement $shownrule] != -1 } {
 		    set filterguielements [lreplace $filterguielements $ind $ind]
 		}
 	    }
+
 	    #delete frame that is already shown below the list of interfaces (shownruleframe)
 	    destroy $shownruleframe
 
@@ -6263,7 +6296,11 @@ proc configGUI_showPacketInfo { wi phase node pac } {
 
 	#creating popup window with warning about unsaved changes
 	if { $changed == 1 && $apply == 0 } {
+	    # TODO: fix this (new popup for these types of elements)
  	    configGUI_saveChangesPopup $wi $node $shownpac
+	    if { $cancel == 0 } {
+		[string trimright $wi .f2].f1.tree selection set $rule
+	    }
 	}
 
 	#if user didn't select Cancel in the popup about saving changes on previously selected interface

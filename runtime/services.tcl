@@ -87,10 +87,9 @@ proc regHooks { service hooks } {
 #   * hooks -- hooks for which the service is executed
 #****
 proc services { action hook args } {
-    upvar 0 ::cf::[set ::curcfg]::node_list node_list
     global services$hook
 
-    set iterlist $node_list
+    set iterlist [getFromRunning "node_list"]
     if { $args != "" } {
 	set iterlist $args
     }
@@ -153,14 +152,12 @@ proc $service.start { node } {
 }
 
 proc $service.stop { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     lappend cmds "pkill tcpdump"
 
     set output [execCmdsNode $node $cmds]
     writeDataToNodeFile $node "tcpdump_stop.log" $output
 
-    set ext_dir /tmp/$eid/
+    set ext_dir /tmp/[getFromRunning "eid"]/
     file mkdir $ext_dir
     foreach ifc [allIfcList $node] {
 	if { [string match "lo*" $ifc] } {

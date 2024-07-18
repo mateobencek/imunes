@@ -949,18 +949,17 @@ proc updateIconSize {} {
 #   * y -- y coordinate
 #****
 proc selectZoomPopupMenu { x y } {
-    upvar 0 ::cf::[set ::curcfg]::zoom zoom
     global zoom_stops changed
     .button3menu delete 0 end
 
-    set sel_zoom $zoom
+    set sel_zoom [getFromRunning "zoom"]
 
     foreach z $zoom_stops {
 	.button3menu add radiobutton -label [expr {int($z*100)}] \
 	  -variable sel_zoom -value $z \
 	  -command {
-	      upvar 0 ::cf::[set ::curcfg]::zoom zoom
-	      set zoom $sel_zoom
+	      setToRunning "zoom" $sel_zoom
+
 	      redrawAll
 	      set changed 1
 	      updateUndoLog

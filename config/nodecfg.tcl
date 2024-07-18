@@ -2596,7 +2596,7 @@ proc setNodeCustomImage { node_id img } {
 #   * status -- attach enabled
 #****
 proc getNodeDockerAttach { node_id } {
-    return [cfgGet "nodes" $node_id "docker_attach"]
+    return [cfgGetWithDefault 0 "nodes" $node_id "docker_attach"]
 }
 
 #****f* nodecfg.tcl/setNodeDockerAttach
