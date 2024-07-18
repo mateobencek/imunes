@@ -92,63 +92,37 @@ proc $MODULE.virtlayer {} {
 #   * congif -- generated configuration
 #****
 proc $MODULE.cfggen { node_id } {
-    upvar 0 ::cf::[set ::curcfg]::$node_id $node_id
-
     set cfg {}
 
-    foreach ifc [allIfcList $node_id] {
-	lappend cfg "interface $ifc"
-	set addrs [getIfcIPv4addrs $node_id $ifc]
-	foreach addr $addrs {
-	    if { $addr != "" } {
-		lappend cfg " ip address $addr"
-	    }
-	}
-	set addrs [getIfcIPv6addrs $node_id $ifc]
-	foreach addr $addrs {
-	    if { $addr != "" } {
-		lappend cfg " ipv6 address $addr"
-	    }
-	}
-	if { [getIfcOperState $node_id $ifc] == "down" } {
-	    lappend cfg " shutdown"
-	}
-	lappend cfg "!"
+    # setup interfaces
+    foreach iface [allIfcList $node_id] {
+	set cfg [concat $cfg [getRouterInterfaceCfg $node_id $iface]]
     }
 
-    foreach proto { rip ripng ospf ospf6 bgp } {
-	set protocfg [netconfFetchSection $node_id "router $proto"]
-	if { $protocfg != "" } {
-	    lappend cfg "router $proto"
-	    foreach line $protocfg {
-		lappend cfg "$line"
-	    }
-	    if {$proto == "ospf6"} {
-		foreach ifc [allIfcList $node_id] {
-		    if {$ifc == "lo0"} {
-			continue
-		    }
-		    lappend cfg " interface $ifc area 0.0.0.0"
-		}
-	    }
-	    lappend cfg "!"
-	}
+    # setup routing protocols
+    foreach protocol { rip ripng ospf ospf6 bgp } {
+	set cfg [concat $cfg [getRouterProtocolCfg $node_id $protocol]]
     }
 
+    # setup IPv4/IPv6 static routes
     foreach statrte [getStatIPv4routes $node_id] {
 	lappend cfg "ip route $statrte"
     }
+
     foreach statrte [getStatIPv6routes $node_id] {
 	lappend cfg "ipv6 route $statrte"
     }
 
+    # setup automatic default routes (static)
     if { [getAutoDefaultRoutesStatus $node_id] == "enabled" } {
 	foreach statrte [getDefaultIPv4routes $node_id] {
 	    lappend cfg "ip route $statrte"
 	}
+
 	foreach statrte [getDefaultIPv6routes $node_id] {
 	    lappend cfg "ipv6 route $statrte"
 	}
+
 	setDefaultIPv4routes $node_id {}
 	setDefaultIPv6routes $node_id {}
     }
@@ -278,7 +252,7 @@ proc $MODULE.destroy { eid node_id } {
 # NAME
 #   router.frr.nghook -- nghook
 # SYNOPSIS
-#   router.frr.nghook $eid $node_id $ifc
+#   router.frr.nghook $eid $node_id $iface
 # FUNCTION
 #   Returns the id of the netgraph node and the name of the netgraph hook
 #   which is used for connecting two netgraph nodes. This procedure calls
@@ -286,12 +260,11 @@ proc $MODULE.destroy { eid node_id } {
 # INPUTS
 #   * eid - experiment id
 #   * node_id - node id
-#   * ifc - interface name
+#   * iface - interface name
 # RESULT
 #   * nghook - the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node_id ifc } {
-    return [l3node.nghook $eid $node_id $ifc]
+proc $MODULE.nghook { eid node_id iface } {
+    return [l3node.nghook $eid $node_id $iface]
 }
-

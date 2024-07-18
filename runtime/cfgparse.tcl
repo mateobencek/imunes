@@ -397,6 +397,9 @@ proc loadCfgLegacy { cfg } {
 				    "packet generator" {
 					set packgen true
 				    }
+				    "router *" {
+					cfgSet $dict_object $object "router_config" [lindex $zline 1] 1
+				    }
 				}
 
 				lappend cfg $zline

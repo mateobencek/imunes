@@ -71,18 +71,6 @@
 # "network-config" statement. The following functions can be used to
 # manipulate the per-node network config:
 #
-# netconfFetchSection { node_id sectionhead }
-#	Returns a section of a config file starting with the $sectionhead
-#	line, and ending with the first occurence of the "!" sign.
-#
-# netconfClearSection { node_id sectionhead }
-#	Removes the appropriate section from the config.
-#
-# netconfInsertSection { node_id section }
-#	Inserts a section in the config file. Sections beginning with the
-#	"interface" keyword are inserted at the head of the config, and
-#	all other sequences are simply appended to the config tail.
-#
 # getIfcOperState { node_id ifc }
 #	Returns "up" or "down".
 #
@@ -284,11 +272,9 @@ proc typemodel { node_id } {
 }
 
 proc getNodeDir { node } {
-    upvar 0 ::cf::[set ::curcfg]::eid eid
-
     set node_dir [getNodeCustomImage $node]
     if { $node_dir == "" } {
-	set node_dir [getVrootDir]/$eid/$node
+	set node_dir [getVrootDir]/[getFromRunning "eid"]/$node
     }
 
     return $node_dir
@@ -442,120 +428,6 @@ proc getCustomConfigCommand { node_id cfg_id } {
 #****
 proc getCustomConfigIDs { node_id } {
     return [dict keys [cfgGet "nodes" $node_id "custom_configs"]]
-}
-
-#****f* nodecfg.tcl/netconfFetchSection
-# NAME
-#   netconfFetchSection -- fetch the network configuration section
-# SYNOPSIS
-#   set section [netconfFetchSection $node $sectionhead]
-# FUNCTION
-#   Returns a section of a network part of a configuration file starting with
-#   the $sectionhead line, and ending with the first occurrence of the "!"
-#   sign.
-# INPUTS
-#   * node -- node id
-#   * sectionhead -- represents the first line of the section in
-#     network-config part of the configuration file
-# RESULT
-#   * section -- returns a part of the configuration file between sectionhead
-#     and "!"
-#****
-proc netconfFetchSection { node sectionhead } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set cfgmode global
-    set section {}
-    set netconf [lindex [lsearch -inline [set $node] "network-config *"] 1]
-    foreach line $netconf {
-	if { $cfgmode == "section" } {
-	    if { "$line" == "!" } {
-		return $section
-	    }
-	    lappend section "$line"
-	    continue
-	}
-	if { "$line" == "$sectionhead" } {
-	    set cfgmode section
-	}
-    }
-}
-
-#****f* nodecfg.tcl/netconfClearSection
-# NAME
-#   netconfClearSection -- clear the section from a network-config part
-# SYNOPSIS
-#   netconfClearSection $node $sectionhead
-# FUNCTION
-#   Removes the appropriate section from the network part of the
-#   configuration.
-# INPUTS
-#   * node -- node id
-#   * sectionhead -- represents the first line of the section that is to be
-#     removed from network-config part of the configuration.
-#****
-proc netconfClearSection { node sectionhead } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set i [lsearch [set $node] "network-config *"]
-    set netconf [lindex [lindex [set $node] $i] 1]
-    set lnum_beg -1
-    set lnum_end 0
-    foreach line $netconf {
-	if { $lnum_beg == -1 && "$line" == "$sectionhead" } {
-	    set lnum_beg $lnum_end
-	}
-	if { $lnum_beg > -1 && "$line" == "!" } {
-	    set netconf [lreplace $netconf $lnum_beg $lnum_end]
-	    set $node [lreplace [set $node] $i $i \
-		[list network-config $netconf]]
-	    return
-	}
-	incr lnum_end
-    }
-}
-
-#****f* nodecfg.tcl/netconfInsertSection
-# NAME
-#   netconfInsertSection -- Insert the section to a network-config
-#   part of configuration
-# SYNOPSIS
-#   netconfInsertSection $node $section
-# FUNCTION
-#   Inserts a section in the configuration. Sections beginning with the
-#   "interface" keyword are inserted at the head of the configuration, and all
-#   other sequences are simply appended to the configuration tail.
-# INPUTS
-#   * node -- the node id of the node whose config section is inserted
-#   * section -- represents the section that is being inserted. If there was a
-#     section in network configuration with the same section head, it is lost.
-#****
-proc netconfInsertSection { node section } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set sectionhead [lindex $section 0]
-    netconfClearSection $node $sectionhead
-    set i [lsearch [set $node] "network-config *"]
-    set netconf [lindex [lindex [set $node] $i] 1]
-    set lnum_beg end
-    if { "[lindex $sectionhead 0]" == "interface" } {
-	set lnum [lsearch $netconf "hostname *"]
-	if { $lnum >= 0 } {
-	    set lnum_beg [expr $lnum + 2]
-	}
-    } elseif { "[lindex $sectionhead 0]" == "hostname" } {
-	set lnum_beg 0
-    }
-    if { "[lindex $section end]" != "!" } {
-	lappend section "!"
-    }
-    foreach line $section {
-	set netconf [linsert $netconf $lnum_beg $line]
-	if { $lnum_beg != "end" } {
-	    incr lnum_beg
-	}
-    }
-    set $node [lreplace [set $node] $i $i [list network-config $netconf]]
 }
 
 #****f* nodecfg.tcl/getIfcOperState
@@ -2194,125 +2066,135 @@ proc setNodeProtocol { node_id protocol state } {
 # NAME
 #   getNodeProtocolOspfv3
 # SYNOPSIS
-#   getNodeProtocolOspfv3 $node
+#   getNodeProtocolOspfv3 $node_id
 # FUNCTION
 #   Checks if node's current protocol is ospfv3.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 # RESULT
 #   * check -- 1 if it is ospfv3, otherwise 0
 #****
 
-#****f* nodecfg.tcl/setNodeProtocolRip
-# NAME
-#   setNodeProtocolRip
-# SYNOPSIS
-#   setNodeProtocolRip $node $ripEnable
-# FUNCTION
-#   Sets node's protocol to rip.
-# INPUTS
-#   * node -- node id
-#   * ripEnable -- 1 if enabling rip, 0 if disabling
-#****
-proc setNodeProtocolRip { node ripEnable } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
+proc getRouterInterfaceCfg { node_id iface } {
+    set ospf_enabled [getNodeProtocol $node_id "ospf"]
+    set ospf6_enabled [getNodeProtocol $node_id "ospf6"]
 
-    if { $ripEnable == 1 } {
-	netconfInsertSection $node [list "router rip" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute ospf" \
-		" network 0.0.0.0/0" \
-		! ]
-    } else {
-	netconfClearSection $node "router rip"
+    set cfg {}
+
+    set model [getNodeModel $node_id]
+    switch -exact -- $model {
+	"quagga" -
+	"frr" {
+	    lappend cfg "interface $iface"
+
+	    set addrs [getIfcIPv4addrs $node_id $iface]
+	    foreach addr $addrs {
+		if { $addr != "" } {
+		    lappend cfg " ip address $addr"
+		}
+	    }
+
+	    if { $ospf_enabled } {
+		if { ! [isIfcLogical $node_id $iface] } {
+		    lappend cfg " ip ospf area 0.0.0.0"
+		}
+	    }
+
+	    set addrs [getIfcIPv6addrs $node_id $iface]
+	    foreach addr $addrs {
+		if { $addr != "" } {
+		    lappend cfg " ipv6 address $addr"
+		}
+	    }
+
+	    if { $model == "frr" && $ospf6_enabled } {
+		if { ! [isIfcLogical $node_id $iface] } {
+		    lappend cfg " ipv6 ospf6 area 0.0.0.0"
+		}
+	    }
+
+	    if { [getIfcOperState $node_id $iface] == "down" } {
+		lappend cfg " shutdown"
+	    }
+
+	    lappend cfg "!"
+	}
+	"static" {
+	}
     }
+
+    return $cfg
 }
 
-#****f* nodecfg.tcl/setNodeProtocolRipng
-# NAME
-#   setNodeProtocolRipng
-# SYNOPSIS
-#   setNodeProtocolRipng $node $ripngEnable
-# FUNCTION
-#   Sets node's protocol to ripng.
-# INPUTS
-#   * node -- node id
-#   * ripngEnable -- 1 if enabling ripng, 0 if disabling
-#****
-proc setNodeProtocolRipng { node ripngEnable } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    if { $ripngEnable == 1 } {
-	netconfInsertSection $node [list "router ripng" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute ospf6" \
-		" network ::/0" \
-		! ]
-    } else {
- 	netconfClearSection $node "router ripng"
-    }
-}
-
-#****f* nodecfg.tcl/setNodeProtocolOspfv2
-# NAME
-#   setNodeProtocolOspfv2
-# SYNOPSIS
-#   setNodeProtocolOspfv2 $node $ospfEnable
-# FUNCTION
-#   Sets node's protocol to ospf.
-# INPUTS
-#   * node -- node id
-#   * ospfEnable -- 1 if enabling ospf, 0 if disabling
-#****
-proc setNodeProtocolOspfv2 { node ospfEnable } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    if { $ospfEnable == 1 } {
-	netconfInsertSection $node [list "router ospf" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute rip" \
-		" network 0.0.0.0/0 area 0.0.0.0" \
-		! ]
-    } else {
-	netconfClearSection $node "router ospf"
-    }
-}
-
-#****f* nodecfg.tcl/setNodeProtocolOspfv3
-# NAME
-#   setNodeProtocolOspfv3
-# SYNOPSIS
-#   setNodeProtocolOspfv3 $node $ospf6Enable
-# FUNCTION
-#   Sets node's protocol to Ospfv3.
-# INPUTS
-#   * node -- node id
-#   * ospf6Enable -- 1 if enabling ospf6, 0 if disabling
-#****
-proc setNodeProtocolOspfv3 { node ospf6Enable } {
-    upvar 0 ::cf::[set ::curcfg]::$node $node
-
-    set router_id [ip::intToString [expr 1 + [string trimleft $node "n"]]]
-
-    set area_string "area 0.0.0.0 range ::/0"
-    if { [getNodeModel $node] == "quagga" } {
-	set area_string "network ::/0 area 0.0.0.0"
+proc getRouterProtocolCfg { node_id protocol } {
+    if { [getNodeProtocol $node_id $protocol] == 0 } {
+	return ""
     }
 
-    if { $ospf6Enable == 1 } {
-	netconfInsertSection $node [list "router ospf6" \
-		" ospf6 router-id $router_id" \
-		" redistribute static" \
-		" redistribute connected" \
-		" redistribute ripng" \
-		" $area_string" \
-		! ]
-    } else {
-	netconfClearSection $node "router ospf6"
+    set cfg {}
+
+    set model [getNodeModel $node_id]
+    switch -exact -- $model {
+	"quagga" -
+	"frr" {
+	    set router_id [ip::intToString [expr 1 + [string trimleft $node_id "n"]]]
+	    switch -exact -- $protocol {
+		"rip" {
+		    set cfg [list "router rip" \
+			" redistribute static" \
+			" redistribute connected" \
+			" redistribute ospf" \
+			" network 0.0.0.0/0" \
+			! ]
+		}
+		"ripng" {
+		    set cfg [list "router ripng" \
+			" redistribute static" \
+			" redistribute connected" \
+			" redistribute ospf6" \
+			" network ::/0" \
+			! ]
+		}
+		"ospf" {
+		    set cfg [list "router ospf" \
+			" ospf router-id $router_id" \
+			" redistribute static" \
+			" redistribute connected" \
+			" redistribute rip" \
+			! ]
+		}
+		"ospf6" {
+		    if { $model == "quagga" } {
+			set id_string "router-id $router_id"
+			#set area_string "network ::/0 area 0.0.0.0"
+		    } else {
+			set id_string "ospf6 router-id $router_id"
+			#set area_string "area 0.0.0.0 range ::/0"
+		    }
+
+		    set cfg [list "router ospf6" \
+			" $id_string" \
+			" redistribute static" \
+			" redistribute connected" \
+			" redistribute ripng" \
+			]
+
+		    if { $model == "quagga" } {
+			foreach iface [ifcList $node_id] {
+			    lappend cfg " interface $iface area 0.0.0.0"
+			}
+		    }
+
+		    lappend cfg "!"
+		}
+	    }
+	}
+	"static" {
+	    # nothing to return
+	}
     }
+
+    return $cfg
 }
 
 #****f* nodecfg.tcl/setNodeType
