@@ -2776,28 +2776,35 @@ proc customConfigGUI { node } {
 #****
 proc customConfigGUI_Apply { wi node } {
     set o $wi.options
+
     if { [$wi.nb tabs] != "" } {
 	set t $wi.nb.[$wi.nb tab current -text]
 	set cfg_id [$t.confid_e get]
-	if {[$t.confid_e get] != [$wi.nb tab current -text]} {
+	if { [$t.confid_e get] != [$wi.nb tab current -text] } {
 	    removeCustomConfig $node [$wi.nb tab current -text]
 	    setCustomConfig $node [$t.confid_e get] \
-		[$t.bootcmd_e get] [$t.editor get 1.0 {end -1c}]
+		[$t.bootcmd_e get] [split [$t.editor get 1.0 {end -1c}] "\n"]
+
 	    destroy $t
 	    createTab $node $cfg_id
 	} else {
 	    setCustomConfig $node [$t.confid_e get] \
-		[$t.bootcmd_e get] [$t.editor get 1.0 {end -1c}]
+		[$t.bootcmd_e get] [split [$t.editor get 1.0 {end -1c}] "\n"]
 	}
-	if {[getCustomConfigSelected $node] ni \
-	    [getCustomConfigIDs $node]} {
+
+	if { [getCustomConfigSelected $node] ni \
+	    [getCustomConfigIDs $node] } {
+
 	    setCustomConfigSelected $node ""
 	}
+
 	set defaultConfig [$wi.options.cb get]
 	if { [llength [getCustomConfigIDs $node]] == 1 && \
-		$defaultConfig == "" } {
+	    $defaultConfig == "" } {
+
 	    set config [lindex [getCustomConfigIDs $node] 0]
 	    setCustomConfigSelected $node $config
+
 	    $wi.options.cb set $config
 	    .popup.nbook.nfConfiguration.custcfg.dcomboDefault set \
 		$config
@@ -2806,6 +2813,7 @@ proc customConfigGUI_Apply { wi node } {
 	    .popup.nbook.nfConfiguration.custcfg.dcomboDefault set \
 		$defaultConfig
 	}
+
 	$o.cb configure -values [getCustomConfigIDs $node]
 	.popup.nbook.nfConfiguration.custcfg.dcomboDefault \
 	    configure -values [getCustomConfigIDs $node]
