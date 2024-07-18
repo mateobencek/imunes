@@ -54,6 +54,22 @@ proc ifcFilterRuleList { node_id iface } {
     return [dict keys [cfgGet "nodes" $node_id "ifaces" $iface "filter_rules"]]
 }
 
+proc getFilterIfcRuleAsString { node_id iface id } {
+    set rule_dict [getFilterIfcRule $node_id $iface $id]
+
+    set action [dictGet $rule_dict "action"]
+    set pattern [dictGet $rule_dict "pattern"]
+    set mask [dictGet $rule_dict "mask"]
+    set offset [dictGet $rule_dict "offset"]
+    set action_data [dictGet $rule_dict "action_data"]
+
+    if { $offset != "" } {
+	return "${id}:${action}:${pattern}/${mask}@${offset}:${action_data}"
+    }
+
+    return "${id}:${action}::${action_data}"
+}
+
 proc checkRuleNum { str } {
     return [regexp {^([1-9])([0-9])*$} $str]
 }

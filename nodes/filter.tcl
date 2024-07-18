@@ -152,11 +152,12 @@ proc $MODULE.instantiate { eid node_id } {
 #****
 proc $MODULE.start { eid node_id } {
     foreach iface [ifcList $node_id] {
-	set cfg [netconfFetchSection $node_id "interface $iface"]
 	set ngcfgreq "shc $iface"
-	foreach rule [lsort -dictionary $cfg] {
-	    set ngcfgreq "[set ngcfgreq]$rule"
+	foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface]] {
+	    set rule [getFilterIfcRuleAsString $node_id $iface $rule_num]
+	    set ngcfgreq "${ngcfgreq} ${rule}"
 	}
+
 	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
     }
 }
@@ -175,8 +176,8 @@ proc $MODULE.start { eid node_id } {
 #****
 proc $MODULE.shutdown { eid node_id } {
     foreach iface [ifcList $node_id] {
-	set cfg [netconfFetchSection $node_id "interface $iface"]
 	set ngcfgreq "shc $iface"
+
 	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
     }
 }
