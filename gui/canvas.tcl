@@ -78,7 +78,7 @@ proc newCanvas { name } {
 	setCanvasName $canvas_id "Canvas[string range $canvas_id 1 end]"
     }
 
-    return [cfgGet "canvases" $canvas_id]
+    return $canvas_id
 }
 
 #****f* canvas.tcl/setCanvasSize

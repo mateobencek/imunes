@@ -377,6 +377,7 @@ bind . <Control-d> selectAdjacent
 menu .menubar.canvas -tearoff 0
 .menubar.canvas add command -label "New" -underline 0 -command {
     newCanvas ""
+
     switchCanvas last
     set changed 1
     updateUndoLog

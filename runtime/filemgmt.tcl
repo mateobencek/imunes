@@ -105,12 +105,11 @@ proc newProject {} {
     setToRunning "stop_sched" true
     setToRunning "undolevel" 0
     setToRunning "redolevel" 0
-    setToUndolog 0
     setToRunning "zoom" 1.0
     setToRunning "canvas_list" {}
-    lassign [newCanvas ""] curcanvas {}
-    setToRunning "curcanvas" $curcanvas
+    setToRunning "curcanvas" [newCanvas ""]
     setToRunning "current_file" ""
+    setToUndolog 0
 
     updateProjectMenu
     switchProject
