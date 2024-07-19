@@ -1600,7 +1600,7 @@ proc button1-release { c x y } {
 #   * y -- y coordinate
 #****
 proc button3background { c x y } {
-    global showBkgImage changed
+    global show_background_images changed
 
     set canvas_list [getFromRunning "canvas_list"]
     set curcanvas [getFromRunning "curcanvas"]
@@ -1611,7 +1611,7 @@ proc button3background { c x y } {
     # Show canvas background
     #
     .button3menu add checkbutton -label "Show background" \
-    -underline 5 -variable showBkgImage \
+    -underline 5 -variable show_background_images \
     -command { redrawAll }
 
     .button3menu add separator
