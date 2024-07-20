@@ -845,6 +845,7 @@ proc configGUI_saveChangesPopup { wi node ifc } {
 #****
 proc configGUI_buttonsACNode { wi node } {
     global badentry close guielements
+
     set close 0
     ttk::frame $wi.bottom
     ttk::frame $wi.bottom.buttons -borderwidth 6
@@ -2726,8 +2727,16 @@ proc customConfigGUI { node } {
     set o $wi.options
     set b $wi.bottom.buttons
 
+    catch { destroy $wi }
     tk::toplevel $wi
-    grab $wi
+
+    try {
+	grab $wi
+    } on error {} {
+	catch { destroy $wi }
+	return
+    }
+
     wm title $wi "Custom configurations $node"
     wm minsize $wi 584 445
     wm resizable $wi 0 1
@@ -3134,9 +3143,10 @@ proc addIPsecConnWindow { node tab } {
     set ikeSALframe $mainFrame.ike_sa_lframe
 
     if { "[ifcList $node]" != "" } {
-	createIPsecGUI $node $mainFrame $connParamsLframe $espOptionsLframe $ikeSALframe "Add"
-	$mainFrame.buttons_container.apply configure -command "putIPsecConnectionInTree $node $tab add"
-	setDefaultsForIPsec $node $connParamsLframe $espOptionsLframe
+	if { [createIPsecGUI $node $mainFrame $connParamsLframe $espOptionsLframe $ikeSALframe "Add"] } {
+	    $mainFrame.buttons_container.apply configure -command "putIPsecConnectionInTree $node $tab add"
+	    setDefaultsForIPsec $node $connParamsLframe $espOptionsLframe
+	}
     } else {
 	tk_messageBox -message "Selected node does not have any interfaces!" -title "Error" -icon error -type ok
 	destroy .d
@@ -3153,9 +3163,10 @@ proc modIPsecConnWindow { node tab } {
 
     set selected [$tab.tree focus]
     if { $selected != "" } {
-	createIPsecGUI $node $mainFrame $connParamsLframe $espOptionsLframe $ikeSALframe "Modify"
-	$mainFrame.buttons_container.apply configure -command "putIPsecConnectionInTree $node $tab modify"
-	populateValuesForUpdate $node $tab $connParamsLframe $espOptionsLframe
+	if { [createIPsecGUI $node $mainFrame $connParamsLframe $espOptionsLframe $ikeSALframe "Modify"] } {
+	    $mainFrame.buttons_container.apply configure -command "putIPsecConnectionInTree $node $tab modify"
+	    populateValuesForUpdate $node $tab $connParamsLframe $espOptionsLframe
+	}
     } else {
 	tk_messageBox -message "Please select item to modify!" -title "Error" -icon error -type ok
 	destroy .d
@@ -3499,9 +3510,16 @@ proc refreshIPsecTree { node tab } {
 }
 
 proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALframe indicator } {
+    catch { destroy .d }
     tk::toplevel .d
     wm title .d "$indicator IPsec connection"
-    after 100 "grab .d"
+
+    try {
+	grab .d
+    } on error {} {
+	catch { destroy .d }
+	return 0
+    }
 
     ttk::frame $mainFrame -padding 4
     grid $mainFrame -column 0 -row 0 -sticky nwes
@@ -3724,6 +3742,8 @@ proc createIPsecGUI { node mainFrame connParamsLframe espOptionsLframe ikeSALfra
 	bind $connParamsLframe.peer_ip_entry <<ComboboxSelected>> \
 	    "updatePeerSubnetCombobox $connParamsLframe"
     }
+
+    return 1
 }
 
 # XXX
