@@ -252,6 +252,10 @@ proc getLinkBandwidthString { link_id } {
 #   * bandwidth -- link bandwidth in bits per second.
 #****
 proc setLinkBandwidth { link_id bandwidth } {
+    if { $bandwidth == 0 } {
+	set bandwidth ""
+    }
+
     cfgSet "links" $link_id "bandwidth" $bandwidth
 }
 
@@ -285,6 +289,10 @@ proc getLinkColor { link_id } {
 #   * color -- link color
 #****
 proc setLinkColor { link_id color } {
+    if { $color == "Red" } {
+	set color ""
+    }
+
     cfgSet "links" $link_id "color" $color
 }
 
@@ -316,6 +324,12 @@ proc getLinkWidth { link_id } {
 #   * width -- link width
 #****
 proc setLinkWidth { link_id width } {
+    global defLinkWidth
+
+    if { $width == $defLinkWidth } {
+	set width ""
+    }
+
     cfgSet "links" $link_id "width" $width
 }
 
@@ -350,6 +364,7 @@ proc getLinkDelay { link_id } {
 #     measure unit.
 #****
 proc getLinkDelayString { link_id } {
+    set delstr ""
     set delay [getLinkDelay $link_id]
     if { "$delay" != "" } {
 	if { $delay >= 10000 } {
@@ -359,8 +374,6 @@ proc getLinkDelayString { link_id } {
 	} else {
 	    set delstr "$delay us"
 	}
-    } else {
-	set delstr ""
     }
 
     return $delstr
@@ -378,6 +391,10 @@ proc getLinkDelayString { link_id } {
 #   * delay -- link delay delay in microseconds.
 #****
 proc setLinkDelay { link_id delay } {
+    if { $delay == 0 } {
+	set delay ""
+    }
+
     cfgSet "links" $link_id "delay" $delay
 }
 
@@ -409,6 +426,10 @@ proc getLinkJitterUpstream { link_id } {
 #   * jitter_upstream -- link upstream jitter values in microseconds.
 #****
 proc setLinkJitterUpstream { link_id jitter_upstream } {
+    if { $jitter_upstream == 0 } {
+	set jitter_upstream ""
+    }
+
     cfgSet "links" $link_id "jitter_upstream" $jitter_upstream
 }
 
@@ -440,6 +461,10 @@ proc getLinkJitterModeUpstream { link_id } {
 #   * jitter_upstream_mode -- link upstream jitter mode.
 #****
 proc setLinkJitterModeUpstream { link_id jitter_upstream_mode } {
+    if { $jitter_upstream_mode == 0 } {
+	set jitter_upstream_mode ""
+    }
+
     cfgSet "links" $link_id "jitter_upstream_mode" $jitter_upstream_mode
 }
 
@@ -471,6 +496,10 @@ proc getLinkJitterHoldUpstream { link_id } {
 #   * jitter_upstream_hold -- link upstream jitter hold.
 #****
 proc setLinkJitterHoldUpstream { link_id jitter_upstream_hold } {
+    if { $jitter_upstream_hold == 0 } {
+	set jitter_upstream_hold ""
+    }
+
     cfgSet "links" $link_id "jitter_upstream_hold" $jitter_upstream_hold
 }
 
@@ -503,6 +532,10 @@ proc getLinkJitterDownstream { link_id } {
 #   * jitter_downstream -- link downstream jitter values in microseconds.
 #****
 proc setLinkJitterDownstream { link_id jitter_downstream } {
+    if { $jitter_downstream == 0 } {
+	set jitter_downstream ""
+    }
+
     cfgSet "links" $link_id "jitter_downstream" $jitter_downstream
 }
 
@@ -534,6 +567,10 @@ proc getLinkJitterModeDownstream { link_id } {
 #   * jitter_downstream_mode -- link downstream jitter mode.
 #****
 proc setLinkJitterModeDownstream { link_id jitter_downstream_mode } {
+    if { $jitter_downstream_mode == 0 } {
+	set jitter_downstream_mode ""
+    }
+
     cfgSet "links" $link_id "jitter_downstream_mode" $jitter_downstream_mode
 }
 
@@ -565,6 +602,10 @@ proc getLinkJitterHoldDownstream { link_id } {
 #   * jitter_downstream_hold -- link downstream jitter hold.
 #****
 proc setLinkJitterHoldDownstream { link_id jitter_downstream_hold } {
+    if { $jitter_downstream_hold == 0 } {
+	set jitter_downstream_hold ""
+    }
+
     cfgSet "links" $link_id "jitter_downstream_hold" $jitter_downstream_hold
 }
 
@@ -596,6 +637,10 @@ proc getLinkBER { link_id } {
 #   * ber -- The value of 1/BER of the link.
 #****
 proc setLinkBER { link_id ber } {
+    if { $ber == 0 } {
+	set ber ""
+    }
+
     cfgSet "links" $link_id "ber" $ber
 }
 
@@ -627,6 +672,10 @@ proc getLinkLoss { link_id } {
 #   * loss -- The loss percentage of the link.
 #****
 proc setLinkLoss { link_id loss } {
+    if { $loss == 0 } {
+	set loss ""
+    }
+
     cfgSet "links" $link_id "loss" $loss
 }
 
@@ -658,6 +707,10 @@ proc getLinkDup { link_id } {
 #   * duplicate -- The percentage of the link packet duplicate value.
 #****
 proc setLinkDup { link_id duplicate } {
+    if { $duplicate == 0 } {
+	set duplicate ""
+    }
+
     cfgSet "links" $link_id "duplicate" $duplicate
 }
 
