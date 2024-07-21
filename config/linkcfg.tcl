@@ -804,7 +804,7 @@ proc splitLink { orig_link_id } {
 
     foreach pseudo_node_id $pseudo_nodes orig_node_id $orig_nodes orig_node_iface $orig_ifaces link_id $links {
 	# change peer for original node interface
-	setIfcPeer $orig_node_id $orig_node_iface $pseudo_node_id
+	setIfcLink $orig_node_id $orig_node_iface $link_id
 
 	# setup new pseudo node properties
 	set other_orig_node_id [removeFromList $orig_nodes $orig_node_id]
@@ -812,7 +812,7 @@ proc splitLink { orig_link_id } {
 	setNodeCanvas $pseudo_node_id [getNodeCanvas $orig_node_id]
 	setNodeCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
 	setNodeLabelCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
-	setIfcPeer $pseudo_node_id "0" $orig_node_id
+	setIfcLink $pseudo_node_id "0" $link_id
 
 	# setup both link properties
 	setLinkPeers $link_id "$pseudo_node_id $orig_node_id"
@@ -850,8 +850,8 @@ proc mergeLink { link_id } {
     lassign [getLinkPeersIfaces $link_id] - orig_node1_iface
     lassign [getLinkPeersIfaces $mirror_link_id] - orig_node2_iface
 
-    setIfcPeer $orig_node1 $orig_node1_iface $orig_node2
-    setIfcPeer $orig_node2 $orig_node2_iface $orig_node1
+    setIfcLink $orig_node1 $orig_node1_iface $link_id
+    setIfcLink $orig_node2 $orig_node2_iface $link_id
 
     setLinkMirror $link_id ""
     setLinkPeers $link_id "$orig_node1 $orig_node2"
@@ -941,14 +941,14 @@ proc newLink { lnode1 lnode2 } {
     set link_id [newObjectId "link"]
 
     set ifname1 [newIfc [chooseIfName $lnode1 $lnode2] $lnode1]
-    cfgSet "nodes" $lnode1 "ifaces" $ifname1 "type" "phys"
-    cfgSet "nodes" $lnode1 "ifaces" $ifname1 "peer" $lnode2
+    setIfcType $lnode1 $ifname1 "phys"
+    setIfcLink $lnode1 $ifname1 $link_id
     set ifname2 [newIfc [chooseIfName $lnode2 $lnode1] $lnode2]
-    cfgSet "nodes" $lnode2 "ifaces" $ifname2 "type" "phys"
-    cfgSet "nodes" $lnode2 "ifaces" $ifname2 "peer" $lnode1
+    setIfcType $lnode2 $ifname2 "phys"
+    setIfcLink $lnode2 $ifname2 $link_id
 
-    cfgSet "links" $link_id "peers" "$lnode1 $lnode2"
-    cfgSet "links" $link_id "peers_ifaces" "$ifname1 $ifname2"
+    setLinkPeers $link_id "$lnode1 $lnode2"
+    setLinkPeersIfaces $link_id "$ifname1 $ifname2"
     if { ([getNodeType $lnode1] == "lanswitch" || \
 	[getNodeType $lnode2] == "lanswitch" || \
 	[string first eth "$ifname1 $ifname2"] != -1) && \
@@ -956,10 +956,10 @@ proc newLink { lnode1 lnode2 } {
 	[getNodeType $lnode2] != "rj45" &&
 	$defEthBandwidth != 0 } {
 
-	cfgSet "links" $link_id "bandwidth" $defEthBandwidth
+	setLinkBandwidth $link_id $defEthBandwidth
     } elseif { [string first ser "$ifname1 $ifname2"] != -1 } {
-	cfgSet "links" $link_id "bandwidth" $defSerBandwidth
-	cfgSet "links" $link_id "bandwidth" $defSerDelay
+	setLinkBandwidth $link_id $defSerBandwidth
+	setLinkDelay $link_id $defSerDelay
     }
     lappendToRunning "link_list" $link_id
 

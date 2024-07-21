@@ -1004,11 +1004,16 @@ proc setIfcIPv6addrs { node_id iface addrs } {
 }
 
 proc getIfcPeer { node_id iface } {
-    return [cfgGet "nodes" $node_id "ifaces" $iface "peer"]
+    set link_id [getIfcLink $node_id $iface]
+    return [removeFromList [getLinkPeers $link_id] $node_id]
 }
 
-proc setIfcPeer { node_id iface peer } {
-    cfgSet "nodes" $node_id "ifaces" $iface "peer" $peer
+proc getIfcLink { node_id iface } {
+    return [cfgGet "nodes" $node_id "ifaces" $iface "link"]
+}
+
+proc setIfcLink { node_id iface link_id } {
+    cfgSet "nodes" $node_id "ifaces" $iface "link" $link_id
 }
 
 #****f* nodecfg.tcl/getIfcLinkLocalIPv6addr
@@ -1095,6 +1100,9 @@ proc getDefaultGateways { node_id subnet_gws nodes_l2data } {
 	# add new subnet at the end of the list
 	set subnet_idx [llength $subnet_gws]
 	lassign [logicalPeerByIfc $node_id $ifc] peer_node peer_ifc
+	if { $peer_node == "" } {
+	    continue
+	}
 	lassign [getSubnetData $peer_node $peer_ifc \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -1102,8 +1110,10 @@ proc getDefaultGateways { node_id subnet_gws nodes_l2data } {
 
     # merge all gateways values and return
     set my_gws {}
-    foreach subnet_idx [lsort -unique [dict values [dict get $nodes_l2data $node_id]]] {
-	set my_gws [concat $my_gws [lindex $subnet_gws $subnet_idx]]
+    if { $nodes_l2data != {} } {
+	foreach subnet_idx [lsort -unique [dict values [dict get $nodes_l2data $node_id]]] {
+	    set my_gws [concat $my_gws [lindex $subnet_gws $subnet_idx]]
+	}
     }
 
     return [list $my_gws $subnet_gws $nodes_l2data]
@@ -1169,6 +1179,9 @@ proc getSubnetData { this_node_id this_ifc subnet_gws nodes_l2data subnet_idx } 
 	dict set nodes_l2data $this_node_id $ifc $subnet_idx
 
 	lassign [logicalPeerByIfc $this_node_id $ifc] peer_node peer_ifc
+	if { $peer_node == "" } {
+	    continue
+	}
 	lassign [getSubnetData $peer_node $peer_ifc \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
