@@ -61,10 +61,12 @@ proc toggleDirectLink { c link_id } {
 	set link_id [lindex [$c gettags current] 1]
     }
 
-    if { [getLinkDirect $link_id] } {
-	setLinkDirect $link_id 0
-    } else {
-	setLinkDirect $link_id 1
+    set new_value [expr [getLinkDirect $link_id] ^ 1]
+    setLinkDirect $link_id $new_value
+
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	setLinkDirect $mirror_link_id $new_value
     }
 }
 

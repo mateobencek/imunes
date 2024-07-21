@@ -910,25 +910,20 @@ proc createLinks { links linkCount w } {
     set batchStep 0
     for {set pending_links $links} {$pending_links != ""} {} {
 	set link [lindex $pending_links 0]
-	set i [lsearch -exact $pending_links $link]
-	set pending_links [lreplace $pending_links $i $i]
-
-	set lnode1 [lindex [getLinkPeers $link] 0]
-	set lnode2 [lindex [getLinkPeers $link] 1]
-	set ifname1 [ifcByPeer $lnode1 $lnode2]
-	set ifname2 [ifcByPeer $lnode2 $lnode1]
-
 	set msg "Creating link $link"
+	set pending_links [removeFromList $pending_links $link]
+
+	lassign [getLinkPeers $link] lnode1 lnode2
+	lassign [getLinkPeersIfaces $link] ifname1 ifname2
+
 	set mirror_link [getLinkMirror $link]
 	if { $mirror_link != "" } {
-	    set i [lsearch -exact $pending_links $mirror_link]
-	    set pending_links [lreplace $pending_links $i $i]
-
 	    set msg "Creating link $link/$mirror_link"
+	    set pending_links [removeFromList $pending_links $mirror_link]
 
-	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
-	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
+	    # pseudo node is always on index 0
+	    set lnode1 [lindex [getLinkPeers $mirror_link] 1]
+	    set ifname1 [lindex [getLinkPeersIfaces $mirror_link] 1]
 	}
 
 	displayBatchProgress $batchStep $linkCount

@@ -909,6 +909,19 @@ proc numOfLinks { node_id } {
 proc newLink { lnode1 lnode2 } {
     global defEthBandwidth defSerBandwidth defSerDelay
 
+    foreach link_id [getFromRunning "link_list"] {
+	lassign [set peers [getLinkPeers $link_id]] node1 node2
+	set mirror_link_id [getLinkMirror $link_id]
+	if { $mirror_link_id != "" } {
+	    # pseudo node is always on index 0
+	    set peers "[lindex [getLinkPeers $mirror_link_id] 1] $node2"
+	}
+
+	if { $lnode1 in $peers && $lnode2 in $peers } {
+	    return
+	}
+    }
+
     foreach node "$lnode1 $lnode2" {
 	if { [info procs [getNodeType $node].maxLinks] != "" } {
 	    if { [ numOfLinks $node ] == [[getNodeType $node].maxLinks] } {
