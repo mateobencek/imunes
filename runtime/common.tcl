@@ -495,18 +495,17 @@ proc dumpLinksToFile { path } {
 	if { $link in $skipLinks } {
 	    continue
 	}
-	set lnode1 [lindex [getLinkPeers $link] 0]
-	set lnode2 [lindex [getLinkPeers $link] 1]
-	set ifname1 [ifcByPeer $lnode1 $lnode2]
-	set ifname2 [ifcByPeer $lnode2 $lnode1]
 
-	if { [getLinkMirror $link] != "" } {
-	    set mirror_link [getLinkMirror $link]
+	lassign [getLinkPeers $link] lnode1 lnode2
+	lassign [getLinkPeersIfaces $link] ifname1 ifname2
+
+	set mirror_link [getLinkMirror $link]
+	if { $mirror_link != "" } {
 	    lappend skipLinks $mirror_link
 
-	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
-	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
+	    # switch direction for mirror links
+	    lassign "$lnode2 [lindex [getLinkPeers $mirror_link] 1]" lnode1 lnode2
+	    lassign "$ifname2 [lindex [getLinkPeersIfaces $mirror_link] 1]" ifname1 ifname2
 	}
 
 	set name1 [getNodeName $lnode1]

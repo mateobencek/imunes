@@ -75,7 +75,7 @@ proc checkExternalInterfaces {} {
 
     foreach node_ifcpair $nodes_ifcpairs {
 	lassign $node_ifcpair node ifcpair
-	lassign $ifcpair ifc physical_ifc
+	lassign $ifcpair iface physical_ifc
 
 	# check if the interface exists
 	set i [lsearch $extifcs $physical_ifc]
@@ -88,6 +88,7 @@ proc checkExternalInterfaces {} {
 		tk_dialog .dialog1 "IMUNES error" $msg \
 		    info 0 Dismiss
 	    }
+
 	    return 1
 	}
 
@@ -100,8 +101,7 @@ proc checkExternalInterfaces {} {
 		exec test -d /sys/class/net/$physical_ifc/wireless
 	    } on error {} {
 	    } on ok {} {
-		set link [lindex [linkByIfc $node $ifc] 0]
-		if { [getLinkDirect $link] } {
+		if { [getLinkDirect [getIfcLink $node $iface]] } {
 		    set severity "warning"
 		    set msg "Interface '$physical_ifc' is a wireless interface,\
 			so its peer cannot change its MAC address!"
@@ -361,9 +361,9 @@ proc l3node.initConfigure { eid node } {
 #   * eid -- experiment id
 #   * node -- node id
 #****
-proc l3node.start { eid node } {
-    startIfcsNode $node
-    runConfOnNode $node
+proc l3node.start { eid node_id } {
+    startIfcsNode $node_id
+    runConfOnNode $node_id
 }
 
 #****f* exec.tcl/l2node.setupNamespace
@@ -921,9 +921,9 @@ proc createLinks { links linkCount w } {
 	    set msg "Creating link $link/$mirror_link"
 	    set pending_links [removeFromList $pending_links $mirror_link]
 
-	    # pseudo node is always on index 0
-	    set lnode1 [lindex [getLinkPeers $mirror_link] 1]
-	    set ifname1 [lindex [getLinkPeersIfaces $mirror_link] 1]
+	    # switch direction for mirror links
+	    lassign "$lnode2 [lindex [getLinkPeers $mirror_link] 1]" lnode1 lnode2
+	    lassign "$ifname2 [lindex [getLinkPeersIfaces $mirror_link] 1]" ifname1 ifname2
 	}
 
 	displayBatchProgress $batchStep $linkCount
@@ -941,7 +941,7 @@ proc createLinks { links linkCount w } {
 	incr batchStep
 	incr progressbarCount
 
-	if {$execMode != "batch"} {
+	if { $execMode != "batch" } {
 	    statline $msg
 	    $w.p configure -value $progressbarCount
 	    update
@@ -964,25 +964,20 @@ proc configureLinks { links linkCount w } {
     set batchStep 0
     for {set pending_links $links} {$pending_links != ""} {} {
 	set link [lindex $pending_links 0]
-	set i [lsearch -exact $pending_links $link]
-	set pending_links [lreplace $pending_links $i $i]
-
-	set lnode1 [lindex [getLinkPeers $link] 0]
-	set lnode2 [lindex [getLinkPeers $link] 1]
-	set ifname1 [ifcByPeer $lnode1 $lnode2]
-	set ifname2 [ifcByPeer $lnode2 $lnode1]
-
 	set msg "Configuring link $link"
-	if { [getLinkMirror $link] != "" } {
-	    set mirror_link [getLinkMirror $link]
-	    set i [lsearch -exact $pending_links $mirror_link]
-	    set pending_links [lreplace $pending_links $i $i]
+	set pending_links [removeFromList $pending_links $link]
 
+	lassign [getLinkPeers $link] lnode1 lnode2
+	lassign [getLinkPeersIfaces $link] ifname1 ifname2
+
+	set mirror_link [getLinkMirror $link]
+	if { $mirror_link != "" } {
 	    set msg "Configuring link $link/$mirror_link"
+	    set pending_links [removeFromList $pending_links $mirror_link]
 
-	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
-	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
+	    # switch direction for mirror links
+	    lassign "$lnode2 [lindex [getLinkPeers $mirror_link] 1]" lnode1 lnode2
+	    lassign "$ifname2 [lindex [getLinkPeersIfaces $mirror_link] 1]" ifname1 ifname2
 	}
 
 	displayBatchProgress $batchStep $linkCount

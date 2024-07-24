@@ -423,98 +423,95 @@ Please don't try killing the process.
 # NAME
 #   execSetIfcQDisc -- in exec mode set interface queuing discipline
 # SYNOPSIS
-#   execSetIfcQDisc $eid $node $ifc $qdisc
+#   execSetIfcQDisc $eid $node_id $iface $qdisc
 # FUNCTION
 #   Sets the queuing discipline during the simulation.
 #   New queuing discipline is defined in qdisc parameter.
 #   Queueing discipline can be set to fifo, wfq or drr.
 # INPUTS
 #   eid -- experiment id
-#   node -- node id
-#   ifc -- interface name
+#   node_id -- node id
+#   iface -- interface name
 #   qdisc -- queuing discipline
 #****
-proc execSetIfcQDisc { eid node ifc qdisc } {
-    set link [linkByIfc $node $ifc]
-    set peers [getLinkPeers [lindex $link 0]]
-    set dir [lindex $link 1]
-    set lnode1 [lindex $peers 0]
-    set lnode2 [lindex $peers 1]
+proc execSetIfcQDisc { eid node_id iface qdisc } {
+    set link_id [getIfcLink $node_id $iface]
+    lassign [getLinkPeers $link_id] lnode1 lnode2
+    set direction [linkDirection $node_id $iface]
+
     switch -exact $qdisc {
 	FIFO { set qdisc fifo }
 	WFQ { set qdisc wfq }
 	DRR { set qdisc drr }
     }
-    if { [getNodeType $lnode2] == "pseudo" } {
-	set mirror_link [getLinkMirror [lindex $link 0]]
-	pipesExec "jexec $eid ngctl msg $mirror_link: setcfg \"{ $dir={ $qdisc=1 } }\"" "hold"
+
+    if { [getNodeType $lnode1] == "pseudo" } {
+	set link_id [getLinkMirror $link_id]
     }
 
-    pipesExec "jexec $eid ngctl msg $link: setcfg \"{ $dir={ $qdisc=1 } }\"" "hold"
+    pipesExec "jexec $eid ngctl msg $link_id: setcfg \"{ $direction={ $qdisc=1 } }\"" "hold"
 }
 
 #****f* freebsd.tcl/execSetIfcQDrop
 # NAME
 #   execSetIfcQDrop -- in exec mode set interface queue drop
 # SYNOPSIS
-#   execSetIfcQDrop $eid $node $ifc $qdrop
+#   execSetIfcQDrop $eid $node_id $iface $qdrop
 # FUNCTION
 #   Sets the queue dropping policy during the simulation.
 #   New queue dropping policy is defined in qdrop parameter.
 #   Queue dropping policy can be set to drop-head or drop-tail.
 # INPUTS
 #   eid -- experiment id
-#   node -- node id
-#   ifc -- interface name
+#   node_id -- node id
+#   iface -- interface name
 #   qdrop -- queue dropping policy
 #****
-proc execSetIfcQDrop { eid node ifc qdrop } {
-    set link [linkByIfc $node $ifc]
-    set peers [getLinkPeers [lindex $link 0]]
-    set dir [lindex $link 1]
-    set lnode1 [lindex $peers 0]
-    set lnode2 [lindex $peers 1]
+proc execSetIfcQDrop { eid node_id iface qdrop } {
+    set link_id [getIfcLink $node_id $iface]
+    lassign [getLinkPeers $link_id] lnode1 lnode2
+    set direction [linkDirection $node_id $iface]
+
     switch -exact $qdrop {
 	drop-head { set qdrop drophead }
 	drop-tail { set qdrop droptail }
     }
-    if { [getNodeType $lnode2] == "pseudo" } {
-	set mirror_link [getLinkMirror [lindex $link 0]]
-	pipesExec "jexec $eid ngctl msg $mirror_link: setcfg \"{ $dir={ $qdrop=1 } }\"" "hold"
+
+    if { [getNodeType $lnode1] == "pseudo" } {
+	set link_id [getLinkMirror $link_id]
     }
 
-    pipesExec "jexec $eid ngctl msg $link: setcfg \"{ $dir={ $qdrop=1 } }\"" "hold"
+    pipesExec "jexec $eid ngctl msg $link_id: setcfg \"{ $direction={ $qdrop=1 } }\"" "hold"
 }
 
 #****f* freebsd.tcl/execSetIfcQLen
 # NAME
 #   execSetIfcQLen -- in exec mode set interface queue length
 # SYNOPSIS
-#   execSetIfcQLen $eid $node $ifc $qlen
+#   execSetIfcQLen $eid $node_id $iface $qlen
 # FUNCTION
 #   Sets the queue length during the simulation.
 #   New queue length is defined in qlen parameter.
 # INPUTS
 #   eid -- experiment id
-#   node -- node id
-#   ifc -- interface name
+#   node_id -- node id
+#   iface -- interface name
 #   qlen -- new queue's length
 #****
-proc execSetIfcQLen { eid node ifc qlen } {
-    set link [linkByIfc $node $ifc]
-    set peers [getLinkPeers [lindex $link 0]]
-    set dir [lindex $link 1]
-    set lnode1 [lindex $peers 0]
-    set lnode2 [lindex $peers 1]
+proc execSetIfcQLen { eid node_id iface qlen } {
+    set link_id [getIfcLink $node_id $iface]
+    lassign [getLinkPeers $link_id] lnode1 lnode2
+    set direction [linkDirection $node_id $iface]
+
     if { $qlen == 0 } {
 	set qlen -1
     }
-    if { [getNodeType $lnode2] == "pseudo" } {
-	set mirror_link [getLinkMirror [lindex $link 0]]
-	pipesExec "jexec $eid ngctl msg $mirror_link: setcfg \"{ $dir={ $queuelen=$qlen } }\"" "hold"
+
+    if { [getNodeType $lnode1] == "pseudo" } {
+	set link_id [getLinkMirror $link_id]
     }
 
-    pipesExec "jexec $eid ngctl msg $link: setcfg \"{ $dir={ $queuelen=$qlen } }\"" "hold"
+    pipesExec "jexec $eid ngctl msg $link_id: setcfg \"{ $direction={ $queuelen=$qlen } }\"" "hold"
 }
 
 #****f* freebsd.tcl/execSetLinkParams

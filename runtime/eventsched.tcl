@@ -201,31 +201,33 @@ proc evsched {} {
 		    }
 		}
 	    }
+
 	    set changed 1
 
 	    if { $evlogfile != 0 } {
-		set peers [getLinkPeers $object]
-		set n0 [lindex $peers 0]
-		set n1 [lindex $peers 1]
-		set ifc0 [ifcByPeer $n0 $n1]
-		set ifc1 [ifcByPeer $n1 $n0]
+		lassign [getLinkPeers $object] node1_id node2_id
+		lassign [getLinkPeersIfaces $object] iface1 iface2
 
 		set delay [getLinkDelay $object]
 		if { $delay == "" } {
 		    set delay 0
 		}
+
 		set ber [getLinkBER $object]
 		if { $ber == "" } {
 		    set ber 0
 		}
+
 		set loss [getLinkLoss $object]
 		if { $loss == "" } {
 		    set loss 0
 		}
+
 		set dup [getLinkDup $object]
 		if { $dup == "" } {
 		    set dup 0
 		}
+
 		set bw [getLinkBandwidth $object]
 		if { $bw == "" } {
 		    set bw 0
@@ -233,7 +235,7 @@ proc evsched {} {
 
 		set cfg "$delay $ber $loss $dup $bw"
 		puts $evlogfile \
-		    "[clock seconds] $object $n0:$ifc0 $n1:$ifc1 $cfg"
+		    "[clock seconds] $object $node1_id:$iface1 $node2_id:$iface2 $cfg"
 		flush $evlogfile
 	    }
 	}

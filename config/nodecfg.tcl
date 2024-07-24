@@ -198,15 +198,6 @@
 # logicalPeerByIfc { node_id ifc }
 #	Returns id of the logical node on the other side of the interface.
 #
-# ifcByPeer { local_node_id peer_node_id }
-#	Returns the name of the interface connected to the specified peer
-#       if the peer is on the same canvas, otherwise returns an empty string.
-#
-# ifcByLogicalPeer { local_node_id peer_node_id }
-#	Returns the name of the interface connected to the specified peer.
-#	Returns the right interface even if the peer node is on the other
-#	canvas.
-#
 # hasIPv4Addr { node_id }
 # hasIPv6Addr { node_id }
 #	Returns true if at least one interface has an IPv{4|6} address
@@ -1103,8 +1094,7 @@ proc getDefaultGateways { node_id subnet_gws nodes_l2data } {
 
 	# add new subnet at the end of the list
 	set subnet_idx [llength $subnet_gws]
-	set peer_node [logicalPeerByIfc $node_id $ifc]
-	set peer_ifc [ifcByLogicalPeer $peer_node $node_id]
+	lassign [logicalPeerByIfc $node_id $ifc] peer_node peer_ifc
 	lassign [getSubnetData $peer_node $peer_ifc \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -1164,8 +1154,7 @@ proc getSubnetData { this_node_id this_ifc subnet_gws nodes_l2data subnet_idx } 
 
 	# first, get this node/ifc peer's subnet data in case it is an L2 node
 	# and we're not yet gone through it
-	set peer_node [logicalPeerByIfc $this_node_id $this_ifc]
-	set peer_ifc [ifcByLogicalPeer $peer_node $this_node_id]
+	lassign [logicalPeerByIfc $this_node_id $this_ifc] peer_node peer_ifc
 	lassign [getSubnetData $peer_node $peer_ifc \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -1179,8 +1168,7 @@ proc getSubnetData { this_node_id this_ifc subnet_gws nodes_l2data subnet_idx } 
     foreach ifc [ifcList $this_node_id] {
 	dict set nodes_l2data $this_node_id $ifc $subnet_idx
 
-	set peer_node [logicalPeerByIfc $this_node_id $ifc]
-	set peer_ifc [ifcByLogicalPeer $peer_node $this_node_id]
+	lassign [logicalPeerByIfc $this_node_id $ifc] peer_node peer_ifc
 	lassign [getSubnetData $peer_node $peer_ifc \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -1610,7 +1598,7 @@ proc setNodeCPUConf { node_id param_list } {
 }
 
 proc getAutoDefaultRoutesStatus { node_id } {
-    return [cfgGet "nodes" $node_id "auto_default_routes"]
+    return [cfgGetWithDefault "enabled" "nodes" $node_id "auto_default_routes"]
 }
 
 proc setAutoDefaultRoutesStatus { node_id state } {
@@ -1690,7 +1678,7 @@ proc allIfcList { node_id } {
 # NAME
 #   logicalPeerByIfc -- get node's peer by interface.
 # SYNOPSIS
-#   set peer [logicalPeerByIfc $node $ifc]
+#   set peer_id [logicalPeerByIfc $node $ifc]
 # FUNCTION
 #   Returns id of the node on the other side of the interface. If the node on
 #   the other side of the interface is connected via normal link (not split)
@@ -1701,81 +1689,20 @@ proc allIfcList { node_id } {
 #   * node -- node id
 #   * ifc -- interface name
 # RESULT
-#   * peer -- node id of the node on the other side of the interface
+#   * peer_id -- node id of the node on the other side of the interface
 #****
 proc logicalPeerByIfc { node_id iface } {
-    set peer [getIfcPeer $node_id $iface]
-    if { [getNodeType $peer] != "pseudo" } {
-	return $peer
+    set link_id [getIfcLink $node_id $iface]
+    set mirror_link_id [getLinkMirror $link_id]
+    if { $mirror_link_id != "" } {
+	set peer_id [lindex [getLinkPeers $mirror_link_id] 1]
+	set peer_iface [lindex [getLinkPeersIfaces $mirror_link_id] 1]
     } else {
-	set mirror_node [getNodeMirror $peer]
-	set mirror_ifc [ifcList $mirror_node]
-
-	return [getIfcPeer $mirror_node $mirror_ifc]
-    }
-}
-
-#****f* nodecfg.tcl/ifcByPeer
-# NAME
-#   ifcByPeer -- get node interface by peer.
-# SYNOPSIS
-#   set ifc [ifcByPeer $node $peer]
-# FUNCTION
-#   Returns the name of the interface connected to the specified peer. If the
-#   peer node is on different canvas or connected via split link to the
-#   specified node this function returns an empty string.
-# INPUTS
-#   * node -- node id
-#   * peer -- id of the peer node
-# RESULT
-#   * ifc -- interface name
-#****
-proc ifcByPeer { node_id peer_id } {
-    set ifc_list {}
-
-    foreach {iface iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
-	if { [dictGet $iface_cfg "peer"] == $peer_id } {
-	    lappend ifc_list $iface
-	}
+	set peer_id [removeFromList [getLinkPeers $link_id] $node_id]
+	set peer_iface [removeFromList [getLinkPeersIfaces $link_id] $iface]
     }
 
-    return $ifc_list
-}
-
-#****f* nodecfg.tcl/ifcByLogicalPeer
-# NAME
-#   ifcByPeer -- get node interface by peer.
-# SYNOPSIS
-#   set ifc [ifcByLogicalPeer $node $peer]
-# FUNCTION
-#   Returns the name of the interface connected to the specified peer. Returns
-#   the right interface even if the peer node is on the other canvas or
-#   connected via split link.
-# INPUTS
-#   * node -- node id
-#   * peer -- id of the peer node
-# RESULT
-#   * ifc -- interface name
-#****
-proc ifcByLogicalPeer { node_id peer_id } {
-    set iface [ifcByPeer $node_id $peer_id]
-    if { $iface == "" } {
-	#
-	# Must search through pseudo peers
-	#
-	foreach iface [ifcList $node_id] {
-	    set t_peer [getIfcPeer $node_id $iface]
-	    if { [getNodeType $t_peer] == "pseudo" } {
-		set mirror [getNodeMirror $t_peer]
-		if { [getIfcPeer $mirror [ifcList $mirror]] == $peer_id } {
-		    return $iface
-		}
-	    }
-	}
-	return ""
-    }
-
-    return $iface
+    return "$peer_id $peer_iface"
 }
 
 #****f* nodecfg.tcl/hasIPv4Addr
@@ -2193,15 +2120,9 @@ proc getRouterProtocolCfg { node_id protocol } {
 }
 
 proc getRouterStaticRoutes4Cfg { node_id } {
-    set croutes [getStatIPv4routes $node_id]
-    if { $croutes == {} } {
-	return ""
-    }
-
     set cfg {}
 
-    set model [getNodeModel $node_id]
-    switch -exact -- $model {
+    switch -exact -- [getNodeModel $node_id] {
 	"quagga" -
 	"frr" {
 	    set cfg [nodeCfggenRouteIPv4 $node_id 1]
@@ -2215,15 +2136,9 @@ proc getRouterStaticRoutes4Cfg { node_id } {
 }
 
 proc getRouterStaticRoutes6Cfg { node_id } {
-    set croutes [getStatIPv6routes $node_id]
-    if { $croutes == {} } {
-	return ""
-    }
-
     set cfg {}
 
-    set model [getNodeModel $node_id]
-    switch -exact -- $model {
+    switch -exact -- [getNodeModel $node_id] {
 	"quagga" -
 	"frr" {
 	    set cfg [nodeCfggenRouteIPv6 $node_id 1]

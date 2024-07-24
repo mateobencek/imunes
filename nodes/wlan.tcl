@@ -88,12 +88,12 @@ proc $MODULE.start { eid node_id } {
     set ngid $ngnodemap($eid\.$node_id)
     set wlan_epids ""
     foreach ifc [ifcList $node_id] {
-	lappend wlan_epids [string range [logicalPeerByIfc $node_id $ifc] 1 end]
+	lappend wlan_epids [string range [lindex [logicalPeerByIfc $node_id $ifc] 0] 1 end]
     }
 
     foreach ifc [ifcList $node_id] {
 	set local_linkname link[string range $ifc 1 end]
-	set local_epid [string range [logicalPeerByIfc $node_id $ifc] 1 end]
+	set local_epid [string range [lindex [logicalPeerByIfc $node_id $ifc] 0] 1 end]
 	set tx_bandwidth 54000000
 	set tx_jitter 1.5
 	set tx_duplicate 5

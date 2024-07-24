@@ -1255,7 +1255,7 @@ proc captureExtIfc { eid node } {
 	}
     }
 
-    if { [getLinkDirect [lindex [linkByIfc $node 0] 0]] } {
+    if { [getLinkDirect [getIfcLink $node "0"]] } {
 	return
     }
 
@@ -1299,7 +1299,7 @@ proc releaseExtIfc { eid node } {
 	return
     }
 
-    if { [getLinkDirect [lindex [linkByIfc $node 0] 0]] } {
+    if { [getLinkDirect [getIfcLink $node "0"]] } {
 	return
     }
 
@@ -1379,33 +1379,25 @@ proc checkSysPrerequisites {} {
 # NAME
 #   execSetIfcQDisc -- in exec mode set interface queuing discipline
 # SYNOPSIS
-#   execSetIfcQDisc $eid $node $ifc $qdisc
+#   execSetIfcQDisc $eid $node_id $iface $qdisc
 # FUNCTION
 #   Sets the queuing discipline during the simulation.
 #   New queuing discipline is defined in qdisc parameter.
 #   Queueing discipline can be set to fifo, wfq or drr.
 # INPUTS
 #   eid -- experiment id
-#   node -- node id
-#   ifc -- interface name
+#   node_id -- node id
+#   iface -- interface name
 #   qdisc -- queuing discipline
 #****
-proc execSetIfcQDisc { eid node ifc qdisc } {
-    set target [linkByIfc $node $ifc]
-    set peers [getLinkPeers [lindex $target 0]]
-    set dir [lindex $target 1]
-    set lnode1 [lindex $peers 0]
-    set lnode2 [lindex $peers 1]
-    if { [getNodeType $lnode2] == "pseudo" } {
-        set mirror_link [getLinkMirror [lindex $target 0]]
-        set lnode2 [lindex [getLinkPeers $mirror_link] 0]
-    }
+proc execSetIfcQDisc { eid node_id iface qdisc } {
     switch -exact $qdisc {
         FIFO { set qdisc fifo_fast }
         WFQ { set qdisc sfq }
         DRR { set qdisc drr }
     }
-    pipesExec "ip netns exec $eid-$node tc qdisc add dev $ifc root $qdisc" "hold"
+
+    pipesExec "ip netns exec $eid-$node_id tc qdisc add dev $iface root $qdisc" "hold"
 }
 
 #****f* linux.tcl/execSetIfcQLen
@@ -1481,21 +1473,17 @@ proc configureIfcLinkParams { eid node ifname bandwidth delay ber loss dup } {
 #   link -- link id
 #****
 proc execSetLinkParams { eid link } {
-    set lnode1 [lindex [getLinkPeers $link] 0]
-    set lnode2 [lindex [getLinkPeers $link] 1]
-    set ifname1 [ifcByLogicalPeer $lnode1 $lnode2]
-    set ifname2 [ifcByLogicalPeer $lnode2 $lnode1]
+    lassign [getLinkPeers $link] lnode1 lnode2
+    lassign [getLinkPeersIfaces $link] ifname1 ifname2
 
-    if { [getLinkMirror $link] != "" } {
-	set mirror_link [getLinkMirror $link]
+    set mirror_link [getLinkMirror $link]
+    if { $mirror_link != "" } {
 	if { [getNodeType $lnode1] == "pseudo" } {
-	    set p_lnode1 $lnode1
-	    set lnode1 [lindex [getLinkPeers $mirror_link] 0]
-	    set ifname1 [ifcByPeer $lnode1 [getNodeMirror $p_lnode1]]
+	    set lnode1 [lindex [getLinkPeers $mirror_link] 1]
+	    set ifname1 [lindex [getLinkPeersIfaces $mirror_link] 1]
 	} else {
-	    set p_lnode2 $lnode2
-	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
-	    set ifname2 [ifcByPeer $lnode2 [getNodeMirror $p_lnode2]]
+	    set lnode2 [lindex [getLinkPeers $mirror_link] 1]
+	    set ifname2 [lindex [getLinkPeersIfaces $mirror_link] 1]
 	}
     }
 

@@ -49,25 +49,24 @@ registerModule $MODULE
 # NAME
 #   router.confNewIfc -- configure new interface
 # SYNOPSIS
-#   router.confNewIfc $node $ifc
+#   router.confNewIfc $node $iface
 # FUNCTION
 #   Configures new interface for the specified node.
 # INPUTS
 #   * node -- node id
-#   * ifc -- interface name
+#   * iface -- interface name
 #****
-proc $MODULE.confNewIfc { node ifc } {
+proc $MODULE.confNewIfc { node iface } {
     global changeAddressRange changeAddressRange6
 
     set changeAddressRange 0
     set changeAddressRange6 0
-    autoIPv4addr $node $ifc
-    autoIPv6addr $node $ifc
-    autoMACaddr $node $ifc
+    autoIPv4addr $node $iface
+    autoIPv6addr $node $iface
+    autoMACaddr $node $iface
 
-    set peer_node [logicalPeerByIfc $node $ifc]
-    if { [getNodeType $peer_node] == "extnat" } {
-	setIfcNatState $node $ifc "on"
+    if { [getNodeType [lindex [logicalPeerByIfc $node $iface] 0]] == "extnat" } {
+	setIfcNatState $node $iface "on"
     }
 }
 

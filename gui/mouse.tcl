@@ -45,8 +45,8 @@ proc removeLinkGUI { link_id atomic } {
     global changed
 
     # this data needs to be fetched before we removeLink
-    set mirror_link_id [getLinkMirror $link_id]
     lassign [getLinkPeers $link_id] node1 node2
+    set mirror_link_id [getLinkMirror $link_id]
     if { $mirror_link_id != "" } {
 	set mirror_node_id [getNodeMirror $node1]
     }
@@ -401,11 +401,13 @@ proc button3link { c x y } {
     #
     # Merge two pseudo nodes / links
     #
-    if { $oper_mode != "exec" && [getLinkMirror $link_id] != "" &&
-	[getNodeCanvas [getNodeMirror [lindex [getLinkPeers $link_id] 1]]] ==
+    set link_mirror_id [getLinkMirror $link_id]
+    if { $oper_mode != "exec" && $link_mirror_id != "" &&
+	[getNodeCanvas [lindex [getLinkPeers $link_mirror_id] 0]] ==
 	[getFromRunning "curcanvas"] } {
+
 	.button3menu add command -label "Merge" \
-	    -command "mergeNodeGUI [lindex [getLinkPeers $link_id] 1]"
+	    -command "mergeNodeGUI [lindex [getLinkPeers $link_id] 0]"
     } else {
 	.button3menu add command -label "Merge" -state disabled
     }
@@ -476,7 +478,7 @@ proc moveToCanvas { canvas_id } {
 #   * node_id -- node id of a pseudo node.
 #****
 proc mergeNodeGUI { node_id } {
-    mergeLink [lindex [linkByIfc $node_id "0"] 0]
+    mergeLink [getIfcLink $node_id "0"]
     redrawAll
 }
 
@@ -593,6 +595,7 @@ proc button3node { c x y } {
 	.button3menu add cascade -label "Create link to" \
 	    -menu .button3menu.connect
     }
+
     destroy .button3menu.connect.selected
     menu .button3menu.connect.selected -tearoff 0
     .button3menu.connect add cascade -label "Selected" \
@@ -621,16 +624,14 @@ proc button3node { c x y } {
 
     foreach peer_node [getFromRunning "node_list"] {
 	set canvas_id [getNodeCanvas $peer_node]
-	if { $type != "rj45" &&
-	    [lsearch {pseudo rj45} [getNodeType $peer_node]] < 0 &&
-	    [ifcByLogicalPeer $node_id $peer_node] == "" } {
+	if { [getNodeType $peer_node] != "pseudo" } {
 	    .button3menu.connect.$canvas_id add command \
 		-label [getNodeName $peer_node] \
 		-command "connectWithNode \"[selectedRealNodes]\" $peer_node"
-	} elseif { [getNodeType $peer_node] != "pseudo" } {
-	    .button3menu.connect.$canvas_id add command \
-		-label [getNodeName $peer_node] \
-		-state disabled
+#	} elseif { [getNodeType $peer_node] != "pseudo" } {
+#	    .button3menu.connect.$canvas_id add command \
+#		-label [getNodeName $peer_node] \
+#		-state disabled
 	}
     }
 
@@ -1304,14 +1305,12 @@ proc button1-release { c x y } {
 	if { $destobj != "" && $curobj != "" && $destobj != $curobj } {
 	    set lnode1 [lindex [$c gettags $curobj] 1]
 	    set lnode2 [lindex [$c gettags $destobj] 1]
-	    if { [ifcByLogicalPeer $lnode1 $lnode2] == "" } {
-		set link_id [newLink $lnode1 $lnode2]
-		if { $link_id != "" } {
-		    drawLink $link_id
-		    redrawLink $link_id
-		    updateLinkLabel $link_id
-		    set changed 1
-		}
+	    set link_id [newLink $lnode1 $lnode2]
+	    if { $link_id != "" } {
+		drawLink $link_id
+		redrawLink $link_id
+		updateLinkLabel $link_id
+		set changed 1
 	    }
 	}
     } elseif { $activetool in "rectangle oval text freeform" } {
@@ -1911,12 +1910,13 @@ proc changeAddressRange {} {
 	foreach node_id $element {
 	    set autorenumber_nodes ""
 	    foreach iface [ifcList $node_id] {
-		set peer [getIfcPeer $node_id $iface]
-		if { $peer != "" && [[getNodeType $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
-		    set peer_ifc [ifcByPeer $peer $node_id]
-		    lappend autorenumber_nodes "$peer $peer_ifc"
+		set link_id [getIfcLink $node_id $iface]
+		set peer [removeFromList [getLinkPeers $link_id] $node_id]
+		if { $peer != "" && [[getNodeType $peer].layer] != "LINK" && $peer in $selected_nodes } {
+		    lappend autorenumber_nodes "$peer [removeFromList [getLinkPeersIfaces $link_id] $iface]"
 		}
 	    }
+
 	    foreach el $autorenumber_nodes {
 		lassign $el node_id iface
 		if { $counter == 0 } {
@@ -2029,12 +2029,13 @@ proc changeAddressRange6 {} {
 	foreach node_id $element {
 	    set autorenumber_nodes ""
 	    foreach iface [ifcList $node_id] {
-		set peer [getIfcPeer $node_id $iface]
-		if { $peer != "" && [[getNodeType $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
-		    set peer_ifc [ifcByPeer $peer $node_id]
-		    lappend autorenumber_nodes "$peer $peer_ifc"
+		set link_id [getIfcLink $node_id $iface]
+		set peer [removeFromList [getLinkPeers $link_id] $node_id]
+		if { $peer != "" && [[getNodeType $peer].layer] != "LINK" && $peer in $selected_nodes } {
+		    lappend autorenumber_nodes "$peer [removeFromList [getLinkPeersIfaces $link_id] $iface]"
 		}
 	    }
+
 	    foreach el $autorenumber_nodes {
 		lassign $el node_id iface
 		if { $counter == 0 } {

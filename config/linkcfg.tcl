@@ -847,8 +847,8 @@ proc mergeLink { link_id } {
     lassign [getLinkPeers $link_id] pseudo_node1 orig_node1
     lassign [getLinkPeers $mirror_link_id] pseudo_node2 orig_node2
 
-    set orig_node1_iface [ifcByPeer $orig_node1 $pseudo_node1]
-    set orig_node2_iface [ifcByPeer $orig_node2 $pseudo_node2]
+    lassign [getLinkPeersIfaces $link_id] - orig_node1_iface
+    lassign [getLinkPeersIfaces $mirror_link_id] - orig_node2_iface
 
     setIfcPeer $orig_node1 $orig_node1_iface $orig_node2
     setIfcPeer $orig_node2 $orig_node2_iface $orig_node1
@@ -922,11 +922,16 @@ proc newLink { lnode1 lnode2 } {
 	}
     }
 
-    foreach node "$lnode1 $lnode2" {
-	if { [info procs [getNodeType $node].maxLinks] != "" } {
-	    if { [ numOfLinks $node ] == [[getNodeType $node].maxLinks] } {
+    foreach node_id "$lnode1 $lnode2" {
+	set type [getNodeType $node_id]
+	if { $type == "pseudo" } {
+	    return
+	}
+
+	if { [info procs $type.maxLinks] != "" } {
+	    if { [ numOfLinks $node_id ] == [$type.maxLinks] } {
 		tk_dialog .dialog1 "IMUNES warning" \
-		   "Warning: Maximum links connected to the node $node" \
+		   "Warning: Maximum links connected to the node $node_id" \
 		   info 0 Dismiss
 		return
 	    }
@@ -968,38 +973,32 @@ proc newLink { lnode1 lnode2 } {
     return $link_id
 }
 
-#****f* linkcfg.tcl/linkByIfc
-# NAME
-#   linkByIfg -- get link by interface
-# SYNOPSIS
-#   set link [linkByIfc $node $fc]
-# FUNCTION
-#   Returns the link id of the link connecting the node's interface.
-# INPUTS
-#   * node -- node id
-#   * iface -- interface
-# RESULT
-#   * link -- link id.
-#****
-proc linkByIfc { node iface } {
-    set peer [getIfcPeer $node $iface]
-    foreach link [getFromRunning "link_list"] {
-	set endpoints [getLinkPeers $link]
-	if { $endpoints == "$node $peer" } {
-	    set dir downstream
-	    break
-	}
-	if { $endpoints == "$peer $node" } {
-	    set dir upstream
-	    break
-	}
-    }
-
-    return [list $link $dir]
-}
-
 proc getLinkPeers { link_id } {
     return [cfgGet "links" $link_id "peers"]
+}
+
+#****f* linkcfg.tcl/linkDirection
+# NAME
+#   linkByIfg -- get direction of link in regards to the node's interface
+# SYNOPSIS
+#   set link [linkDirection $node_id $iface]
+# FUNCTION
+#   Returns the direction of the link connecting the node's interface.
+# INPUTS
+#   * node_id -- node id
+#   * iface -- interface
+# RESULT
+#   * direction -- upstream/downstream
+#****
+proc linkDirection { node_id iface } {
+    set link_id [getIfcLink $node_id $iface]
+
+    set direction upstream
+    if { $node_id == [lindex [getLinkPeers $link_id] 0] } {
+	set direction downstream
+    }
+
+    return $direction
 }
 
 proc setLinkPeers { link_id peers } {
