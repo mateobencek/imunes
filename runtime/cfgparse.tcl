@@ -143,6 +143,7 @@ proc loadCfgLegacy { cfg } {
 			    cfgUnset $dict_object $object $field
 			    lassign $value iface peer
 			    cfgSet $dict_object $object "ifaces" $iface "peer" $peer
+			    cfgSet $dict_object $object "ifaces" $iface "peer_iface" $iface
 			    lappend $object "interface-peer {$value}"
 			}
 			external-ifcs {
@@ -576,7 +577,8 @@ proc loadCfgLegacy { cfg } {
 			}
 			docker-attach {
 			    cfgUnset $dict_object $object $field
-			    cfgSet $dict_object $object "docker_attach" $value
+			    set docker_enable_str [string map {false "" true 1} $value]
+			    cfgSet $dict_object $object "docker_attach" $docker_enable_str
 			    lappend $object "docker-attach $value"
 			}
 			# for backwards compatibility
@@ -620,19 +622,16 @@ proc loadCfgLegacy { cfg } {
 				dict for {iface if_value} [cfgGet "nodes" $node "ifaces"] {
 				    if { [dictGet $if_value "peer"] == "$other_node" } {
 					lappend ifaces $iface
+					cfgUnset "nodes" $node "ifaces" $iface "peer"
+					cfgUnset "nodes" $node "ifaces" $iface "peer_iface"
+					cfgSet "nodes" $node "ifaces" $iface "link" $object
+
 					break
 				    }
 				}
 			    }
 
 			    cfgSet $dict_object $object "peers_ifaces" $ifaces
-
-			    foreach node $value iface $ifaces {
-				set other_node [removeFromList $value $node]
-				set other_iface [removeFromList $ifaces $iface]
-				cfgSet "nodes" $node "ifaces" $iface "peer" $other_node
-				cfgSet "nodes" $node "ifaces" $iface "peer-iface" $other_iface
-			    }
 			}
 			mirror {
 			    lappend $object "mirror $value"

@@ -1808,7 +1808,7 @@ proc configGUI_attachDockerToExt { wi node } {
     global guielements docker_enable
     lappend guielements configGUI_attachDockerToExt
 
-    set docker_enable [string map {true 1 false 0} [getNodeDockerAttach $node]]
+    set docker_enable [string map {"" 0 true 1} [getNodeDockerAttach $node]]
 
     set w $wi.docker
     ttk::frame $w -relief groove -borderwidth 2 -padding 2
@@ -2667,7 +2667,8 @@ proc configGUI_servicesConfigApply { wi node } {
 #****
 proc configGUI_attachDockerToExtApply { wi node } {
     global docker_enable
-    set docker_enable_str [string map {0 false 1 true} $docker_enable]
+
+    set docker_enable_str [string map {0 "" 1 true} $docker_enable]
     if { [getFromRunning "oper_mode"] == "edit"} {
 	if { [getNodeDockerAttach $node] != $docker_enable_str } {
 	    setNodeDockerAttach $node $docker_enable_str
