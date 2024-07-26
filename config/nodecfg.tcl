@@ -2768,3 +2768,35 @@ proc pseudo.layer {} {
 #****
 proc pseudo.virtlayer {} {
 }
+
+proc newIface { node_id type auto_config { stolen_iface "" } } {
+    set node_type [getNodeType $node_id]
+    switch -exact -- $type {
+	"phys" {
+	    set prefix [$node_type.ifcName $node_id ""]
+	}
+	"stolen" {
+	    set prefix $stolen_iface
+	}
+    }
+
+    set ifaces {}
+    foreach iface [ifcList $node_id] {
+	if { [getIfcType $node_id $iface] == $type } {
+	    lappend ifaces $iface
+	}
+    }
+
+    set new_iface [newObjectIdAlt $ifaces $prefix]
+
+    setIfcType $node_id $new_iface $type
+    if { $type == "stolen" } {
+	setIfcStolenIfc $node_id $new_iface $stolen_iface
+    }
+
+    if { $auto_config } {
+	$node_type.confNewIfc $node_id $new_iface
+    }
+
+    return $new_iface
+}

@@ -968,6 +968,18 @@ proc newLink { lnode1 lnode2 } {
 proc newLinkWithIfaces { lnode1 iface1 lnode2 iface2 } {
     global defEthBandwidth defSerBandwidth defSerDelay
 
+    set config_iface1 0
+    if { $iface1 == "" } {
+	set config_iface1 1
+	set iface1 [newIface $lnode1 "phys" 0]
+    }
+
+    set config_iface2 0
+    if { $iface2 == "" } {
+	set config_iface2 1
+	set iface2 [newIface $lnode2 "phys" 0]
+    }
+
     foreach node_id "$lnode1 $lnode2" iface "$iface1 $iface2" {
 	# iface already connected to a link
 	if { [getNodeIface $node_id $iface] == "" } {
@@ -999,6 +1011,7 @@ proc newLinkWithIfaces { lnode1 iface1 lnode2 iface2 } {
 		tk_dialog .dialog1 "IMUNES warning" \
 		   "Warning: Maximum links connected to the node $node_id" \
 		   info 0 Dismiss
+
 		return
 	    }
 	}
@@ -1025,10 +1038,11 @@ proc newLinkWithIfaces { lnode1 iface1 lnode2 iface2 } {
     }
     lappendToRunning "link_list" $link_id
 
-    if { [info procs [getNodeType $lnode1].confNewIfc] != "" } {
+    if { $config_iface1 && [info procs [getNodeType $lnode1].confNewIfc] != "" } {
 	[getNodeType $lnode1].confNewIfc $lnode1 $iface1
     }
-    if { [info procs [getNodeType $lnode2].confNewIfc] != "" } {
+
+    if { $config_iface2 && [info procs [getNodeType $lnode2].confNewIfc] != "" } {
 	[getNodeType $lnode2].confNewIfc $lnode2 $iface2
     }
 
