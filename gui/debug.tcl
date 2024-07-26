@@ -155,7 +155,6 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/nodes/pc.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/rj45.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/router.tcl"
-    source "$ROOTDIR/$LIBDIR/nodes/static.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/stpswitch.tcl"
     source "$ROOTDIR/$LIBDIR/nodes/wlan.tcl"
 

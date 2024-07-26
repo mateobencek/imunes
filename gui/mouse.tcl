@@ -636,6 +636,56 @@ proc button3node { c x y } {
     }
 
     #
+    # Connect interface - can be between different canvases
+    #
+    .button3menu.connect_iface delete 0 end
+    if { $oper_mode == "edit" && $type != "pseudo" } {
+	.button3menu add cascade -label "Connect interface" \
+	    -menu .button3menu.connect_iface
+    }
+
+    foreach my_iface [ifcList $node_id] {
+	if { [getIfcLink $node_id $my_iface] != "" } {
+	    continue
+	}
+
+	destroy .button3menu.connect_iface.$my_iface
+	menu .button3menu.connect_iface.$my_iface -tearoff 0
+	.button3menu.connect_iface add cascade -label $my_iface \
+	    -menu .button3menu.connect_iface.$my_iface
+
+	foreach canvas_id $canvas_list {
+	    destroy .button3menu.connect_iface.$my_iface.$canvas_id
+	    menu .button3menu.connect_iface.$my_iface.$canvas_id -tearoff 0
+	    .button3menu.connect_iface.$my_iface add cascade -label [getCanvasName $canvas_id] \
+		-menu .button3menu.connect_iface.$my_iface.$canvas_id
+	}
+
+	# skip current node (for now)
+	foreach peer_node [removeFromList [getFromRunning "node_list"] $node_id] {
+	    set canvas_id [getNodeCanvas $peer_node]
+	    if { [getNodeType $peer_node] != "pseudo" } {
+		destroy .button3menu.connect_iface.$my_iface.$canvas_id.$peer_node
+		menu .button3menu.connect_iface.$my_iface.$canvas_id.$peer_node -tearoff 0
+		.button3menu.connect_iface.$my_iface.$canvas_id add cascade -label [getNodeName $peer_node] \
+		    -menu .button3menu.connect_iface.$my_iface.$canvas_id.$peer_node
+
+		.button3menu.connect_iface.$my_iface.$canvas_id.$peer_node add command \
+		    -label "Create new interface" \
+		    -command "newLinkWithIfacesGUI $node_id $my_iface $peer_node {}"
+
+		foreach peer_iface [ifcList $peer_node] {
+		    if { [getIfcLink $peer_node $peer_iface] == "" } {
+			.button3menu.connect_iface.$my_iface.$canvas_id.$peer_node add command \
+			    -label $peer_iface \
+			    -command "newLinkWithIfacesGUI $node_id $my_iface $peer_node $peer_iface"
+		    }
+		}
+	    }
+	}
+    }
+
+    #
     # Move to another canvas
     #
     .button3menu.moveto delete 0 end

@@ -107,24 +107,16 @@ proc linkByPeers { node1 node2 } {
 #****
 proc removeLink { link_id } {
     set pnodes [getLinkPeers $link_id]
+
+    # move to removeIfaces procedure
     foreach node_id $pnodes iface [getLinkPeersIfaces $link_id] {
 	if { [getNodeType $node_id] in "extelem" } {
 	    cfgUnset "nodes" $node_id "ifaces" $iface
 	    continue
 	}
 
-	set ipv4_used_list [getFromRunning "ipv4_used_list"]
-	foreach addr [getIfcIPv4addrs $node_id $iface] {
-	    set ipv4_used_list [removeFromList $ipv4_used_list $addr]
-	}
-	setToRunning "ipv4_used_list" $ipv4_used_list
-
-	set ipv6_used_list [getFromRunning "ipv6_used_list"]
-	foreach addr [getIfcIPv6addrs $node_id $iface] {
-	    set ipv6_used_list [removeFromList $ipv6_used_list $addr]
-	}
-	setToRunning "ipv6_used_list" $ipv6_used_list
-
+	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addr $node_id $iface]]
+	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addr $node_id $iface]]
 	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $node_id $iface]]
 
 	cfgUnset "nodes" $node_id "ifaces" $iface
@@ -146,6 +138,7 @@ proc removeLink { link_id } {
 	removeLink $mirror_link_id
     }
 
+    # move to removeIfaces procedure
     foreach node_id $pnodes {
 	if { [getNodeType $node_id] == "pseudo" } {
 	    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
@@ -857,10 +850,9 @@ proc mergeLink { link_id } {
     setLinkPeers $link_id "$orig_node1 $orig_node2"
     setLinkPeersIfaces $link_id "$orig_node1_iface $orig_node2_iface"
 
-    foreach pseudo_node_id "$pseudo_node1 $pseudo_node2" {
-	setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $pseudo_node_id]
-	cfgUnset "nodes" $pseudo_node_id
-    }
+    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] "$pseudo_node1 $pseudo_node2"]
+    cfgUnset "nodes" $pseudo_node1
+    cfgUnset "nodes" $pseudo_node2
 
     setToRunning "link_list" [removeFromList [getFromRunning "link_list"] $mirror_link_id]
     cfgUnset "links" $mirror_link_id
@@ -968,6 +960,76 @@ proc newLink { lnode1 lnode2 } {
     }
     if { [info procs [getNodeType $lnode2].confNewIfc] != "" } {
 	[getNodeType $lnode2].confNewIfc $lnode2 $ifname2
+    }
+
+    return $link_id
+}
+
+proc newLinkWithIfaces { lnode1 iface1 lnode2 iface2 } {
+    global defEthBandwidth defSerBandwidth defSerDelay
+
+    foreach node_id "$lnode1 $lnode2" iface "$iface1 $iface2" {
+	# iface already connected to a link
+	if { [getNodeIface $node_id $iface] == "" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES warning" \
+		"Warning: Interface '$iface' on node '$node_id' does not exist" \
+		info 0 Dismiss
+
+	    return
+	}
+
+	if { [getIfcLink $node_id $iface] != "" } {
+	    after idle {.dialog1.msg configure -wraplength 4i}
+	    tk_dialog .dialog1 "IMUNES warning" \
+		"Warning: Interface $iface already connected to a link" \
+		info 0 Dismiss
+
+	    return
+	}
+
+	set type [getNodeType $node_id]
+	if { $type == "pseudo" } {
+	    return
+	}
+
+	if { [info procs $type.maxLinks] != "" } {
+	    if { [ numOfLinks $node_id ] == [$type.maxLinks] } {
+		after idle {.dialog1.msg configure -wraplength 4i}
+		tk_dialog .dialog1 "IMUNES warning" \
+		   "Warning: Maximum links connected to the node $node_id" \
+		   info 0 Dismiss
+		return
+	    }
+	}
+    }
+
+    set link_id [newObjectId "link"]
+
+    setIfcLink $lnode1 $iface1 $link_id
+    setIfcLink $lnode2 $iface2 $link_id
+
+    setLinkPeers $link_id "$lnode1 $lnode2"
+    setLinkPeersIfaces $link_id "$iface1 $iface2"
+    if { ([getNodeType $lnode1] == "lanswitch" || \
+	[getNodeType $lnode2] == "lanswitch" || \
+	[string first eth "$iface1 $iface2"] != -1) && \
+	[getNodeType $lnode1] != "rj45" && \
+	[getNodeType $lnode2] != "rj45" &&
+	$defEthBandwidth != 0 } {
+
+	setLinkBandwidth $link_id $defEthBandwidth
+    } elseif { [string first ser "$iface1 $iface2"] != -1 } {
+	setLinkBandwidth $link_id $defSerBandwidth
+	setLinkDelay $link_id $defSerDelay
+    }
+    lappendToRunning "link_list" $link_id
+
+    if { [info procs [getNodeType $lnode1].confNewIfc] != "" } {
+	[getNodeType $lnode1].confNewIfc $lnode1 $iface1
+    }
+    if { [info procs [getNodeType $lnode2].confNewIfc] != "" } {
+	[getNodeType $lnode2].confNewIfc $lnode2 $iface2
     }
 
     return $link_id

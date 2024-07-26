@@ -1103,6 +1103,7 @@ proc getDefaultGateways { node_id subnet_gws nodes_l2data } {
 	if { $peer_node == "" } {
 	    continue
 	}
+
 	lassign [getSubnetData $peer_node $peer_ifc \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -1153,12 +1154,13 @@ proc getSubnetData { this_node_id this_ifc subnet_gws nodes_l2data subnet_idx } 
 
     dict set nodes_l2data $this_node_id $this_ifc $subnet_idx
 
-    if { [[getNodeType $this_node_id].layer] == "NETWORK" } {
-	if { [getNodeType $this_node_id] in "router extnat" } {
+    set this_type [getNodeType $this_node_id]
+    if { [$this_type.layer] == "NETWORK" } {
+	if { $this_type in "router extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
 	    set gw4 [lindex [split [getIfcIPv4addr $this_node_id $this_ifc] /] 0]
 	    set gw6 [lindex [split [getIfcIPv6addr $this_node_id $this_ifc] /] 0]
-	    lappend my_gws [getNodeType $this_node_id]|$gw4|$gw6
+	    lappend my_gws $this_type|$gw4|$gw6
 	    lset subnet_gws $subnet_idx $my_gws
 	}
 
@@ -1182,6 +1184,7 @@ proc getSubnetData { this_node_id this_ifc subnet_gws nodes_l2data subnet_idx } 
 	if { $peer_node == "" } {
 	    continue
 	}
+
 	lassign [getSubnetData $peer_node $peer_ifc \
 	  $subnet_gws $nodes_l2data $subnet_idx] \
 	  subnet_gws nodes_l2data
@@ -1707,12 +1710,18 @@ proc allIfcList { node_id } {
 proc logicalPeerByIfc { node_id iface } {
     set link_id [getIfcLink $node_id $iface]
     set mirror_link_id [getLinkMirror $link_id]
+
+    set peer_id ""
+    set peer_iface ""
     if { $mirror_link_id != "" } {
 	set peer_id [lindex [getLinkPeers $mirror_link_id] 1]
 	set peer_iface [lindex [getLinkPeersIfaces $mirror_link_id] 1]
     } else {
-	set peer_id [removeFromList [getLinkPeers $link_id] $node_id]
-	set peer_iface [removeFromList [getLinkPeersIfaces $link_id] $iface]
+	foreach peer_id [getLinkPeers $link_id] peer_iface [getLinkPeersIfaces $link_id] {
+	    if { $peer_id != $node_id } {
+		break
+	    }
+	}
     }
 
     return "$peer_id $peer_iface"
@@ -2461,6 +2470,25 @@ proc getNodeDockerAttach { node_id } {
 #****
 proc setNodeDockerAttach { node_id state } {
     cfgSet "nodes" $node_id "docker_attach" $state
+}
+
+proc getNodeIface { node_id iface } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
+    }
+
+    return [cfgGet "nodes" $node_id $group $iface]
+}
+
+# is this needed?
+proc setNodeIface { node_id iface new_iface } {
+    set group "ifaces"
+    if { $iface in [dict keys [cfgGet "nodes" $node_id "logifaces"]] } {
+	set group "logifaces"
+    }
+
+    cfgSet "nodes" $node_id $group $iface $new_iface
 }
 
 #****f* nodecfg.tcl/nodeCfggenIfcIPv4
