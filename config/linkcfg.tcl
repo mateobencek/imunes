@@ -105,11 +105,20 @@ proc linkByPeers { node1 node2 } {
 # INPUTS
 #   * link_id -- link id
 #****
-proc removeLink { link_id } {
-    set pnodes [getLinkPeers $link_id]
+proc removeLink { link_id { keep_ifaces 0 } } {
+    # direct links handling in edit/exec mode?
+    if { [getLinkDirect $link_id] && [getFromRunning "oper_mode"] == "exec" } {
+	set keep_ifaces 0
+    }
 
     # move to removeIfaces procedure
+    set pnodes [getLinkPeers $link_id]
     foreach node_id $pnodes iface [getLinkPeersIfaces $link_id] {
+	if { $keep_ifaces } {
+	    cfgUnset "nodes" $node_id "ifaces" $iface "link"
+	    continue
+	}
+
 	if { [getNodeType $node_id] in "extelem" } {
 	    cfgUnset "nodes" $node_id "ifaces" $iface
 	    continue

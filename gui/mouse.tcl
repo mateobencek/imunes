@@ -41,7 +41,7 @@ proc animateCursor {} {
 #     of a composed, non-atomic action (relevant for updating log
 #     for undo).
 #****
-proc removeLinkGUI { link_id atomic } {
+proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
     global changed
 
     # this data needs to be fetched before we removeLink
@@ -57,7 +57,7 @@ proc removeLinkGUI { link_id atomic } {
 	return
     }
 
-    removeLink $link_id
+    removeLink $link_id $keep_ifaces
     .panwin.f1.c delete $link_id
 
     if { $mirror_link_id != "" } {
@@ -71,6 +71,10 @@ proc removeLinkGUI { link_id atomic } {
 
     if { $atomic == "atomic" } {
 	set changed 1
+	if { $keep_ifaces } {
+	    redrawAll
+	}
+
 	updateUndoLog
     }
 }
@@ -384,6 +388,17 @@ proc button3link { c x y } {
 	    -command "removeLinkGUI $link_id atomic"
     } else {
 	.button3menu add command -label "Delete" \
+	    -state disabled
+    }
+
+    #
+    # Delete link (keep ifaces)
+    #
+    if { $oper_mode != "exec" } {
+	.button3menu add command -label "Delete (keep_ifaces)" \
+	    -command "removeLinkGUI $link_id atomic 1"
+    } else {
+	.button3menu add command -label "Delete (keep_ifaces)" \
 	    -state disabled
     }
 
