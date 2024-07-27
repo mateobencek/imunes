@@ -170,8 +170,8 @@ proc paste {} {
 	set new_node_id $node_map($node_orig)
 
 	foreach iface [ifcList $new_node_id] {
-	    set new_peer_id $node_map([getIfcPeer $new_node_id $iface])
-	    cfgSet "nodes" $new_node_id "ifaces" $iface "peer" $new_peer_id
+	    #set new_peer_id $node_map([getIfcPeer $new_node_id $iface])
+	    #cfgSet "nodes" $new_node_id "ifaces" $iface "peer" $new_link_id
 
 	    if { $cutNodes == 0 } {
 		autoMACaddr $new_node_id $iface
@@ -201,6 +201,10 @@ proc paste {} {
 	set old_peers [getLinkPeers $new_link_id]
 	set new_peers \
 	    "$node_map([lindex $old_peers 0]) $node_map([lindex $old_peers 1])"
+
+	foreach node_id $new_peers iface [getLinkPeersIfaces $new_link_id] {
+	    cfgSet "nodes" $node_id "ifaces" $iface "link" $new_link_id
+	}
 
 	cfgSet "links" $new_link_id "peers" $new_peers
     }

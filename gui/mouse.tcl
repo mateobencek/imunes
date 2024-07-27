@@ -1970,10 +1970,9 @@ proc changeAddressRange {} {
 	foreach node_id $element {
 	    set autorenumber_nodes ""
 	    foreach iface [ifcList $node_id] {
-		set link_id [getIfcLink $node_id $iface]
-		set peer [removeFromList [getLinkPeers $link_id] $node_id]
+		lassign [logicalPeerByIfc $node_id $iface] peer peer_iface
 		if { $peer != "" && [[getNodeType $peer].layer] != "LINK" && $peer in $selected_nodes } {
-		    lappend autorenumber_nodes "$peer [removeFromList [getLinkPeersIfaces $link_id] $iface]"
+		    lappend autorenumber_nodes "$peer $peer_iface"
 		}
 	    }
 
@@ -1999,8 +1998,8 @@ proc changeAddressRange {} {
     foreach node_id $selected_nodes {
 	if { [[getNodeType $node_id].layer] != "LINK" } {
 	    foreach iface [ifcList $node_id] {
-		set peer [getIfcPeer $node_id $iface]
-		if { $peer != "" && [[getNodeType $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
+		lassign [logicalPeerByIfc $node_id $iface] peer peer_iface
+		if { $peer != "" && [[getNodeType $peer].layer] != "LINK" && $peer in $selected_nodes } {
 		    lappend autorenumber_ifcs "$node_id $iface"
 		    if { [lsearch $autorenumber_nodes $node_id] == -1 } {
 			lappend autorenumber_nodes $node_id
@@ -2019,7 +2018,7 @@ proc changeAddressRange {} {
     # assign IP addresses to interfaces not connected to L2 nodes
     foreach el $autorenumber_ifcs {
 	lassign $el node_id iface
-	set peer [getIfcPeer $node_id $iface]
+	lassign [logicalPeerByIfc $node_id $iface] peer peer_iface
 	if { [lsearch $autorenumber_nodes $node_id] < [lsearch $autorenumber_nodes $peer] } {
 	    set changeAddrRange 1
 	}
@@ -2089,10 +2088,9 @@ proc changeAddressRange6 {} {
 	foreach node_id $element {
 	    set autorenumber_nodes ""
 	    foreach iface [ifcList $node_id] {
-		set link_id [getIfcLink $node_id $iface]
-		set peer [removeFromList [getLinkPeers $link_id] $node_id]
+		lassign [logicalPeerByIfc $node_id $iface] peer peer_iface
 		if { $peer != "" && [[getNodeType $peer].layer] != "LINK" && $peer in $selected_nodes } {
-		    lappend autorenumber_nodes "$peer [removeFromList [getLinkPeersIfaces $link_id] $iface]"
+		    lappend autorenumber_nodes "$peer $peer_iface"
 		}
 	    }
 
@@ -2118,8 +2116,8 @@ proc changeAddressRange6 {} {
     foreach node_id $selected_nodes {
 	if { [[getNodeType $node_id].layer] != "LINK" } {
 	    foreach iface [ifcList $node_id] {
-		set peer [getIfcPeer $node_id $iface]
-		if { $peer != "" && [[getNodeType $peer].layer] != "LINK" && [lsearch $selected_nodes $peer] != -1 } {
+		lassign [logicalPeerByIfc $node_id $iface] peer peer_iface
+		if { $peer != "" && [[getNodeType $peer].layer] != "LINK" && $peer in $selected_nodes } {
 		    lappend autorenumber_ifcs "$node_id $iface"
 		    if { [lsearch $autorenumber_nodes $node_id] == -1 } {
 			lappend autorenumber_nodes $node_id
@@ -2138,7 +2136,7 @@ proc changeAddressRange6 {} {
     # assign IP addresses to interfaces not connected to L2 nodes
     foreach el $autorenumber_ifcs {
 	lassign $el node_id iface
-	set peer [getIfcPeer $node_id $iface]
+	lassign [logicalPeerByIfc $node_id $iface] peer peer_iface
 	if { [lsearch $autorenumber_nodes $node_id] < [lsearch $autorenumber_nodes $peer] } {
 	    set changeAddrRange6 1
 	}

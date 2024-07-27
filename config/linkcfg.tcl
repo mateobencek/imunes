@@ -884,8 +884,8 @@ proc mergeLink { link_id } {
 proc numOfLinks { node_id } {
     set num 0
     foreach {iface iface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
-	catch { dict get $iface_cfg "peer" } peer
-	if { $peer != "" } {
+	catch { dictGet $iface_cfg "link" } link_id
+	if { $link_id != "" } {
 	    incr num
 	}
     }
