@@ -63,7 +63,7 @@ proc updateUndoLog {} {
 	    .menubar.edit entryconfigure "Undo" -state normal
 	}
 
-	setToUndolog $undolevel
+	saveToUndoLevel $undolevel
 	setToRunning "redolevel" $undolevel
 	set changed 0
 	# When some changes are made in the topology, new /etc/hosts files
@@ -85,9 +85,6 @@ proc updateUndoLog {} {
 #   configuration. Reduces the value of undolevel.
 #****
 proc undo {} {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
-
     set undolevel [getFromRunning "undolevel"]
 
     if { [getFromRunning "oper_mode"] == "edit" && $undolevel > 0} {
@@ -99,11 +96,7 @@ proc undo {} {
 
 	.panwin.f1.c config -cursor watch
 
-	set dict_cfg [getFromUndolog $undolevel]
-	setToRunning "canvas_list" [getCanvasList]
-	setToRunning "node_list" [getNodeList]
-	setToRunning "link_list" [getLinkList]
-	setToRunning "annotation_list" [getAnnotationList]
+	jumpToUndoLevel $undolevel
 	switchCanvas none
     }
 }
@@ -120,9 +113,6 @@ proc undo {} {
 #   of undolevel.
 #****
 proc redo {} {
-    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
-    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
-
     set undolevel [getFromRunning "undolevel"]
     set redolevel [getFromRunning "redolevel"]
 
@@ -137,11 +127,7 @@ proc redo {} {
 
 	.panwin.f1.c config -cursor watch
 
-	set dict_cfg [getFromUndolog $undolevel]
-	setToRunning "canvas_list" [getCanvasList]
-	setToRunning "node_list" [getNodeList]
-	setToRunning "link_list" [getLinkList]
-	setToRunning "annotation_list" [getAnnotationList]
+	jumpToUndoLevel $undolevel
 	switchCanvas none
     }
 }

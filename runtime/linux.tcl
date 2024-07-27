@@ -527,7 +527,7 @@ proc createNodeContainer { node } {
     set node_id "[getFromRunning "eid"].$node"
 
     set network "none"
-    if { [getNodeDockerAttach $node] } {
+    if { [getNodeDockerAttach $node] == 1 } {
 	set network "bridge"
     }
 
@@ -697,7 +697,7 @@ proc createNodeLogIfcs { node } {
     }
 
     # docker interface is created before other ones, so let's rename it to something that's not used by IMUNES
-    if { [getNodeDockerAttach $node] } {
+    if { [getNodeDockerAttach $node] == 1 } {
 	set cmds "ip r save > /tmp/routes"
 	set cmds "$cmds ; ip l set eth0 down"
 	set cmds "$cmds ; ip l set eth0 name docker0"

@@ -913,8 +913,8 @@ proc loadCfgLegacy { cfg } {
 	# Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering
 	# used addresses in lists.
 	foreach iface [ifcList $node] {
-	    set addr [getIfcIPv6addr $node $iface]
-	    if { $addr != "" } { lappend ipv6_used_list [ip::contract [ip::prefix $addr]] }
+	    lassign [split [getIfcIPv6addr $node $iface] "/"] addr mask
+	    if { $addr != "" } { lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask" }
 	    set addr [getIfcIPv4addr $node $iface]
 	    if { $addr != "" } { lappend ipv4_used_list $addr }
 	    set addr [getIfcMACaddr $node $iface]
@@ -991,8 +991,8 @@ proc loadCfgJson { json_cfg } {
     set mac_used_list {}
     foreach node_id [getFromRunning "node_list"] {
 	foreach iface [ifcList $node_id] {
-	    set addr [getIfcIPv6addr $node_id $iface]
-	    if { $addr != "" } { lappend ipv6_used_list [ip::contract [ip::prefix $addr]] }
+	    lassign [split [getIfcIPv6addr $node_id $iface] "/"] addr mask
+	    if { $addr != "" } { lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask" }
 	    set addr [getIfcIPv4addr $node_id $iface]
 	    if { $addr != "" } { lappend ipv4_used_list $addr }
 	    lappend mac_used_list [getIfcMACaddr $node_id $iface]
@@ -1248,13 +1248,22 @@ proc lappendToRunning { key value } {
     return $dict_run
 }
 
-proc getFromUndolog { undolevel } {
+proc jumpToUndoLevel { undolevel } {
+    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
     upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
 
-    return [dictGet $dict_run "undolog" $undolevel]
+    foreach list_var "canvas_list node_list link_list annotation_list image_list \
+	mac_used_list ipv4_used_list ipv6_used_list" {
+
+	setToRunning $list_var [dictGet $dict_run "undolog" $undolevel $list_var]
+    }
+
+    set dict_cfg [dictGet $dict_run "undolog" $undolevel "config"]
+
+    return $dict_cfg
 }
 
-proc setToUndolog { undolevel { value "" } } {
+proc saveToUndoLevel { undolevel { value "" } } {
     upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
@@ -1262,7 +1271,12 @@ proc setToUndolog { undolevel { value "" } } {
 	set value $dict_cfg
     }
 
-    set dict_run [dictSet $dict_run "undolog" $undolevel $value]
+    foreach list_var "canvas_list node_list link_list annotation_list image_list \
+	mac_used_list ipv4_used_list ipv6_used_list" {
+
+	set dict_run [dictSet $dict_run "undolog" $undolevel $list_var [getFromRunning $list_var]]
+    }
+    set dict_run [dictSet $dict_run "undolog" $undolevel "config" $value]
 
     return $dict_run
 }

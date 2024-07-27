@@ -845,9 +845,9 @@ proc configGUI_physicalInterfaces { wi node ifc } {
 	}
 
 	# move to removeIfaces procedure
-	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addr $curnode $ifc]]
-	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addr $curnode $ifc]]
-	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $curnode $ifc]]
+	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] [getIfcIPv4addr $curnode $ifc] 1]
+	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] [getIfcIPv6addr $curnode $ifc] 1]
+	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] [getIfcMACaddr $curnode $ifc] 1]
 
 	cfgUnset "nodes" $curnode "ifaces" $ifc
 
@@ -1071,8 +1071,8 @@ proc configGUI_applyButtonNode { wi node phase } {
 	    }
 	} elseif { $nbook == -1 && $treecolumns != "" } {
 	    configGUI_refreshIfcsTree .popup.panwin.f1.tree $node
-	} else {
 	}
+
 	redrawAll
 	updateUndoLog
     }
@@ -1316,6 +1316,7 @@ proc configGUI_ifcQueueConfig { wi node ifc } {
 #****
 proc configGUI_ifcMACAddress { wi node ifc } {
     global guielements
+
     lappend guielements "configGUI_ifcMACAddress $ifc"
     ttk::frame $wi.if$ifc.mac -borderwidth 2
     ttk::label $wi.if$ifc.mac.txt -text "MAC address " -anchor w
@@ -1341,6 +1342,7 @@ proc configGUI_ifcMACAddress { wi node ifc } {
 #****
 proc configGUI_ifcIPv4Address { wi node ifc } {
     global guielements
+
     lappend guielements "configGUI_ifcIPv4Address $ifc"
     ttk::frame $wi.if$ifc.ipv4 -borderwidth 2
     ttk::label $wi.if$ifc.ipv4.txt -text "IPv4 addresses " -anchor w
@@ -1371,6 +1373,7 @@ proc configGUI_ifcIPv4Address { wi node ifc } {
 #****
 proc configGUI_ifcIPv6Address { wi node ifc } {
     global guielements
+
     lappend guielements "configGUI_ifcIPv6Address $ifc"
     ttk::frame $wi.if$ifc.ipv6 -borderwidth 2
     ttk::label $wi.if$ifc.ipv6.txt -text "IPv6 addresses " -anchor w
@@ -2236,6 +2239,10 @@ proc configGUI_ifcMACAddressApply { wi node ifc } {
 	    setIfcMACaddr $node $ifc $macaddr
 	}
 	set changed 1
+
+	# replace old address in used_list with the new one
+	setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] $oldmacaddr 1]
+	lappendToRunning "mac_used_list" $macaddr
     }
 }
 
@@ -2268,6 +2275,10 @@ proc configGUI_ifcIPv4AddressApply { wi node ifc } {
 	    setIfcIPv4addrs $node $ifc $ipaddrs
 	}
 	set changed 1
+
+	# replace old address(es) in used_list with the new one(s)
+	setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] $oldipaddrs 1]
+	lappendToRunning "ipv4_used_list" $ipaddrs
     }
 }
 
@@ -2296,10 +2307,14 @@ proc configGUI_ifcIPv6AddressApply { wi node ifc } {
 
     set oldipaddrs [getIfcIPv6addrs $node $ifc]
     if { $ipaddrs != $oldipaddrs } {
-	if {$apply == 1} {
+	if { $apply == 1 } {
 	    setIfcIPv6addrs $node $ifc $ipaddrs
 	}
 	set changed 1
+
+	# replace old address(es) in used_list with the new one(s)
+	setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] $oldipaddrs 1]
+	lappendToRunning "ipv6_used_list" $ipaddrs
     }
 }
 
