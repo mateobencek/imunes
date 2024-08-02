@@ -591,7 +591,7 @@ proc newLinkGUI { lnode1 lnode2 } {
 	return
     }
 
-    if { [getNodeCanvas $lnode1] != [getNodeCanvas $lnode2] } {
+    if { [getNodeCanvas $lnode1] != [getNodeCanvas $lnode2] || $lnode1 == $lnode2 } {
 	lassign [getLinkPeers $link] orig_node1 orig_node2
 	lassign [splitLink $link] new_node1 new_node2
 
@@ -612,7 +612,7 @@ proc newLinkWithIfacesGUI { lnode1 iface1 lnode2 iface2 } {
 	return
     }
 
-    if { [getNodeCanvas $lnode1] != [getNodeCanvas $lnode2] } {
+    if { [getNodeCanvas $lnode1] != [getNodeCanvas $lnode2] || $lnode1 == $lnode2 } {
 	lassign [getLinkPeers $link] orig_node1 orig_node2
 	lassign [splitLink $link] new_node1 new_node2
 

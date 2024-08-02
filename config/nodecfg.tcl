@@ -1785,7 +1785,7 @@ proc hasIPv6Addr { node_id } {
 # INPUTS
 #   * node -- node id
 #****
-proc removeNode { node_id } {
+proc removeNode { node_id { keep_other_ifaces 0 } } {
     global nodeNamingBase
 
     if { [getCustomIcon $node_id] != "" } {
@@ -1793,7 +1793,7 @@ proc removeNode { node_id } {
     }
 
     foreach iface [ifcList $node_id] {
-	removeLink [linkByPeers $node_id [getIfcPeer $node_id $iface]]
+	removeLink [linkByPeers $node_id [getIfcPeer $node_id $iface]] $keep_other_ifaces
     }
 
     setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]

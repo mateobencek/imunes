@@ -144,7 +144,7 @@ proc removeLink { link_id { keep_ifaces 0 } } {
     set mirror_link_id [getLinkMirror $link_id]
     if { $mirror_link_id != "" } {
 	setLinkMirror $mirror_link_id ""
-	removeLink $mirror_link_id
+	removeLink $mirror_link_id $keep_ifaces
     }
 
     # move to removeIfaces procedure
@@ -809,8 +809,8 @@ proc splitLink { orig_link_id } {
 	setIfcLink $orig_node_id $orig_node_iface $link_id
 
 	# setup new pseudo node properties
-	set other_orig_node_id [removeFromList $orig_nodes $orig_node_id]
-	setNodeMirror $pseudo_node_id [removeFromList $pseudo_nodes $pseudo_node_id]
+	set other_orig_node_id [removeFromList $orig_nodes $orig_node_id 1]
+	setNodeMirror $pseudo_node_id [removeFromList $pseudo_nodes $pseudo_node_id 1]
 	setNodeCanvas $pseudo_node_id [getNodeCanvas $orig_node_id]
 	setNodeCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
 	setNodeLabelCoords $pseudo_node_id [getNodeCoords $other_orig_node_id]
@@ -819,7 +819,7 @@ proc splitLink { orig_link_id } {
 	# setup both link properties
 	setLinkPeers $link_id "$pseudo_node_id $orig_node_id"
 	setLinkPeersIfaces $link_id "0 $orig_node_iface"
-	setLinkMirror $link_id [removeFromList $links $link_id]
+	setLinkMirror $link_id [removeFromList $links $link_id 1]
     }
 
     return $pseudo_nodes
@@ -848,6 +848,10 @@ proc mergeLink { link_id } {
 
     lassign [getLinkPeers $link_id] pseudo_node1 orig_node1
     lassign [getLinkPeers $mirror_link_id] pseudo_node2 orig_node2
+
+    if { $orig_node1 == $orig_node2 } {
+	return
+    }
 
     lassign [getLinkPeersIfaces $link_id] - orig_node1_iface
     lassign [getLinkPeersIfaces $mirror_link_id] - orig_node2_iface
@@ -909,19 +913,6 @@ proc numOfLinks { node_id } {
 #****
 proc newLink { lnode1 lnode2 } {
     global defEthBandwidth defSerBandwidth defSerDelay
-
-    foreach link_id [getFromRunning "link_list"] {
-	lassign [set peers [getLinkPeers $link_id]] node1 node2
-	set mirror_link_id [getLinkMirror $link_id]
-	if { $mirror_link_id != "" } {
-	    # pseudo node is always on index 0
-	    set peers "[lindex [getLinkPeers $mirror_link_id] 1] $node2"
-	}
-
-	if { $lnode1 in $peers && $lnode2 in $peers } {
-	    return
-	}
-    }
 
     foreach node_id "$lnode1 $lnode2" {
 	set type [getNodeType $node_id]
