@@ -638,21 +638,33 @@ proc loadCfgLegacy { cfg } {
 			    lappend $object "delay $value"
 			}
 			jitter-upstream {
+			    cfgUnset $dict_object $object $field
+			    cfgSet $dict_object $object "jitter_upstream" $value
 			    lappend $object "jitter-upstream {$value}"
 			}
 			jitter-upstream-mode {
+			    cfgUnset $dict_object $object $field
+			    cfgSet $dict_object $object "jitter_upstream_mode" $value
 			    lappend $object "jitter-upstream-mode $value"
 			}
 			jitter-upstream-hold {
+			    cfgUnset $dict_object $object $field
+			    cfgSet $dict_object $object "jitter_upstream_hold" $value
 			    lappend $object "jitter-upstream-hold $value"
 			}
 			jitter-downstream {
+			    cfgUnset $dict_object $object $field
+			    cfgSet $dict_object $object "jitter_downstream" $value
 			    lappend $object "jitter-downstream {$value}"
 			}
 			jitter-downstream-mode {
+			    cfgUnset $dict_object $object $field
+			    cfgSet $dict_object $object "jitter_downstream_mode" $value
 			    lappend $object "jitter-downstream-mode $value"
 			}
 			jitter-downstream-hold {
+			    cfgUnset $dict_object $object $field
+			    cfgSet $dict_object $object "jitter_downstream_hold" $value
 			    lappend $object "jitter-downstream-hold $value"
 			}
 			ber {
@@ -1134,7 +1146,7 @@ proc dictSet { dictionary args } {
     try {
 	dict set dictionary {*}$args
     } on error {} {
-	return {}
+	return $dictionary
     } on ok retv {
 	return $retv
     }
@@ -1144,7 +1156,7 @@ proc dictLappend { dictionary args } {
     try {
 	dict lappend dictionary {*}$args
     } on error {} {
-	return {}
+	return $dictionary
     } on ok retv {
 	return $retv
     }
@@ -1288,6 +1300,14 @@ proc setToRunning { key value } {
     upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
 
     set dict_run [dictSet $dict_run $key $value]
+
+    return $dict_run
+}
+
+proc unsetRunning { key } {
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+
+    set dict_run [dictUnset $dict_run $key]
 
     return $dict_run
 }
