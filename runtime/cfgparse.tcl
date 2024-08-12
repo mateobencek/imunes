@@ -1018,7 +1018,7 @@ proc newObjectIdAlt { elem_list prefix } {
 	return ${prefix}0
     }
 
-    return [nextFreeIndex [lsort $elem_list] $prefix]
+    return [nextFreeIndex [lsort -dictionary $elem_list] $prefix]
 }
 
 #########################################################################
