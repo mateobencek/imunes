@@ -461,6 +461,9 @@ proc getSubnetData { this_node_id this_ifc subnet_gws nodes_l2data subnet_idx } 
 	  subnet_gws nodes_l2data
 
 	# this node is done, do nothing else
+	if { $subnet_gws == "" } {
+	    set subnet_gws "{||}"
+	}
 	return [list $subnet_gws $nodes_l2data]
     }
 
