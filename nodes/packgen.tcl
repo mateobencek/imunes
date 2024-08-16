@@ -98,12 +98,12 @@ proc $MODULE.virtlayer {} {
 # FUNCTION
 #   Procedure instantiate creates a new virtaul node
 #   for a given node in imunes.
-#   Procedure packgen.nodeCreate cretaes a new virtual node
+#   Procedure packgen.nodeCreate creates a new virtual node
 #   with all the interfaces and CPU parameters as defined
 #   in imunes.
 # INPUTS
 #   * eid - experiment id
-#   * node_id - id of the node (type of the node is packgen.
+#   * node_id - id of the node
 #****
 
 proc $MODULE.nodeCreate { eid node_id } {
@@ -123,7 +123,7 @@ proc $MODULE.nodeCreate { eid node_id } {
 #   Starts a new packgen. The node can be started if it is instantiated.
 # INPUTS
 #   * eid - experiment id
-#   * node_id - id of the node (type of the node is packgen)
+#   * node_id - id of the node
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
     foreach packet [packgenPackets $node_id] {
@@ -152,7 +152,7 @@ proc $MODULE.nodeConfigure { eid node_id } {
 #   Shutdowns a packgen. Simulates the shutdown proces of a packgen.
 # INPUTS
 #   * eid - experiment id
-#   * node_id - id of the node (type of the node is packgen)
+#   * node_id - id of the node
 #****
 proc $MODULE.nodeShutdown { eid node_id } {
     pipesExec "jexec $eid ngctl msg $node_id: clrdata" "hold"
@@ -172,7 +172,7 @@ proc $MODULE.destroyIfcs { eid node_id ifaces } {
 #   Destroys a packgen. Destroys all the interfaces of the packgen.
 # INPUTS
 #   * eid - experiment id
-#   * node_id - id of the node (type of the node is packgen)
+#   * node_id - id of the node
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
     pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"

@@ -96,12 +96,12 @@ proc $MODULE.virtlayer {} {
 # FUNCTION
 #   Procedure instantiate creates a new virtaul node
 #   for a given node in imunes.
-#   Procedure filter.nodeCreate cretaes a new virtual node
+#   Procedure filter.nodeCreate creates a new virtual node
 #   with all the interfaces and CPU parameters as defined
 #   in imunes.
 # INPUTS
 #   * eid - experiment id
-#   * node_id - id of the node (type of the node is filter).
+#   * node_id - id of the node
 #****
 proc $MODULE.nodeCreate { eid node_id } {
     pipesExec "printf \"
@@ -121,7 +121,7 @@ proc $MODULE.nodeCreate { eid node_id } {
 #   procedure.
 # INPUTS
 #   * eid - experiment id
-#   * node_id - id of the node (type of the node is filter.
+#   * node_id - id of the node
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
     foreach iface [ifcList $node_id] {
@@ -146,7 +146,7 @@ proc $MODULE.nodeConfigure { eid node_id } {
 #   processes.
 # INPUTS
 #   * eid - experiment id
-#   * node_id - id of the node (type of the node is filter.
+#   * node_id - id of the node
 #****
 proc $MODULE.nodeShutdown { eid node_id } {
     foreach iface [ifcList $node_id] {
@@ -170,7 +170,7 @@ proc $MODULE.destroyIfcs { eid node_id ifcs } {
 #   It issues the shutdown command to ngctl.
 # INPUTS
 #   * eid - experiment id
-#   * node_id - id of the node (type of the node is filter.
+#   * node_id - id of the node
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
     pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"

@@ -121,7 +121,7 @@ proc $MODULE.setupNamespace { eid node } {
 proc $MODULE.nodeInitConfigure { eid node } {
     l3node.nodeInitConfigure $eid $node
 
-    enableIPforwarding $eid $node
+    enableIPforwarding $node
 }
 
 proc $MODULE.createIfcs { eid node ifcs } {

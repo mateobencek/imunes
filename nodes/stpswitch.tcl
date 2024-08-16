@@ -330,7 +330,7 @@ proc $MODULE.shellcmds { } {
 # FUNCTION
 #   Procedure instantiate creates a new virtaul node
 #   for a given node in imunes.
-#   Procedure stpswitch.nodeCreate cretaes a new virtual node
+#   Procedure stpswitch.nodeCreate creates a new virtual node
 #   with all the interfaces and CPU parameters as defined
 #   in imunes.
 # INPUTS
