@@ -1020,7 +1020,7 @@ proc removeIface { node_id iface_id } {
     set link_id [getIfcLink $node_id $iface_id]
     if { $link_id != "" } {
 	cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
-	removeLinkGUI $link_id non-atomic 1
+	removeLink $link_id 1
     }
 
     # move to removeIfaces procedure
