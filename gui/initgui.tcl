@@ -97,6 +97,7 @@ set selected ""
 set ns2srcfile ""
 set animatephase 0
 set changed 0
+set force 0
 set badentry 0
 set cursorState 0
 set clock_seconds 0
@@ -864,6 +865,18 @@ menu .menubar.experiment -tearoff 0
 	-command "setOperMode edit" -state disabled
 .menubar.experiment add command -label "Restart" -underline 0 \
 	-command "setOperMode edit; setOperMode exec" -state disabled
+.menubar.experiment add separator
+.menubar.experiment add command -label "Pause auto execution" -underline 1 \
+	-command {
+	    set auto_execution [getFromRunning "auto_execution"]
+	    setToRunning "auto_execution" [expr $auto_execution ^ 1]
+	    if { [getFromRunning "cfg_deployed"] && ! $auto_execution } {
+		undeployCfg
+		deployCfg
+	    }
+
+	    toggleAutoExecutionGUI
+	}
 .menubar.experiment add separator
 .menubar.experiment add command -label "Attach to experiment" -underline 0 \
 	-command "attachToExperimentPopup"

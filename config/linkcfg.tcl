@@ -111,8 +111,8 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	set keep_ifaces 0
     }
 
-    set pnodes [getLinkPeers $link_id]
-    foreach node_id $pnodes iface_id [getLinkPeersIfaces $link_id] {
+    lassign [getLinkPeers $link_id] node1_id node2_id
+    foreach node_id "$node1_id $node2_id" iface_id [getLinkPeersIfaces $link_id] {
 	if { $keep_ifaces } {
 	    cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
 	    continue
@@ -132,7 +132,7 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	removeLink $mirror_link_id $keep_ifaces
     }
 
-    foreach node_id $pnodes {
+    foreach node_id "$node1_id $node2_id" {
 	if { [getNodeType $node_id] == "pseudo" } {
 	    setToRunning "node_list" [removeFromList [getFromRunning "node_list"] $node_id]
 	    cfgUnset "nodes" $node_id

@@ -339,9 +339,11 @@ if { $execMode == "interactive" } {
 
 	namespace eval ::cf::[set curcfg] {}
 	upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 	set dict_cfg [dict create]
 	set dict_run [dict create]
+	set execute_vars [dict create]
 
 	lappendToRunning "cfg_list" $curcfg
 	readCfgJson $currentFileBatch
@@ -362,19 +364,30 @@ if { $execMode == "interactive" } {
 
 	    namespace eval ::cf::[set curcfg] {}
 	    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+	    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 	    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 	    set dict_cfg [dict create]
 	    set dict_run [dict create]
+	    set execute_vars [dict create]
 	    lappendToRunning "cfg_list" $curcfg
 
 	    readCfgJson $configFile
 
 	    setToRunning "eid" $eid_base
-	    undeployCfg $eid_base 1 [getFromRunning "node_list"] "*" [getFromRunning "link_list"] "*" "*" "*"
+
+	    setToExecuteVars "terminate_cfg" [cfgGet]
+	    setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
+	    setToExecuteVars "destroy_nodes_ifaces" "*"
+	    setToExecuteVars "terminate_links" [getFromRunning "link_list"]
+	    setToExecuteVars "unconfigure_links" "*"
+	    setToExecuteVars "unconfigure_nodes_ifaces" "*"
+	    setToExecuteVars "unconfigure_nodes" "*"
+
+	    undeployCfg $eid_base 1
 	} else {
 	    vimageCleanup $eid_base
 	}
 
-	deleteExperimentFiles $eid_base
+	terminate_deleteExperimentFiles $eid_base
     }
 }

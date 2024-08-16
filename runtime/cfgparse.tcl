@@ -69,9 +69,11 @@ proc loadCfgLegacy { cfg } {
     global execMode all_modules_list
 
     upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
     set dict_cfg [dict create]
     set dict_run [dict create]
+    set execute_vars [dict create]
 
     # Cleanup first
     set node_list {}
@@ -1318,6 +1320,43 @@ proc lappendToRunning { key value } {
     set dict_run [dictLappend $dict_run $key $value]
 
     return $dict_run
+}
+
+proc getFromExecuteVars { key { config "" } } {
+    if { $config == "" } {
+	set config [set ::curcfg]
+    }
+    upvar 0 ::cf::${config}::execute_vars execute_vars
+
+    return [dictGet $execute_vars $key]
+}
+
+proc setToExecuteVars { key value } {
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+
+    set execute_vars [dictSet $execute_vars $key $value]
+
+    return $execute_vars
+}
+
+proc unsetExecuteVars { key } {
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+
+    if { $key == "" } {
+	set execute_vars [dictSet $execute_vars {}]
+    } else {
+	set execute_vars [dictUnset $execute_vars $key]
+    }
+
+    return $execute_vars
+}
+
+proc lappendToExecuteVars { key value } {
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+
+    set execute_vars [dictLappend $execute_vars $key $value]
+
+    return $execute_vars
 }
 
 proc jumpToUndoLevel { undolevel } {

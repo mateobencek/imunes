@@ -718,7 +718,7 @@ proc vimageCleanup { eid } {
 	    incr step
 	    displayBatchProgress $step $allVimages
 
-	    [getNodeType $node].shutdown $eid $node
+	    [getNodeType $node].nodeShutdown $eid $node
 	}
 
 	statline ""
@@ -1180,10 +1180,14 @@ proc destroyNamespace { ns } {}
 # INPUTS
 #   * node -- node id
 #****
-proc createNodeLogIfcs { node } {
+proc createNodeLogIfcs { node ifaces } {
     set node_id "[getFromRunning "eid"].$node"
 
-    foreach {liface_id liface_cfg} [cfgGet "nodes" $node_id "ifaces"] {
+    if { $ifaces == "*" } {
+	set ifaces [cfgGet "nodes" $node_id "ifaces"]
+    }
+
+    foreach {liface_id liface_cfg} $ifaces {
 	switch -exact [dictGet $liface_cfg "type"] {
 	    vlan {
 		# physical interfaces are created when creating links, so VLANs
@@ -1241,10 +1245,18 @@ proc isNodeInitNet { node } {
 # INPUTS
 #   * node -- node id
 #****
-proc startIfcsNode { node } {
+proc startIfcsNode { node ifaces } {
     set node_id "[getFromRunning "eid"].$node"
 
-    foreach {iface_id iface_cfg} [concat [cfgGet "nodes" $node "ifaces"] [cfgGet "nodes" $node "ifaces"]] {
+    if { $ifaces == "*" } {
+	set ifaces [concat [cfgGet "nodes" $node "ifaces"] [cfgGet "nodes" $node "ifaces"]]
+    }
+
+    # TODO: check this
+    set ifaces_cfgs [lmap iface_id $ifaces {set iface_id "$iface_id [getNodeIface $node $iface_id]"}]
+    puts "IFACES_CFGS: '$ifacs_cfgs'"
+
+    foreach {iface_id iface_cfg} $ifaces_cfgs {
 	set iface_name [dictGet $iface_cfg "name"]
 	set mtu [dictGet $iface_cfg "mtu"]
 
@@ -1738,25 +1750,25 @@ proc destroyNodeIfaces { eid node ifcs } {
     }
 }
 
-#****f* freebsd.tcl/removeExperimentContainer
+#****f* freebsd.tcl/terminate_removeExperimentContainer
 # NAME
-#   removeExperimentContainer -- remove experiment container
+#   terminate_removeExperimentContainer -- remove experiment container
 # SYNOPSIS
-#   removeExperimentContainer $eid $widget
+#   terminate_removeExperimentContainer $eid $widget
 # FUNCTION
 #   Removes the root jail of the given experiment.
 # INPUTS
 #   * eid -- experiment id
 #   * widget -- status widget
 #****
-proc removeExperimentContainer { eid widget } {
+proc terminate_removeExperimentContainer { eid widget } {
     # Remove the main vimage which contained all other nodes, hopefully we
     # cleaned everything.
     catch "exec jexec $eid kill -9 -1 2> /dev/null"
     exec jail -r $eid
 }
 
-proc removeExperimentFiles { eid widget } {
+proc terminate_removeExperimentFiles { eid widget } {
     global vroot_unionfs execMode
 
     set VROOT_BASE [getVrootDir]
@@ -1792,18 +1804,18 @@ proc removeExperimentFiles { eid widget } {
 }
 
 
-#****f* freebsd.tcl/l2node.nodeInstantiate
+#****f* freebsd.tcl/l2node.nodeCreate
 # NAME
-#   l2node.nodeInstantiate -- nodeInstantiate
+#   l2node.nodeCreate -- nodeCreate
 # SYNOPSIS
-#   l2node.nodeInstantiate $eid $node
+#   l2node.nodeCreate $eid $node
 # FUNCTION
-#   Procedure l2node.nodeInstantiate creates a new netgraph node of the appropriate type.
+#   Procedure l2node.nodeCreate creates a new netgraph node of the appropriate type.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- id of the node (type of the node is either lanswitch or hub)
 #****
-proc l2node.nodeInstantiate { eid node } {
+proc l2node.nodeCreate { eid node } {
     switch -exact [getNodeType $node] {
 	lanswitch {
 	    set ngtype bridge
@@ -1821,11 +1833,11 @@ proc l2node.nodeInstantiate { eid node } {
     pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
 }
 
-#****f* freebsd.tcl/l2node.destroy
+#****f* freebsd.tcl/l2node.nodeDestroy
 # NAME
-#   l2node.destroy -- destroy
+#   l2node.nodeDestroy -- destroy
 # SYNOPSIS
-#   l2node.destroy $eid $node
+#   l2node.nodeDestroy $eid $node
 # FUNCTION
 #   Destroys a l2node (netgraph) node by sending a shutdown
 #   message.
@@ -1833,7 +1845,7 @@ proc l2node.nodeInstantiate { eid node } {
 #   * eid -- experiment id
 #   * node -- id of the node
 #****
-proc l2node.destroy { eid node } {
+proc l2node.nodeDestroy { eid node } {
     pipesExec "jexec $eid ngctl msg $node: shutdown" "hold"
 }
 

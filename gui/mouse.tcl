@@ -44,6 +44,12 @@ proc animateCursor {} {
 proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
     global changed
 
+    if { $atomic == "atomic" } {
+	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	    setToExecuteVars "terminate_cfg" [cfgGet]
+	}
+    }
+
     # this data needs to be fetched before we removeLink
     lassign [getLinkPeers $link_id] node1 node2
     set mirror_link_id [getLinkMirror $link_id]
@@ -70,6 +76,11 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
     }
 
     if { $atomic == "atomic" } {
+	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	    undeployCfg
+	    deployCfg
+	}
+
 	set changed 1
 	if { $keep_ifaces } {
 	    redrawAll
@@ -91,11 +102,24 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 #   * node_id -- node id
 #****
 proc removeNodeGUI { node_id { keep_other_ifaces 0 } } {
-    foreach iface [ifcList $node_id] {
-	removeLinkGUI [linkByPeers $node_id [getIfcPeer $node_id $iface]] non-atomic $keep_other_ifaces
+    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	setToExecuteVars "terminate_cfg" [cfgGet]
+    }
+
+    foreach iface_id [ifcList $node_id] {
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id != "" } {
+	    removeLinkGUI $link_id non-atomic $keep_other_ifaces
+	}
     }
 
     removeNode $node_id $keep_other_ifaces
+
+    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	undeployCfg
+	deployCfg
+    }
+
     .panwin.f1.c delete $node_id
 }
 
@@ -383,24 +407,14 @@ proc button3link { c x y } {
     #
     # Delete link
     #
-    if { $oper_mode != "exec" } {
-	.button3menu add command -label "Delete" \
-	    -command "removeLinkGUI $link_id atomic"
-    } else {
-	.button3menu add command -label "Delete" \
-	    -state disabled
-    }
+    .button3menu add command -label "Delete" \
+	-command "removeLinkGUI $link_id atomic"
 
     #
     # Delete link (keep ifaces)
     #
-    if { $oper_mode != "exec" } {
-	.button3menu add command -label "Delete (keep interfaces)" \
-	    -command "removeLinkGUI $link_id atomic 1"
-    } else {
-	.button3menu add command -label "Delete (keep interfaces)" \
-	    -state disabled
-    }
+    .button3menu add command -label "Delete (keep interfaces)" \
+	-command "removeLinkGUI $link_id atomic 1"
 
     #
     # Split link
@@ -611,7 +625,7 @@ proc button3node { c x y } {
     # Create a new link - can be between different canvases
     #
     .button3menu.connect delete 0 end
-    if { $oper_mode == "edit" && $type != "pseudo" } {
+    if { $type != "pseudo" } {
 	.button3menu add cascade -label "Create link to" \
 	    -menu .button3menu.connect
     }
@@ -659,7 +673,7 @@ proc button3node { c x y } {
     # Connect interface - can be between different canvases
     #
     .button3menu.connect_iface delete 0 end
-    if { $oper_mode == "edit" && $type != "pseudo" } {
+    if { $type != "pseudo" } {
 	.button3menu add cascade -label "Connect interface" \
 	    -menu .button3menu.connect_iface
     }
@@ -753,16 +767,12 @@ proc button3node { c x y } {
     #
     # Delete selection
     #
-    if { $oper_mode != "exec" } {
-	.button3menu add command -label "Delete" -command "deleteSelection"
-    }
+    .button3menu add command -label "Delete" -command "deleteSelection"
 
     #
     # Delete selection (keep linked interfaces)
     #
-    if { $oper_mode != "exec" } {
-	.button3menu add command -label "Delete (keep interfaces)" -command "deleteSelection 1"
-    }
+    .button3menu add command -label "Delete (keep interfaces)" -command "deleteSelection 1"
 
     if { $type != "pseudo" } {
 	.button3menu add separator
@@ -771,8 +781,8 @@ proc button3node { c x y } {
     #
     # Start & stop node
     #
-    if { $oper_mode == "exec" && [info procs [getNodeType $node_id].start] != "" \
-	&& [info procs [getNodeType $node_id].shutdown] != ""} {
+    if { $oper_mode == "exec" && [info procs [getNodeType $node_id].nodeConfigure] != "" \
+	&& [info procs [getNodeType $node_id].nodeShutdown] != ""} {
 
 	.button3menu add command -label Start \
 	    -command "startNodeFromMenu $node_id"
@@ -917,16 +927,19 @@ proc button3node { c x y } {
 	if { [llength [allIfcList $node_id]] == 0 } {
 	    .button3menu.wireshark add command -label "No interfaces available."
 	} else {
-	    foreach iface [allIfcList $node_id] {
-		set label "$iface"
-		if { [getIfcIPv4addr $node_id $iface] != "" } {
-		    set label "$label ([getIfcIPv4addr $node_id $iface])"
+	    foreach iface_id [allIfcList $node_id] {
+		set iface_name "[getIfcName $node_id $iface_id]"
+		set iface_label "$iface_name"
+		if { [getIfcIPv4addr $node_id $iface_id] != "" } {
+		    set iface_label "$iface_label ([getIfcIPv4addr $node_id $iface_id])"
 		}
-		if { [getIfcIPv6addr $node_id $iface] != "" } {
-		    set label "$label ([getIfcIPv6addr $node_id $iface])"
+
+		if { [getIfcIPv6addr $node_id $iface_id] != "" } {
+		    set iface_label "$iface_label ([getIfcIPv6addr $node_id $iface_id])"
 		}
-		.button3menu.wireshark add command -label $label \
-		    -command "startWiresharkOnNodeIfc $node_id $iface"
+
+		.button3menu.wireshark add command -label $iface_label \
+		    -command "startWiresharkOnNodeIfc $node_id $iface_name"
 	    }
 	}
 
@@ -938,16 +951,19 @@ proc button3node { c x y } {
 	if { [llength [allIfcList $node_id]] == 0 } {
 	    .button3menu.tcpdump add command -label "No interfaces available."
 	} else {
-	    foreach iface [allIfcList $node_id] {
-		set label "$iface"
-		if { [getIfcIPv4addr $node_id $iface] != "" } {
-		    set label "$label ([getIfcIPv4addr $node_id $iface])"
+	    foreach iface_id [allIfcList $node_id] {
+		set iface_name "[getIfcName $node_id $iface_id]"
+		set iface_label "$iface_name"
+		if { [getIfcIPv4addr $node_id $iface_id] != "" } {
+		    set iface_label "$iface_label ([getIfcIPv4addr $node_id $iface_id])"
 		}
-		if { [getIfcIPv6addr $node_id $iface] != "" } {
-		    set label "$label ([getIfcIPv6addr $node_id $iface])"
+
+		if { [getIfcIPv6addr $node_id $iface_id] != "" } {
+		    set iface_label "$iface_label ([getIfcIPv6addr $node_id $iface_id])"
 		}
-		.button3menu.tcpdump add command -label $label \
-		    -command "startTcpdumpOnNodeIfc $node_id $iface"
+
+		.button3menu.tcpdump add command -label $iface_label \
+		    -command "startTcpdumpOnNodeIfc $node_id $iface_name"
 	    }
 	}
 
@@ -1122,6 +1138,7 @@ proc button1 { c x y button } {
 
 	    drawNode $node_id
 	    selectNode $c [$c find withtag "node && $node_id"]
+
 	    set changed 1
 	} elseif { $activetool == "select" \
 	    && $curtype != "node" && $curtype != "nodelabel" } {
@@ -1408,6 +1425,11 @@ proc button1-release { c x y } {
 		updateLinkLabel $link_id
 		set changed 1
 	    }
+
+	    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+		undeployCfg
+		deployCfg
+	    }
 	}
     } elseif { $activetool in "rectangle oval text freeform" } {
 	popupAnnotationDialog $c 0 "false"
@@ -1600,6 +1622,15 @@ proc button1-release { c x y } {
 	}
 
 	if { $regular == "true" } {
+	    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+		undeployCfg
+		deployCfg
+	    }
+
+	    foreach img [$c find withtag "selected"] {
+		drawNode [lindex [$c gettags $img] 1]
+	    }
+
 	    foreach link_id [$c find withtag "link && need_redraw"] {
 		redrawLink [lindex [$c gettags $link_id] 1]
                 updateLinkLabel [lindex [$c gettags $link_id] 1]
@@ -1875,10 +1906,6 @@ proc deleteSelection { { keep_other_ifaces 0 } } {
     global changed
     global background
     global viewid
-
-    if { [getFromRunning "oper_mode"] == "exec" } {
-	return
-    }
 
     catch { unset viewid }
     .panwin.f1.c config -cursor watch; update

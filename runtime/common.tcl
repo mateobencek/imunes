@@ -185,17 +185,10 @@ proc pipesClose { } {
 # INPUTS
 #   * mode -- the new operating mode. Can be edit or exec.
 #****
-proc setOperMode { mode } {
+proc setOperMode { oper_mode } {
     global all_modules_list editor_only execMode isOSfreebsd isOSlinux
 
-    if { $mode == "exec" && [getFromRunning "node_list"] == "" } {
-	statline "Empty topologies can't be executed."
-	.panwin.f1.c config -cursor left_ptr
-
-	return
-    }
-
-    if { ! [getFromRunning "cfg_deployed"] && $mode == "exec" } {
+    if { ! [getFromRunning "cfg_deployed"] && $oper_mode == "exec" } {
 	if { ! $isOSlinux && ! $isOSfreebsd } {
 	    after idle {.dialog1.msg configure -wraplength 4i}
 	    tk_dialog .dialog1 "IMUNES error" \
@@ -237,18 +230,8 @@ proc setOperMode { mode } {
 	}
     }
 
-    foreach b { link link_layer net_layer } {
-	if { "$mode" == "exec" } {
-	    .panwin.f1.left.$b configure -state disabled
-	} else {
-	    .panwin.f1.left.$b configure -state normal
-	}
-    }
-
-    .bottom.oper_mode configure -text "$mode mode"
-    setActiveTool select
     #.panwin.f1.left.select configure -state active
-    if { "$mode" == "exec" && [exec id -u] == 0} {
+    if { "$oper_mode" == "exec" && [exec id -u] == 0} {
 	global autorearrange_enabled
 
 	set autorearrange_enabled 0
@@ -268,7 +251,15 @@ proc setOperMode { mode } {
 	}
 
 	if { ! [getFromRunning "cfg_deployed"] } {
+	    setToExecuteVars "instantiate_nodes" [getFromRunning "node_list"]
+	    setToExecuteVars "create_nodes_ifaces" "*"
+	    setToExecuteVars "instantiate_links" [getFromRunning "link_list"]
+	    setToExecuteVars "configure_links" "*"
+	    setToExecuteVars "configure_nodes_ifaces" "*"
+	    setToExecuteVars "configure_nodes" "*"
+
 	    deployCfg
+
 	    setToRunning "cfg_deployed" true
 	}
 
@@ -277,6 +268,11 @@ proc setOperMode { mode } {
 	}
 
 	.bottom.experiment_id configure -text "Experiment ID = [getFromRunning "eid"]"
+	if { [getFromRunning "auto_execution"] } {
+	    set oper_mode_text "exec mode"
+	} else {
+	    set oper_mode_text "paused"
+	}
     } else {
 	if { [getFromRunning "oper_mode"] != "edit"} {
 	    global regular_termination
@@ -286,7 +282,15 @@ proc setOperMode { mode } {
 
 	    set eid [getFromRunning "eid"]
 	    if { $regular_termination } {
-		undeployCfg $eid 1 [getFromRunning "node_list"] "*" [getFromRunning "link_list"] "*" "*" "*"
+		setToExecuteVars "terminate_cfg" [cfgGet]
+		setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
+		setToExecuteVars "destroy_nodes_ifaces" "*"
+		setToExecuteVars "terminate_links" [getFromRunning "link_list"]
+		setToExecuteVars "unconfigure_links" "*"
+		setToExecuteVars "unconfigure_nodes_ifaces" "*"
+		setToExecuteVars "unconfigure_nodes" "*"
+
+		undeployCfg $eid 1
 	    } else {
 		vimageCleanup $eid
 	    }
@@ -332,8 +336,12 @@ proc setOperMode { mode } {
 
 	setToRunning "oper_mode" "edit"
 	.bottom.experiment_id configure -text ""
+	set oper_mode_text "edit mode"
     }
 
+    .bottom.oper_mode configure -text "$oper_mode_text"
+
+    catch { redrawAll }
     .panwin.f1.c config -cursor left_ptr
 }
 
@@ -354,7 +362,7 @@ proc spawnShellExec {} {
 	    return
 	}
     }
-    if { [[getNodeType $node_id].virtlayer] != "VIMAGE" } {
+    if { [[getNodeType $node_id].virtlayer] != "VIMAGE" || ! [getFromRunning "${node_id}_running"] } {
 	nodeConfigGUI .panwin.f1.c $node_id
     } else {
 	set cmd [lindex [existingShells [[getNodeType $node_id].shellcmds] $node_id] 0]
