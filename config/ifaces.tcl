@@ -747,6 +747,9 @@ proc allIfcList { node_id } {
 #****
 proc logicalPeerByIfc { node_id iface } {
     set link_id [getIfcLink $node_id $iface]
+    if { $link_id == "" } {
+	return
+    }
     set mirror_link_id [getLinkMirror $link_id]
 
     set peer_id ""
