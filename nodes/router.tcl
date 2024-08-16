@@ -81,7 +81,7 @@ proc $MODULE.confNewIfc { node iface } {
 #   * node -- node id
 #****
 proc $MODULE.confNewNode { node_id } {
-    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnabl
+    global ripEnable ripngEnable ospfEnable ospf6Enable bgpEnable
     global rdconfig router_model router_ConfigModel
     global def_router_model
     global nodeNamingBase
