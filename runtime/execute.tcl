@@ -384,6 +384,7 @@ proc nodeIpsecInit { node } {
 proc deployCfg {} {
     global progressbarCount execMode
 
+    prepareInstantiateVars "force"
 
     if { "$instantiate_nodes$create_nodes_ifaces$instantiate_links$configure_links$configure_nodes_ifaces$configure_nodes" == "" } {
 	return
@@ -518,11 +519,16 @@ proc deployCfg {} {
 	statline "Starting services for NODEINST hook..."
 	services start "NODEINST"
 
-	statline "Creating interfaces on nodes..."
+	statline "Creating physical interfaces on nodes..."
 	pipesCreate
-	execute_nodesIfacesCreate $create_nodes_ifaces $create_nodes_ifaces_count $w
+	execute_nodesPhysIfacesCreate $create_nodes_ifaces $create_nodes_ifaces_count $w
+	statline "Waiting for physical interfaces on $create_nodes_ifaces_count node(s) to be created..."
+	pipesClose
 
-	statline "Waiting for interfaces on $create_nodes_ifaces_count node(s) to be created..."
+	statline "Creating logical interfaces on nodes..."
+	pipesCreate
+	execute_nodesLogIfacesCreate $create_nodes_ifaces $create_nodes_ifaces_count $w
+	statline "Waiting for logical on $create_nodes_ifaces_count node(s) to be created..."
 	pipesClose
 
 	statline "Creating links..."
@@ -830,7 +836,7 @@ proc waitForInitConf { nodes nodeCount w } {
 
 proc execute_nodesCopyFiles { nodes nodeCount w } {}
 
-proc execute_nodesIfacesCreate { nodes_ifaces nodeCount w } {
+proc execute_nodesPhysIfacesCreate { nodes_ifaces nodeCount w } {
     global progressbarCount execMode
 
     set eid [getFromRunning "eid"]
@@ -839,15 +845,15 @@ proc execute_nodesIfacesCreate { nodes_ifaces nodeCount w } {
     dict for {node ifaces} $nodes_ifaces {
 	displayBatchProgress $batchStep $nodeCount
 
-	if { [info procs [getNodeType $node].nodeIfacesCreate] != "" } {
+	if { [info procs [getNodeType $node].nodePhysIfacesCreate] != "" } {
 	    if { $ifaces == "*" } {
 		set ifaces [ifcList $node]
 	    }
 
 	    try {
-		[getNodeType $node].nodeIfacesCreate $eid $node $ifaces
+		[getNodeType $node].nodePhysIfacesCreate $eid $node $ifaces
 	    } on error err {
-		return -code error "Error in '[getNodeType $node].nodeIfacesCreate $eid $node $ifaces': $err"
+		return -code error "Error in '[getNodeType $node].nodePhysIfacesCreate $eid $node $ifaces': $err"
 	    }
 	    pipesExec ""
 	}
@@ -857,6 +863,46 @@ proc execute_nodesIfacesCreate { nodes_ifaces nodeCount w } {
 
 	if { $execMode != "batch" } {
 	    statline "Creating physical ifaces on node [getNodeName $node]"
+	    $w.p configure -value $progressbarCount
+	    update
+	}
+    }
+
+    if { $nodeCount > 0 } {
+	displayBatchProgress $batchStep $nodeCount
+	if { $execMode == "batch" } {
+	    statline ""
+	}
+    }
+}
+
+proc execute_nodesLogIfacesCreate { nodes_ifaces nodeCount w } {
+    global progressbarCount execMode
+
+    set eid [getFromRunning "eid"]
+
+    set batchStep 0
+    dict for {node ifaces} $nodes_ifaces {
+	displayBatchProgress $batchStep $nodeCount
+
+	if { [info procs [getNodeType $node].nodeLogIfacesCreate] != "" } {
+	    if { $ifaces == "*" } {
+		set ifaces [logIfcList $node]
+	    }
+
+	    try {
+		[getNodeType $node].nodeLogIfacesCreate $eid $node $ifaces
+	    } on error err {
+		return -code error "Error in '[getNodeType $node].nodeLogIfacesCreate $eid $node $ifaces': $err"
+	    }
+	    pipesExec ""
+	}
+
+	incr batchStep
+	incr progressbarCount
+
+	if { $execMode != "batch" } {
+	    statline "Creating logical ifaces on node [getNodeName $node]"
 	    $w.p configure -value $progressbarCount
 	    update
 	}
@@ -900,6 +946,7 @@ proc execute_linksCreate { links linkCount w } {
 	    } else {
 		createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link_id
 	    }
+	    setToRunning "${link_id}_running" true
 	} on error err {
 	    return -code error "Error in 'createLinkBetween $lnode1 $lnode2 $ifname1 $ifname2 $link_id': $err"
 	}
