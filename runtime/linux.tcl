@@ -602,9 +602,10 @@ proc nodePhysIfacesCreate { node_id ifcs } {
     foreach iface_id $ifcs {
 	setToRunning "${node_id}|${iface_id}_running" true
 	set iface_name [getIfcName $node_id $iface_id]
+	set public_hook $node_id-$iface_name
 	set prefix [string trimright $iface_name "0123456789"]
 	if { $node_type in "ext extnat" } {
-	    set iface_name $eid-$node_id
+	    set iface_name $node_id
 	}
 
 	# direct link, simulate capturing the host interface into the node,
@@ -623,7 +624,7 @@ proc nodePhysIfacesCreate { node_id ifcs } {
 	    eth {
 		# Create a veth pair - private hook in node netns and public hook
 		# in the experiment netns
-		createNsVethPair $iface_name $nodeNs $node_id-$iface_name $eid
+		createNsVethPair $iface_name $nodeNs $public_hook $eid
 	    }
 	}
 
@@ -798,8 +799,14 @@ proc createNsVethPair { ifname1 netNs1 ifname2 netNs2 } {
     }
 
     pipesExec "ip link add name $eid-$ifname1 $nsstr1 type veth peer name $eid-$ifname2 $nsstr2" "hold"
-    pipesExec "ip $nsstr1x link set $eid-$ifname1 name $ifname1" "hold"
-    pipesExec "ip $nsstr2x link set $eid-$ifname2 name $ifname2" "hold"
+
+    if { $nsstr1x != "" } {
+	pipesExec "ip $nsstr1x link set $eid-$ifname1 name $ifname1" "hold"
+    }
+
+    if { $nsstr2x != "" } {
+	pipesExec "ip $nsstr2x link set $eid-$ifname2 name $ifname2" "hold"
+    }
 }
 
 proc setNsIfcMaster { netNs ifname master state } {
@@ -1720,7 +1727,7 @@ proc taygaDestroy { eid node } {
     catch { exec docker exec $eid.$node ip l delete [set nat64ifc_$eid.$node] }
 }
 
-proc startExternalConnection { eid node } {
+proc configureExternalConnection { eid node } {
     set cmds ""
     set ifc [lindex [ifcList $node] 0]
     set outifc "$eid-$node"
@@ -1749,12 +1756,27 @@ proc startExternalConnection { eid node } {
     pipesExec "$cmds" "hold"
 }
 
+proc unconfigureExternalConnection { eid node } {
+    set cmds ""
+    set ifc [lindex [ifcList $node] 0]
+    set outifc "$eid-$node"
+
+    set cmds "ip a flush dev $outifc"
+    set cmds "$cmds\n ip -6 a flush dev $outifc"
+
+    pipesExec "$cmds" "hold"
+}
+
 proc stopExternalConnection { eid node } {
     pipesExec "ip link set $eid-$node down" "hold"
 }
 
 proc setupExtNat { eid node ifc } {
     set extIfc [getNodeName $node]
+    if { $extIfc == "UNASSIGNED" } {
+	return
+    }
+
     set extIp [getIfcIPv4addrs $node $ifc]
     set prefixLen [lindex [split $extIp "/"] 1]
     set subnet "[ip::prefix $extIp]/$prefixLen"
@@ -1768,6 +1790,10 @@ proc setupExtNat { eid node ifc } {
 
 proc unsetupExtNat { eid node ifc } {
     set extIfc [getNodeName $node]
+    if { $extIfc == "UNASSIGNED" } {
+	return
+    }
+
     set extIp [getIfcIPv4addrs $node $ifc]
     set prefixLen [lindex [split $extIp "/"] 1]
     set subnet "[ip::prefix $extIp]/$prefixLen"

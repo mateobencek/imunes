@@ -696,7 +696,12 @@ proc getNodeName { node_id } {
 proc setNodeName { node_id name } {
     cfgSet "nodes" $node_id "name" $name
 
-    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+    set node_type [getNodeType $node_id]
+    if { [$node_type.virtlayer] == "NATIVE" } {
+	if { $node_type in "rj45 extnat" } {
+	    trigger_nodeReconfig $node_id
+	}
+
 	return
     }
 

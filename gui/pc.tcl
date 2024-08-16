@@ -145,8 +145,10 @@ proc $MODULE.notebookDimensions { wi } {
 proc $MODULE.configGUI { c node_id } {
     global wi
     global guielements treecolumns
+    global node_cfg
 
     set guielements {}
+    set node_cfg [cfgGet "nodes" $node_id]
 
     configGUI_createConfigPopupWin $c
     wm title $wi "pc configuration"
@@ -167,6 +169,7 @@ proc $MODULE.configGUI { c node_id } {
     configGUI_snapshots $configtab $node_id
     configGUI_customConfig $configtab $node_id
 
+    configGUI_nodeRestart $wi $node_id
     configGUI_buttonsACNode $wi $node_id
 }
 
