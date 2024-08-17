@@ -440,9 +440,12 @@ proc setIfcIPv4addrs { node_id iface_id addrs } {
 
     lassign [getSubnetData $node_id $iface_id {} {} 0] - subnet_data
     foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
-	if { [getNodeType $subnet_node] ni "extnat" } {
-	    trigger_nodeReconfig $subnet_node
+	set subnet_node_type [getNodeType $subnet_node]
+	if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+	    continue
 	}
+
+	trigger_nodeReconfig $subnet_node
     }
 }
 
@@ -585,9 +588,12 @@ proc setIfcIPv6addrs { node_id iface_id addrs } {
 
     lassign [getSubnetData $node_id $iface_id {} {} 0] - subnet_data
     foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
-	if { [getNodeType $subnet_node] ni "extnat" } {
-	    trigger_nodeReconfig $subnet_node
+	set subnet_node_type [getNodeType $subnet_node]
+	if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+	    continue
 	}
+
+	trigger_nodeReconfig $subnet_node
     }
 }
 
@@ -1054,7 +1060,8 @@ proc removeIface { node_id iface_id } {
 	if { $subnet_gws != "{||}" } {
 	    set has_extnat [string match "*extnat*" $subnet_gws]
 	    foreach subnet_node [dict keys $subnet_data] {
-		if { [getNodeType $subnet_node] == "extnat" } {
+		set subnet_node_type [getNodeType $subnet_node]
+		if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
 		    continue
 		}
 
