@@ -1082,73 +1082,86 @@ proc isNodeNamespaceCreated { node } {
     return true
 }
 
-#****f* freebsd.tcl/createNodePhysIfcs
+#****f* freebsd.tcl/nodePhysIfacesCreate
 # NAME
-#   createNodePhysIfcs -- create node physical interfaces
+#   nodePhysIfacesCreate -- create node physical interfaces
 # SYNOPSIS
-#   createNodePhysIfcs $node
+#   nodePhysIfacesCreate $node
 # FUNCTION
 #   Creates physical interfaces for the given node.
 # INPUTS
 #   * node -- node id
 #****
-proc createNodePhysIfcs { node ifcs } {
+proc nodePhysIfacesCreate { node ifcs } {
     global ifc_dad_disable
 
     set eid [getFromRunning "eid"]
-    set node_id "$eid.$node"
+    set jail_id "$eid.$node"
+
+    set node_type [getNodeType $node]
+
     # Create a vimage
     # Create "physical" network interfaces
-    foreach ifc $ifcs {
-	switch -exact [string trimright $ifc 0123456789] {
+    foreach iface_id $ifcs {
+	setToRunning "${node}|${iface_id}_running" true
+	set iface_name [getIfcName $node $iface_id]
+	set public_hook $node-$iface_name
+	set prefix [string trimright $iface_name "0123456789"]
+	if { $node_type in "ext extnat" } {
+	    set iface_name $node
+	}
+
+	switch -exact $prefix {
 	    e {
 	    }
 	    eth {
 		# save newly created ngnodeX into a shell variable ifid and
-		# rename the ng node to $node-$ifc (unique to this experiment)
+		# rename the ng node to $public_hook (unique to this experiment)
 		set cmds "
-		  ifid=\$(printf \"mkpeer . eiface $node-$ifc ether \n
-		  show .:$node-$ifc\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
-		set cmds "$cmds; jexec $eid ngctl name \$ifid: $node-$ifc"
-		set cmds "$cmds; jexec $eid ifconfig \$ifid name $node-$ifc"
+		  ifid=\$(printf \"mkpeer . eiface $public_hook ether \n
+		  show .:$public_hook\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
+		set cmds "$cmds; jexec $eid ngctl name \$ifid: $public_hook"
+		set cmds "$cmds; jexec $eid ifconfig \$ifid name $public_hook"
+
+		puts "$cmds"
 
 		pipesExec $cmds "hold"
-		pipesExec "jexec $eid ifconfig $node-$ifc vnet $node" "hold"
-		pipesExec "jexec $node_id ifconfig $node-$ifc name $ifc" "hold"
+		pipesExec "jexec $eid ifconfig $public_hook vnet $node" "hold"
+		pipesExec "jexec $jail_id ifconfig $public_hook name $iface_name" "hold"
 
-		set ether [getIfcMACaddr $node $ifc]
+		set ether [getIfcMACaddr $node $iface_id]
                 if { $ether == "" } {
-                    autoMACaddr $node $ifc
+                    autoMACaddr $node $iface_id
                 }
-                set ether [getIfcMACaddr $node $ifc]
+                set ether [getIfcMACaddr $node $iface_id]
 
 		global ifc_dad_disable
 		if { $ifc_dad_disable } {
-		    pipesExec "jexec $node_id sysctl net.inet6.ip6.dad_count=0" "hold"
+		    pipesExec "jexec $jail_id sysctl net.inet6.ip6.dad_count=0" "hold"
 		}
 
-		pipesExec "jexec $node_id ifconfig $ifc link $ether" "hold"
+		pipesExec "jexec $jail_id ifconfig $iface_name link $ether" "hold"
 	    }
 	    ext {
 		set outifc "$eid-$node"
 
 		# save newly created ngnodeX into a shell variable ifid and
-		# rename the ng node to $node-$ifc (unique to this experiment)
+		# rename the ng node to $public_hook (unique to this experiment)
 		set cmds "
-		  ifid=\$(printf \"mkpeer . eiface $node-$ifc ether \n
-		  show .:$node-$ifc\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
-		set cmds "$cmds; jexec $eid ngctl name \$ifid: $node-$ifc"
+		  ifid=\$(printf \"mkpeer . eiface $public_hook ether \n
+		  show .:$public_hook\" | jexec $eid ngctl -f - | head -n1 | cut -d' ' -f4)"
+		set cmds "$cmds; jexec $eid ngctl name \$ifid: $public_hook"
 		set cmds "$cmds; jexec $eid ifconfig \$ifid name $outifc"
 
 		pipesExec $cmds "hold"
 		pipesExec "ifconfig $outifc -vnet $eid" "hold"
 
-		set ether [getIfcMACaddr $node $ifc]
+		set ether [getIfcMACaddr $node $iface_id]
                 if { $ether == "" } {
-                    autoMACaddr $node $ifc
+                    autoMACaddr $node $iface_id
                 }
 
-                set ether [getIfcMACaddr $node $ifc]
+                set ether [getIfcMACaddr $node $iface_id]
 		pipesExec "ifconfig $outifc link $ether" "hold"
 	    }
 	    default {
@@ -1156,7 +1169,7 @@ proc createNodePhysIfcs { node ifcs } {
 		# we don't know the name, so make sure all other options cover other IMUNES
 		# 'physical' interfaces
 		# XXX not yet implemented
-		pipesExec "ifconfig $ifc vnet $node_id" "hold"
+		pipesExec "ifconfig $iface_id vnet $jail_id" "hold"
 	    }
 	}
     }
@@ -1170,17 +1183,17 @@ proc createNamespace { ns } {}
 
 proc destroyNamespace { ns } {}
 
-#****f* freebsd.tcl/createNodeLogIfcs
+#****f* freebsd.tcl/nodeLogIfacesCreate
 # NAME
-#   createNodeLogIfcs -- create node logical interfaces
+#   nodeLogIfacesCreate -- create node logical interfaces
 # SYNOPSIS
-#   createNodeLogIfcs $node
+#   nodeLogIfacesCreate $node
 # FUNCTION
 #   Creates logical interfaces for the given node.
 # INPUTS
 #   * node -- node id
 #****
-proc createNodeLogIfcs { node ifaces } {
+proc nodeLogIfacesCreate { node ifaces } {
     set node_id "[getFromRunning "eid"].$node"
 
     if { $ifaces == "*" } {
@@ -1190,8 +1203,11 @@ proc createNodeLogIfcs { node ifaces } {
     foreach {liface_id liface_cfg} $ifaces {
 	switch -exact [dictGet $liface_cfg "type"] {
 	    vlan {
-		# physical interfaces are created when creating links, so VLANs
-		# must be created after links
+		set tag [getIfcVlanTag $node_id $iface_id]
+		set dev [getIfcVlanDev $node_id $iface_id]
+		if { $tag != "" && $dev != "" } {
+		    pipesExec "jexec $node_id [getVlanTagIfcCmd $iface_name $dev $tag]" "hold"
+		}
 	    }
 	    lo {
 		if { $liface_id != "lo0" } {
@@ -1291,7 +1307,7 @@ proc startIfcsNode { node ifaces } {
 #   * node -- node id
 #****
 proc runConfOnNode { node } {
-    set node_id "[getFromRunning "eid"].$node"
+    set jail_id "[getFromRunning "eid"].$node"
 
     if { [getCustomEnabled $node] == true } {
 	set selected [getCustomConfigSelected $node]
@@ -1308,7 +1324,7 @@ proc runConfOnNode { node } {
 	}
 	set confFile "custom.conf"
     } else {
-	set bootcfg [[getNodeType $node].cfggen $node]
+        set bootcfg [[getNodeType $node].generateConfig $node]
 	set bootcmd [[getNodeType $node].bootcmd $node]
 	set confFile "boot.conf"
     }
@@ -1317,7 +1333,7 @@ proc runConfOnNode { node } {
 
     foreach ifc [allIfcList $node] {
 	if { [getIfcOperState $node $ifc] == "down" } {
-	    pipesExec "jexec $node_id ifconfig $ifc down" "hold"
+	    pipesExec "jexec $jail_id ifconfig $ifc down" "hold"
 	}
     }
 
@@ -1327,7 +1343,72 @@ proc runConfOnNode { node } {
     # renaming the file signals that we're done
     set cmds "$cmds mv /tout.log /out.log ;"
     set cmds "$cmds mv /terr.log /err.log"
-    pipesExec "jexec $node_id sh -c '$cmds'" "hold"
+    pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
+}
+
+proc startNodeIfaces { node_id ifaces } {
+    set eid [getFromRunning "eid"]
+
+    set jail_id "$eid.$node_id"
+
+    if { [getCustomEnabled $node_id] == true } {
+	return
+    }
+
+    set bootcfg [[getNodeType $node_id].generateConfigIfaces $node_id $ifaces]
+    set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+    set confFile "boot_ifaces.conf"
+
+    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    set cfg [join "{set -x} $bootcfg" "\n"]
+    writeDataToNodeFile $node_id /$confFile $cfg
+    set cmds "$bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
+    # renaming the file signals that we're done
+    set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
+    set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
+    pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
+}
+
+proc unconfigNode { eid node_id } {
+    set jail_id "$eid.$node_id"
+
+    if { [getCustomEnabled $node_id] == true } {
+	return
+    }
+
+    set bootcfg [[getNodeType $node_id].generateUnconfig $node_id]
+    set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+    set confFile "boot.conf"
+
+    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    set cfg [join "{set -x} $bootcfg" "\n"]
+    writeDataToNodeFile $node_id /$confFile $cfg
+    set cmds "$bootcmd /$confFile >> /tout.log 2>> /terr.log ;"
+    # renaming the file signals that we're done
+    set cmds "$cmds mv /tout.log /out.log ;"
+    set cmds "$cmds mv /terr.log /err.log"
+    pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
+}
+
+proc unconfigNodeIfaces { eid node_id ifaces } {
+    set jail_id "$eid.$node_id"
+
+    if { [getCustomEnabled $node_id] == true } {
+	return
+    }
+
+    set bootcfg [[getNodeType $node_id].generateUnconfigIfaces $node_id $ifaces]
+    set bootcmd [[getNodeType $node_id].bootcmd $node_id]
+    set confFile "boot_ifaces.conf"
+
+    #set cfg [join "{ip a flush dev lo0} $bootcfg" "\n"]
+    set cfg [join "{set -x} $bootcfg" "\n"]
+    writeDataToNodeFile $node_id /$confFile $cfg
+    set cmds "$bootcmd /$confFile >> /tout_ifaces.log 2>> /terr_ifaces.log ;"
+    # renaming the file signals that we're done
+    set cmds "$cmds mv /tout_ifaces.log /out_ifaces.log ;"
+    set cmds "$cmds mv /terr_ifaces.log /err_ifaces.log"
+    pipesExec "jexec $jail_id sh -c '$cmds'" "hold"
 }
 
 proc isNodeConfigured { node } {
@@ -1347,15 +1428,29 @@ proc isNodeConfigured { node } {
 }
 
 proc isNodeError { node } {
-    set node_id "[getFromRunning "eid"].$node"
+    set jail_id "[getFromRunning "eid"].$node"
 
     if { [[getNodeType $node].virtlayer] == "NATIVE" } {
 	return false
     }
 
-    try {
-	exec jexec $node_id test -s /err.log > /dev/null
-    } on error {} {
+    catch { exec jexec $jail_id sed "/^+ /d" /err.log } errlog
+    if { $errlog == "" } {
+	return false
+    }
+
+    return true
+}
+
+proc isNodeErrorIfaces { node } {
+    set jail_id "[getFromRunning "eid"].$node"
+
+    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
+	return false
+    }
+
+    catch { exec jexec $jail_id sed "/^+ /d" /err_ifaces.log } errlog
+    if { $errlog == "" } {
 	return false
     }
 
@@ -1649,6 +1744,7 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     set ngcmds "$ngcmds\n name $ngpeer1:$nghook1 $link"
     set ngcmds "$ngcmds\n connect $link: $ngpeer2: lower $nghook2"
 
+    puts "printf \"$ngcmds\" | jexec $eid ngctl -f -"
     pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
 }
 
@@ -1679,9 +1775,6 @@ proc configureLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     set ngcmds "msg $link: setcfg {bandwidth=$bandwidth delay=$delay upstream={BER=$ber duplicate=$dup} downstream={BER=$ber duplicate=$dup}}"
 
     pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
-    if { $debug && $err != "" } {
-	puts $err
-    }
 
     # FIXME: remove this to interface configuration?
     # Queues
@@ -1761,14 +1854,14 @@ proc destroyNodeIfaces { eid node ifcs } {
 #   * eid -- experiment id
 #   * widget -- status widget
 #****
-proc terminate_removeExperimentContainer { eid widget } {
+proc terminate_removeExperimentContainer { eid } {
     # Remove the main vimage which contained all other nodes, hopefully we
     # cleaned everything.
     catch "exec jexec $eid kill -9 -1 2> /dev/null"
     exec jail -r $eid
 }
 
-proc terminate_removeExperimentFiles { eid widget } {
+proc terminate_removeExperimentFiles { eid } {
     global vroot_unionfs execMode
 
     set VROOT_BASE [getVrootDir]
@@ -2000,11 +2093,39 @@ proc getExtIfcs { } {
     return "$ifcs"
 }
 
+proc getStateIfcCmd { iface_name state } {
+    return "ifconfig $iface_name $state"
+}
+
+proc getNameIfcCmd { iface_name name } {
+    return "ifconfig $iface_name name $name"
+}
+
+proc getMacIfcCmd { iface_name mac_addr } {
+    return "ifconfig $iface_name link $mac_addr"
+}
+
+proc getVlanTagIfcCmd { iface_name dev_name tag } {
+    return "ifconfig $dev_name.$tag create name $iface_name"
+}
+
+proc getMtuIfcCmd { iface_name mtu } {
+    return "ifconfig $iface_name mtu $mtu"
+}
+
+proc getNatIfcCmd { iface_name } {
+    return "sh -c 'echo \"map $iface_name 0/0 -> 0/32\" | ipnat -f -'"
+}
+
 proc getIPv4IfcCmd { ifc addr primary } {
     if { $primary } {
 	return "ifconfig $ifc inet $addr"
     }
     return "ifconfig $ifc inet add $addr"
+}
+
+proc getDelIPv4IfcCmd { ifc addr } {
+    return "ifconfig $ifc inet $addr -alias"
 }
 
 proc getIPv6IfcCmd { ifc addr primary } {
@@ -2014,12 +2135,24 @@ proc getIPv6IfcCmd { ifc addr primary } {
     return "ifconfig $ifc inet6 add $addr"
 }
 
+proc getDelIPv6IfcCmd { ifc addr } {
+    return "ifconfig $ifc inet6 $addr -alias"
+}
+
 proc getIPv4RouteCmd { statrte } {
     return "route -q add -inet $statrte"
 }
 
+proc getRemoveIPv4RouteCmd { statrte } {
+    return "route -q delete -inet $statrte"
+}
+
 proc getIPv6RouteCmd { statrte } {
     return "route -q add -inet6 $statrte"
+}
+
+proc getRemoveIPv6RouteCmd { statrte } {
+    return "route -q delete -inet6 $statrte"
 }
 
 proc checkSysPrerequisites {} {

@@ -464,16 +464,12 @@ proc prepareVirtualFS {} {
     exec mkdir -p /var/run/netns
 }
 
-proc disconnectFromDocker { node } {
+proc attachToL3NodeNamespace { node } {
     set eid [getFromRunning "eid"]
 
     if { [getNodeDockerAttach $node] != "true" } {
 	pipesExec "docker network disconnect imunes-bridge $eid.$node" "hold"
     }
-}
-
-proc attachToL3NodeNamespace { node } {
-    set eid [getFromRunning "eid"]
 
     # VIRTUALIZED nodes use docker netns
     set cmds "docker_ns=\$(docker inspect -f '{{.State.Pid}}' $eid.$node)"
