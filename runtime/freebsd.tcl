@@ -1333,7 +1333,7 @@ proc runConfOnNode { node } {
 proc isNodeConfigured { node } {
     set node_id "[getFromRunning "eid"].$node"
 
-    if { [[getNodeType $node].virtlayer] == "NETGRAPH" } {
+    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
 	return true
     }
 
@@ -1349,7 +1349,7 @@ proc isNodeConfigured { node } {
 proc isNodeError { node } {
     set node_id "[getFromRunning "eid"].$node"
 
-    if { [[getNodeType $node].virtlayer] == "NETGRAPH" } {
+    if { [[getNodeType $node].virtlayer] == "NATIVE" } {
 	return false
     }
 
