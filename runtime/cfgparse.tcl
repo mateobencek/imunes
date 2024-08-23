@@ -94,8 +94,10 @@ proc loadCfgLegacy { cfg } {
 	    set $object {}
 	    set dict_object "${class}s"
 	    if {"$class" == "node"} {
+		setToRunning "${object}_running" false
 		lappend node_list $object
 	    } elseif {"$class" == "link"} {
+		setToRunning "${object}_running" false
 		lappend link_list $object
 	    } elseif {"$class" == "canvas"} {
 		set dict_object "canvases"
@@ -449,6 +451,7 @@ proc loadCfgLegacy { cfg } {
 				    lappend all_logiface_ids $iface_id
 				}
 
+				setToRunning "${object}|${iface_id}_running" false
 				cfgSet $dict_object $object "ifaces" $iface_id [dict get $all_ifaces $iface_name]
 			    }
 
@@ -939,6 +942,7 @@ proc loadCfgLegacy { cfg } {
 
 	if { $node_type ni [concat $all_modules_list "pseudo"] && \
 	    ! [string match "router.*" $node_type] } {
+
 	    set msg "Unknown node type: '$node_type'."
 	    if { $execMode == "batch" } {
 		statline $msg
@@ -947,6 +951,7 @@ proc loadCfgLegacy { cfg } {
 		    "Error: $msg" \
 		info 0 Dismiss
 	    }
+
 	    exit
 	}
 
@@ -966,7 +971,7 @@ proc loadCfgLegacy { cfg } {
 	    set addr [getIfcIPv4addr $node_id $iface_id]
 	    if { $addr != "" } { lappend ipv4_used_list $addr }
 	    set addr [getIfcMACaddr $node_id $iface_id]
-	    if { $addr != "" } { lappend mac_used_list [getIfcMACaddr $node_id $iface_id] }
+	    if { $addr != "" } { lappend mac_used_list $addr }
 	}
 
 	# disable auto_default_routes if not explicitly enabled in old topologies
@@ -1094,24 +1099,33 @@ proc loadCfgJson { json_cfg } {
 
     applyOptions
 
-    # Speeding up auto renumbering of MAC, IPv4 and IPv6 addresses by remembering
-    # used addresses in lists.
     set ipv4_used_list {}
     set ipv6_used_list {}
     set mac_used_list {}
     foreach node_id [getFromRunning "node_list"] {
-	foreach iface [ifcList $node_id] {
+	setToRunning "${node_id}_running" false
+	foreach iface [allIfcList $node_id] {
+	    setToRunning "${node_id}|${iface}_running" false
+	    if { [isIfcLogical $node_id $iface] } {
+		continue
+	    }
+
 	    lassign [split [getIfcIPv6addr $node_id $iface] "/"] addr mask
 	    if { $addr != "" } { lappend ipv6_used_list "[ip::contract [ip::prefix $addr]]/$mask" }
 	    set addr [getIfcIPv4addr $node_id $iface]
 	    if { $addr != "" } { lappend ipv4_used_list $addr }
-	    lappend mac_used_list [getIfcMACaddr $node_id $iface]
+	    set addr [getIfcMACaddr $node_id $iface]
+	    if { $addr != "" } { lappend mac_used_list $addr }
 	}
     }
 
     setToRunning ipv4_used_list $ipv4_used_list
     setToRunning ipv6_used_list $ipv6_used_list
     setToRunning mac_used_list $mac_used_list
+
+    foreach link_id [getFromRunning "link_list"] {
+	setToRunning "${link_id}_running" false
+    }
 
     return $dict_cfg
 }
