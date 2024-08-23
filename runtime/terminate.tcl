@@ -237,6 +237,12 @@ proc finishTerminating { status msg w } {
 proc undeployCfg { { eid "" } { terminate 0 } } {
     global progressbarCount execMode
 
+    foreach var "terminate_nodes destroy_nodes_ifaces terminate_links
+	unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes" {
+
+	set $var ""
+    }
+
     prepareTerminateVars
 
     if { "$terminate_nodes$destroy_nodes_ifaces$terminate_links$unconfigure_links$unconfigure_nodes_ifaces$unconfigure_nodes" == "" } {
