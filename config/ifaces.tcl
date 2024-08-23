@@ -1047,7 +1047,9 @@ proc newLogIface { node_id logiface_type } {
 }
 
 proc removeIface { node_id iface_id } {
-    trigger_ifaceDestroy $node_id $iface_id
+    if { [getNodeType $node_id] != "pseudo" } {
+	trigger_ifaceDestroy $node_id $iface_id
+    }
 
     set link_id [getIfcLink $node_id $iface_id]
     if { $link_id != "" } {
