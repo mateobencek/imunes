@@ -1184,6 +1184,7 @@ menu .button3menu.services -tearoff 0
 menu .button3menu.node_execute -tearoff 0
 menu .button3menu.node_config -tearoff 0
 
+menu .button3physifc -tearoff 0
 menu .button3logifc -tearoff 0
 #
 # Invisible pseudo links

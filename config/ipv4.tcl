@@ -127,7 +127,7 @@ proc bin2dec { bin } {
 # RESULT
 #   * ipnet -- returns the free IPv4 network address in the form a.b.c.d
 #****
-proc findFreeIPv4Net { mask } {
+proc findFreeIPv4Net { mask { ipv4_used_list "" } } {
     global ipv4
     global numbits
 
@@ -163,7 +163,7 @@ proc findFreeIPv4Net { mask } {
 
     set ipnets {}
 
-    foreach addr [getFromRunning "ipv4_used_list"] {
+    foreach addr $ipv4_used_list {
 	if {$numbits <= 8}  {
 	    set ipnet [lindex [split $addr .] 0]
 	} elseif {$numbits > 8 && $numbits <=16} {
@@ -301,32 +301,16 @@ proc autoIPv4addr { node iface } {
 	}
     }
 
-    # TODO: reduce with _getNextIPv4addr proc
-    set targetbyte [$node_type.IPAddrRange]
-
-    set targetbyte2 0
-
     if { $peer_ip4addrs != "" && $changeAddrRange == 0 } {
-	setIfcIPv4addrs $node $iface [nextFreeIP4Addr [lindex $peer_ip4addrs 0] $targetbyte $peer_ip4addrs]
+	setIfcIPv4addrs $node $iface [nextFreeIP4Addr [lindex $peer_ip4addrs 0] [$node_type.IPAddrRange] $peer_ip4addrs]
     } else {
-        if {$numbits <= 8} {
-	    setIfcIPv4addrs $node $iface "[findFreeIPv4Net $numbits].$targetbyte2.$targetbyte2.$targetbyte/$numbits"
-	} elseif {$numbits > 8 && $numbits <=16} {
-	    setIfcIPv4addrs $node $iface "[findFreeIPv4Net $numbits].$targetbyte2.$targetbyte/$numbits"
-	} elseif {$numbits > 16 && $numbits <=24} {
-	    setIfcIPv4addrs $node $iface "[findFreeIPv4Net $numbits].$targetbyte/$numbits"
-	} elseif {$numbits > 24} {
-            set lastbyte [lindex [split [findFreeIPv4Net $numbits] .] 3]
-            set first3bytes [join [lrange [split [findFreeIPv4Net $numbits] .] 0 2] .]
-            set targetbyte3 [expr {$lastbyte + 1}]
-	    setIfcIPv4addrs $node $iface "$first3bytes.$targetbyte3/$numbits"
-        }
+	setIfcIPv4addrs $node $iface [getNextIPv4addr $node_type [getFromRunning "ipv4_used_list"]]
     }
 
     lappendToRunning "ipv4_used_list" [getIfcIPv4addr $node $iface]
 }
 
-proc _getNextIPv4addr { node_type } {
+proc getNextIPv4addr { node_type existing_addrs } {
     global IPv4autoAssign
 
     if { ! $IPv4autoAssign } {
@@ -336,18 +320,16 @@ proc _getNextIPv4addr { node_type } {
     global numbits
 
     set targetbyte [$node_type.IPAddrRange]
-
     set targetbyte2 0
-
     if { $numbits <= 8 } {
-	set ipv4addr "[findFreeIPv4Net $numbits].$targetbyte2.$targetbyte2.$targetbyte/$numbits"
+	set ipv4addr "[findFreeIPv4Net $numbits $existing_addrs].$targetbyte2.$targetbyte2.$targetbyte/$numbits"
     } elseif { $numbits > 8 && $numbits <=16 } {
-	set ipv4addr "[findFreeIPv4Net $numbits].$targetbyte2.$targetbyte/$numbits"
+	set ipv4addr "[findFreeIPv4Net $numbits $existing_addrs].$targetbyte2.$targetbyte/$numbits"
     } elseif { $numbits > 16 && $numbits <=24 } {
-	set ipv4addr "[findFreeIPv4Net $numbits].$targetbyte/$numbits"
+	set ipv4addr "[findFreeIPv4Net $numbits $existing_addrs].$targetbyte/$numbits"
     } elseif { $numbits > 24 } {
-	set lastbyte [lindex [split [findFreeIPv4Net $numbits] .] 3]
-	set first3bytes [join [lrange [split [findFreeIPv4Net $numbits] .] 0 2] .]
+	set lastbyte [lindex [split [findFreeIPv4Net $numbits $existing_addrs] .] 3]
+	set first3bytes [join [lrange [split [findFreeIPv4Net $numbits $existing_addrs] .] 0 2] .]
 	set targetbyte3 [expr {$lastbyte + 1}]
 	set ipv4addr "$first3bytes.$targetbyte3/$numbits"
     }
