@@ -1076,6 +1076,10 @@ proc isNodeError { node } {
 	# docker exec sometimes hangs, so don't use it while we have other pipes opened
 	exec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $node_id
     } on ok mergedir {
+	if { ! [file exists ${mergedir}/err.log] } {
+	    return ""
+	}
+
 	catch { exec sed "/^+ /d" ${mergedir}/err.log } errlog
 	if { $errlog == "" } {
 	    return false
@@ -1100,6 +1104,10 @@ proc isNodeErrorIfaces { node } {
 	# docker exec sometimes hangs, so don't use it while we have other pipes opened
 	exec docker inspect -f "{{.GraphDriver.Data.MergedDir}}" $node_id
     } on ok mergedir {
+	if { ! [file exists ${mergedir}/err_ifaces.log] } {
+	    return ""
+	}
+
 	catch { exec sed "/^+ /d" ${mergedir}/err_ifaces.log } errlog
 	if { $errlog == "" } {
 	    return false

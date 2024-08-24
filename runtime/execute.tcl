@@ -1258,9 +1258,18 @@ proc checkForErrors { nodes nodeCount w } {
 
     set batchStep 0
     set err_nodes ""
-    foreach node $nodes {
+    for {set pending_nodes $nodes} {$pending_nodes != ""} {} {
+	set node [lindex $pending_nodes 0]
+	set pending_nodes [removeFromList $pending_nodes $node]
+
 	set msg "no error"
-	if { [isNodeError $node] } {
+	set err [isNodeError $node]
+	if { $err == "" } {
+	    lappend pending_nodes $node
+	    continue
+	}
+
+	if { $err } {
 	    set msg "error found"
 	    append err_nodes "[getNodeName $node] ($node), "
 	}
@@ -1304,9 +1313,18 @@ proc checkForErrorsIfaces { nodes nodeCount w } {
 
     set batchStep 0
     set err_nodes ""
-    foreach node $nodes {
+    for {set pending_nodes $nodes} {$pending_nodes != ""} {} {
+	set node [lindex $pending_nodes 0]
+	set pending_nodes [removeFromList $pending_nodes $node]
+
 	set msg "no error"
-	if { [isNodeErrorIfaces $node] } {
+	set err [isNodeErrorIfaces $node]
+	if { $err == "" } {
+	    lappend pending_nodes $node
+	    continue
+	}
+
+	if { $err } {
 	    set msg "error found"
 	    append err_nodes "[getNodeName $node] ($node), "
 	}
