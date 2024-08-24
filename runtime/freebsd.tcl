@@ -2275,3 +2275,35 @@ proc unsetupExtNat { eid node ifc } {
 
     pipesExec "$cmds" "hold"
 }
+
+proc startRoutingDaemons { node_id } {
+    set cmds "zebra -dP0"
+
+    foreach protocol { rip ripng ospf ospf6 } {
+	if { [getNodeProtocol $node_id $protocol] != 1 } {
+	    continue
+	}
+
+	set cmds "$cmds; ${protocol}d -dP0"
+    }
+
+    foreach protocol { ldp bfd } {
+	if { [getNodeProtocol $node_id $protocol] != 1 } {
+	    continue
+	}
+
+	set cmds "$cmds; ${protocol}d -dP0"
+    }
+
+    foreach protocol { bgp isis } {
+	if { [getNodeProtocol $node_id $protocol] != 1 } {
+	    continue
+	}
+
+	set cmds "$cmds; ${protocol}d -dP0"
+    }
+
+    set cmds "$cmds; sed -i '' '/Disabling MPLS support/d' /terr.log"
+
+    pipesExec "jexec [getFromRunning "eid"].$node_id sh -c '$cmds'" "hold"
+}

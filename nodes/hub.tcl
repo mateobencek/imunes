@@ -173,7 +173,7 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id ifc } {
-    set ifunit [string range $ifc 1 end]
+    set ifunit [string range $ifc 3 end]
     return [list $node_id link$ifunit]
 }
 

@@ -197,7 +197,7 @@ proc $MODULE.shellcmds {} {
 #     netgraph hook (ngNode ngHook).
 #****
 proc $MODULE.nghook { eid node_id ifc } {
-    return [l3node.nghook $eid $node_id $ifc]
+    return [list $node_id-[getIfcName $node_id $iface_id] ether]
 }
 
 #****f* extnat.tcl/extnat.maxLinks
