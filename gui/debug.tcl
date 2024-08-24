@@ -115,7 +115,7 @@ proc logCaller {} {
 }
 
 bind . <F6> {
-    global all_modules_list
+    global isOSfreebsd all_modules_list
     set all_modules_list {}
 
     source "$ROOTDIR/$LIBDIR/runtime/cfgparse.tcl"
@@ -123,8 +123,11 @@ bind . <F6> {
     source "$ROOTDIR/$LIBDIR/runtime/eventsched.tcl"
     source "$ROOTDIR/$LIBDIR/runtime/execute.tcl"
     source "$ROOTDIR/$LIBDIR/runtime/filemgmt.tcl"
-    source "$ROOTDIR/$LIBDIR/runtime/freebsd.tcl"
-    source "$ROOTDIR/$LIBDIR/runtime/linux.tcl"
+    if { $isOSfreebsd } {
+	source "$ROOTDIR/$LIBDIR/runtime/freebsd.tcl"
+    } else {
+	source "$ROOTDIR/$LIBDIR/runtime/linux.tcl"
+    }
     source "$ROOTDIR/$LIBDIR/runtime/services.tcl"
     source "$ROOTDIR/$LIBDIR/runtime/terminate.tcl"
 
