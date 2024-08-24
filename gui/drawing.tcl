@@ -158,12 +158,18 @@ proc drawNode { node_id } {
 	    if { [getNodeType $node_id] == "wlan" } {
 		set label_str "$label_str [getIfcIPv4addr $node_id $ifc]"
 	    } elseif { [getIfcLink $node_id $ifc] == "" } {
+		if { [getIfcType $node_id $ifc] == "stolen" } {
+		    set iflabel "\[[getIfcName $node_id $ifc]\]"
+		} else {
+		    set iflabel "[getIfcName $node_id $ifc]"
+		}
+
 		if { $has_empty_ifaces == 0 } {
 		    incr y 8
-		    set label_str "$label_str\n[getIfcName $node_id $ifc]"
+		    set label_str "$label_str\n$iflabel"
 		    set has_empty_ifaces 1
 		} else {
-		    set label_str "$label_str [getIfcName $node_id $ifc]"
+		    set label_str "$label_str $iflabel"
 		}
 	    }
 	}
@@ -306,28 +312,35 @@ proc calcAngle { link } {
 proc updateIfcLabel { link_id node_id iface } {
     global show_interface_names show_interface_ipv4 show_interface_ipv6
 
-    if { [getNodeType $node_id] == "extelem" } {
-	set ifaces [getNodeStolenIfaces $node_id]
-	set iface [lindex [lsearch -inline -exact -index 0 $ifaces "$iface"] 1]
-    }
-
-    set ifipv4addr [getIfcIPv4addr $node_id $iface]
-    set ifipv6addr [getIfcIPv6addr $node_id $iface]
+    set ifipv4addr [getIfcIPv4addrs $node_id $iface]
+    set ifipv6addr [getIfcIPv6addrs $node_id $iface]
     if { $iface == 0 } {
 	set iface ""
     }
 
     set labelstr ""
     if { $show_interface_names } {
-	lappend labelstr "[getIfcName $node_id $iface]"
+	if { [getNodeType $node_id] == "extelem" } {
+	    lappend labelstr "$iface - [getIfcName $node_id $iface]"
+	} else {
+	    lappend labelstr "[getIfcName $node_id $iface]"
+	}
     }
 
     if { $show_interface_ipv4 && $ifipv4addr != "" } {
-	lappend labelstr "$ifipv4addr"
+	if { [llength $ifipv4addr] > 1 } {
+	    lappend labelstr "[lindex $ifipv4addr 0] ..."
+	} else {
+	    lappend labelstr "$ifipv4addr"
+	}
     }
 
     if { $show_interface_ipv6 && $ifipv6addr != "" } {
-	lappend labelstr "$ifipv6addr"
+	if { [llength $ifipv6addr] > 1 } {
+	    lappend labelstr "[lindex $ifipv6addr 0] ..."
+	} else {
+	    lappend labelstr "$ifipv6addr"
+	}
     }
 
     set str ""

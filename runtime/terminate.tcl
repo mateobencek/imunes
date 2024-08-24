@@ -270,7 +270,7 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
 
     set bkp_cfg ""
     set terminate_cfg [getFromExecuteVars "terminate_cfg"]
-    if { $terminate_cfg != "" } {
+    if { $terminate_cfg != "" && $terminate_cfg != [cfgGet] } {
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
 	set bkp_cfg [cfgGet]

@@ -712,7 +712,7 @@ proc setNodeName { node_id name } {
     }
 
     if { [$node_type.virtlayer] == "NATIVE" } {
-	if { $node_type in "rj45 extnat" } {
+	if { $node_type in "extnat" } {
 	    trigger_nodeReconfig $node_id
 	}
 
@@ -2032,6 +2032,10 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 	return $old_node_cfg
     }
 
+    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
+	setToExecuteVars "terminate_cfg" [cfgGet]
+    }
+
     dict for {key change} $cfg_diff {
 	if { $change == "copy" } {
 	    continue
@@ -2205,9 +2209,6 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 
 		    switch -exact $iface_change {
 			"removed" {
-			    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-				setToExecuteVars "terminate_cfg" [cfgGet]
-			    }
 			    removeIface $node_id $iface_key
 			}
 

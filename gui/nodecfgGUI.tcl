@@ -940,9 +940,7 @@ proc configGUI_physicalInterfaces { wi node_id ifc } {
     listbox $wi.if$ifc.list -height 7 -width 10 -listvariable ifaces_list
 
     ttk::label $wi.if$ifc.addtxt -text "Add new interface:"
-    # TODO: stolen ifaces
-    set types "phys stolen"
-    set types "phys"
+    set types "phys [getHostIfcList]"
     ttk::combobox $wi.if$ifc.addbox -width 10 -values $types \
 	-state readonly
     $wi.if$ifc.addbox set [lindex $types 0]
@@ -953,7 +951,15 @@ proc configGUI_physicalInterfaces { wi node_id ifc } {
 
 	set wi .popup.nbook.nfInterfaces.panwin.f2.ifphysIfcFrame
 	set ifctype [$wi.addbox get]
+	if { $ifctype != "phys" } {
+	    set iface_name $ifctype
+	    set ifctype "stolen"
+	}
 	lassign [_newIface $node_cfg $ifctype 1] iface_id node_cfg
+
+	if { $ifctype != "phys" } {
+	    set node_cfg [_setIfcName $node_cfg $iface_id $iface_name]
+	}
 
 	set ifaces_list [lsort [_ifaceNames $node_cfg]]
 	$wi.rmvbox configure -values $ifaces_list

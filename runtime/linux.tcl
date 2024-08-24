@@ -651,7 +651,9 @@ proc nodePhysIfacesCreate { node_id ifcs } {
 		# we don't know the name, so make sure all other options cover other IMUNES
 		# 'physical' interfaces
 		# XXX not yet implemented
-		pipesExec "ip link set $iface_name netns $nodeNs" "hold"
+		if { [getIfcType $node_id $iface_id] == "stolen" } {
+		    captureExtIfcByName $eid $iface_name $node_id
+		}
 	    }
 	}
     }
@@ -1226,14 +1228,26 @@ proc destroyLinkBetween { eid lnode1 lnode2 link } {
 #   * vimages -- list of virtual nodes
 #****
 proc destroyNodeIfaces { eid node_id ifaces } {
-    if { [getNodeType $node_id] in "ext extnat" } {
+    puts "destroyNodeIfaces $eid $node_id $ifaces"
+    set node_type [getNodeType $node_id]
+    if { $node_type in "ext extnat" } {
 	pipesExec "ip link del $eid-$node_id" "hold"
-	return
+    } elseif { $node_type in "rj45 extelem" } {
+	foreach iface_id $ifaces {
+	    releaseExtIfcByName $eid [getIfcName $node_id $iface_id] $node_id
+	}
+    } else {
+	foreach iface_id $ifaces {
+	    set iface_name [getIfcName $node_id $iface_id]
+	    if { [getIfcType $node_id $iface_id] == "stolen" } {
+		releaseExtIfcByName $eid $iface_name $node_id
+	    } else {
+		pipesExec "ip -n $eid link del $node_id-$iface_name" "hold"
+	    }
+	}
     }
 
     foreach iface_id $ifaces {
-	set iface_name [getIfcName $node_id $iface_id]
-	pipesExec "ip -n $eid link del $node_id-$iface_name" "hold"
 	setToRunning "${node_id}|${iface_id}_running" false
     }
 }
@@ -1356,7 +1370,7 @@ proc captureExtIfc { eid node } {
 	return
     }
 
-    captureExtIfcByName $eid $ifname
+    captureExtIfcByName $eid $ifname $node_id
 }
 
 #****f* linux.tcl/captureExtIfcByName
@@ -1370,9 +1384,10 @@ proc captureExtIfc { eid node } {
 #   * eid -- experiment id
 #   * ifname -- physical interface name
 #****
-proc captureExtIfcByName { eid ifname } {
+proc captureExtIfcByName { eid ifname node } {
+    set nodeNs [getNodeNetns $eid $node]
     # won't work if the node is a wireless interface
-    pipesExec "ip link set $ifname netns $eid" "hold"
+    pipesExec "ip link set $ifname netns $nodeNs" "hold"
 }
 
 #****f* linux.tcl/releaseExtIfc
@@ -1414,10 +1429,11 @@ proc releaseExtIfc { eid node } {
 #   * eid -- experiment id
 #   * node -- node id
 #****
-proc releaseExtIfcByName { eid ifname } {
+proc releaseExtIfcByName { eid ifname node } {
     global devfs_number
 
-    pipesExec "ip -n $eid link set $ifname netns imunes_$devfs_number" "hold"
+    set nodeNs [getNodeNetns $eid $node]
+    pipesExec "ip -n $nodeNs link set $ifname netns imunes_$devfs_number" "hold"
 
     return
 }

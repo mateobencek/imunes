@@ -717,7 +717,9 @@ proc button3node { c x y } {
 			continue
 		    }
 
-		    if { [getIfcLink $peer_node_id $other_iface_id] != "" } {
+		    if { [getIfcLink $peer_node_id $other_iface_id] != "" ||
+			[getIfcType $peer_node_id $other_iface_id] == "stolen" } {
+
 			continue
 		    }
 
@@ -1856,7 +1858,7 @@ proc nodeEnter { c } {
     }
     if { $type != "rj45" } {
 	foreach iface [ifcList $node_id] {
-	    set line "$line [getIfcName $node_id $iface]:[getIfcIPv4addr $node_id $iface]"
+	    set line "$line [getIfcName $node_id $iface]:[getIfcIPv4addrs $node_id $iface]"
 	}
     }
     .bottom.textbox config -text "$line"
