@@ -3240,13 +3240,13 @@ proc formatIPaddrList { addrList } {
 }
 
 proc setIPsecLogging { node_id tab } {
-    global ipsec_logging_on
+    global ipsec_logging_on node_cfg
 
     if { $ipsec_logging_on } {
 	grid $tab.check_button -column 0 -row 3 -sticky ws -pady {0 0}
 	grid $tab.logLevelLabel -column 1 -row 3 -columnspan 1 -sticky es
 	grid $tab.logLevel -column 2 -row 3 -columnspan 3 -sticky es
-	set ipsec_logging [getNodeIPsecItem $node_id "ipsec_logging"]
+	set ipsec_logging [_getNodeIPsecItem $node_cfg "ipsec_logging"]
 	if { $ipsec_logging == "" } {
 	    set ipsec_logging 1
 	}
@@ -3271,10 +3271,11 @@ proc setIPsecLogging { node_id tab } {
 #   * node_id -- node id
 #****
 proc configGUI_ipsec { tab node_id } {
-    global guielements ipsec_logging_on
-
+    global guielements
     lappend guielements configGUI_ipsec
-    set ipsec_logging [getNodeIPsecItem $node_id "ipsec_logging"]
+
+    global ipsec_logging_on node_cfg
+    set ipsec_logging [_getNodeIPsecItem $node_cfg "ipsec_logging"]
 
     if { $ipsec_logging == "" } {
 	set ipsec_logging_on 0
@@ -3320,24 +3321,26 @@ proc configGUI_ipsec { tab node_id } {
 }
 
 proc configGUI_ipsecApply { wi node_id } {
-    global ipsec_logging_on
+    global ipsec_logging_on node_cfg
 
     if { $ipsec_logging_on } {
-	setNodeIPsecItem $node_id "ipsec_logging" [lindex [$wi.logLevel get] 0]
+	set node_cfg [_setNodeIPsecItem $node_cfg "ipsec_logging" [lindex [$wi.logLevel get] 0]]
     } else {
-	if { [getNodeIPsecItem $node_id "ipsec_logging"] != "" } {
-	    setNodeIPsecItem $node_id "ipsec_logging" ""
+	if { [_getNodeIPsecItem $node_cfg "ipsec_logging"] != "" } {
+	    set node_cfg [_setNodeIPsecItem $node_cfg "ipsec_logging" ""]
 	}
     }
 }
 
 proc addIPsecConnWindow { node_id tab } {
+    global node_cfg
+
     set mainFrame .d.mIPsecFrame
     set connParamsLframe $mainFrame.conn_params_lframe
     set espOptionsLframe $mainFrame.esp_options_lframe
     set ikeSALframe $mainFrame.ike_sa_lframe
 
-    if { "[ifcList $node_id]" != "" } {
+    if { "[_ifcList $node_cfg]" != "" } {
 	if { [createIPsecGUI $node_id $mainFrame $connParamsLframe $espOptionsLframe $ikeSALframe "Add"] } {
 	    $mainFrame.buttons_container.apply configure -command "putIPsecConnectionInTree $node_id $tab add"
 	    setDefaultsForIPsec $node_id $connParamsLframe $espOptionsLframe
@@ -3371,10 +3374,11 @@ proc modIPsecConnWindow { node_id tab } {
 }
 
 proc deleteIPsecConnection { node_id tab } {
-    global $tab.tree ipsec_enable
+    global $tab.tree ipsec_enable node_cfg
+
     set connection_name [$tab.tree focus]
 
-    delNodeIPsecConnection $node_id $connection_name
+    set node_cfg [_delNodeIPsecConnection $node_cfg $connection_name]
 
     refreshIPsecTree $node_id $tab
 
@@ -3402,6 +3406,7 @@ proc putIPsecConnectionInTree { node_id tab indicator } {
     global ah_suits modp_suits connection_name local_name local_ip_address local_subnet
     global tree_widget conn_time keying_time how_long_time
     global no_encryption secret_file old_conn_name ipsec_enable
+    global node_cfg
 
     set cert_exists 0
 
@@ -3460,17 +3465,23 @@ proc putIPsecConnectionInTree { node_id tab indicator } {
 	}
     }
 
-    set cfg [getNodeIPsec $node_id]
+    set cfg [_getNodeIPsec $node_cfg]
+
+    if { $connection_name == "%default" } {
+	tk_messageBox -message "Cannot use '%default' as a name" -title "Error" -icon error -type ok
+
+	return
+    }
 
     if { $indicator == "add"} {
-	if { [nodeIPsecConnExists $node_id $connection_name] == 1 } {
+	if { [_nodeIPsecConnExists $node_cfg $connection_name] == 1 } {
 	    tk_messageBox -message "Connection named '$connection_name' already exists" -title "Error" -icon error -type ok
 
 	    return
 	}
     } else {
 	if { $changed == "yes"} {
-	    if { [nodeIPsecConnExists $node_id $connection_name] == 1 } {
+	    if { [_nodeIPsecConnExists $node_cfg $connection_name] == 1 } {
 		tk_messageBox -message "Connection named '$connection_name' already exists" -title "Error" -icon error -type ok
 
 		return
@@ -3571,100 +3582,99 @@ proc putIPsecConnectionInTree { node_id tab indicator } {
 
     set total_list ""
 
-    set has_local_cert [getNodeIPsecItem $node_id "local_cert"]
-    set has_local_key_file [getNodeIPsecItem $node_id "local_key_file"]
+    set has_local_cert [_getNodeIPsecItem $node_cfg "local_cert"]
+    set has_local_key_file [_getNodeIPsecItem $node_cfg "local_key_file"]
 
     if { $has_local_cert == "" && $authby != "secret" && $local_cert_file != "" && $secret_file != ""\
         && $has_local_key_file == ""} {
-        setNodeIPsecItem $node_id "local_cert" $local_cert_file
-        setNodeIPsecItem $node_id "local_key_file" $secret_file
+
+        set node_cfg [_setNodeIPsecItem $node_cfg "local_cert" $local_cert_file]
+        set node_cfg [_setNodeIPsecItem $node_cfg "local_key_file" $secret_file]
     } else {
         if { $has_local_cert != $local_cert_file && $authby != "secret"} {
             set change [tk_messageBox -type "yesno" -message "Existing local cert file is different than current, proceed and replace?" -icon question -title "Cert file"]
             if { $change == "yes" } {
-		setNodeIPsecItem $node_id "local_cert" $local_cert_file
+		set node_cfg [_setNodeIPsecItem $node_cfg "local_cert" $local_cert_file]
             }
         }
         if { $has_local_key_file != $secret_file && $authby != "secret"} {
             set change [tk_messageBox -type "yesno" -message "Existing local cert file is different than current, proceed and replace?" -icon question -title "Secret file"]
             if { $change == "yes" } {
-		setNodeIPsecItem $node_id "local_key_file" $secret_file
+		set node_cfg [_setNodeIPsecItem $node_cfg "local_key_file" $secret_file]
             }
         }
     }
 
     if { $indicator == "modify" } {
-	delNodeIPsecConnection $node_id $old_conn_name
+	set node_cfg [_delNodeIPsecConnection $node_cfg $old_conn_name]
     }
 
     if { $total_keying_duration != "3h" } {
-        setNodeIPsecSetting $node_id $connection_name "ikelifetime" "$total_keying_duration"
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "ikelifetime" "$total_keying_duration"]
     } else {
-	setNodeIPsecSetting $node_id $connection_name "ikelifetime" ""
+	set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "ikelifetime" ""]
     }
 
     if { $total_instance_duration != "1h" } {
-        setNodeIPsecSetting $node_id $connection_name "keylife" "$total_instance_duration"
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "keylife" "$total_instance_duration"]
     } else {
-	setNodeIPsecSetting $node_id $connection_name "keylife" ""
+	set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "keylife" ""]
     }
 
     if { $total_margintime != "9m" } {
-        setNodeIPsecSetting $node_id $connection_name "rekeymargin" "$total_margintime"
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "rekeymargin" "$total_margintime"]
     } else {
-        setNodeIPsecSetting $node_id $connection_name "rekeymargin" ""
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "rekeymargin" ""]
     }
 
     if { $negotiation_attempts != "3" } {
-        setNodeIPsecSetting $node_id $connection_name "keyingtries" "$negotiation_attempts"
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "keyingtries" "$negotiation_attempts"]
     } else {
-        setNodeIPsecSetting $node_id $connection_name "keyingtries" ""
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "keyingtries" ""]
     }
 
     if { $ike_encr != "aes128" || $ike_auth != "sha1" || $ike_modp != "modp2048"} {
-        setNodeIPsecSetting $node_id $connection_name "ike" "$ike_encr-$ike_auth-$ike_modp"
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "ike" "$ike_encr-$ike_auth-$ike_modp"]
     } else {
-        setNodeIPsecSetting $node_id $connection_name "ike" ""
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "ike" ""]
     }
 
     if { $final_esp_encryption != "aes128" || $ah_suits != "sha1" || $modp_suits != "modp2048" } {
-        setNodeIPsecSetting $node_id $connection_name "esp" "$final_esp_encryption-$ah_suits-$modp_suits"
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "esp" "$final_esp_encryption-$ah_suits-$modp_suits"]
     } else {
-        setNodeIPsecSetting $node_id $connection_name "esp" ""
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "esp" ""]
     }
 
     if { $type != "tunnel"} {
-        setNodeIPsecSetting $node_id $connection_name "type" "$type"
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "type" "$type"]
     } else {
-        setNodeIPsecSetting $node_id $connection_name "type" ""
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "type" ""]
     }
 
-    setNodeIPsecSetting $node_id $connection_name "left" "$real_ip_local"
-    setNodeIPsecSetting $node_id $connection_name "leftsubnet" "$local_subnet"
-    setNodeIPsecSetting $node_id $connection_name "right" "$real_ip_peer"
-    setNodeIPsecSetting $node_id $connection_name "rightsubnet" "$peers_subnet"
-    setNodeIPsecSetting $node_id $connection_name "peersname" "[lindex $peers_name 0]"
+    set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "left" "$real_ip_local"]
+    set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "leftsubnet" "$local_subnet"]
+    set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "right" "$real_ip_peer"]
+    set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "rightsubnet" "$peers_subnet"]
+    set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "peersname" "[lindex $peers_name 0]"]
 
     if { $authby == "secret" } {
-        setNodeIPsecSetting $node_id $connection_name "authby" "secret"
-        setNodeIPsecSetting $node_id $connection_name "sharedkey" "$psk_key"
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "authby" "secret"]
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "sharedkey" "$psk_key"]
 
-        setNodeIPsecSetting $node_id $connection_name "leftid" ""
-        setNodeIPsecSetting $node_id $connection_name "rightid" ""
-#        checkAndClearCertificatesAndIds $node_id $connection_name
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "leftid" ""]
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "rightid" ""]
     } else {
-        setNodeIPsecSetting $node_id $connection_name "leftid" "$local_name"
-        setNodeIPsecSetting $node_id $connection_name "rightid" "$peers_id"
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "leftid" "$local_name"]
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "rightid" "$peers_id"]
 
-        setNodeIPsecSetting $node_id $connection_name "authby" ""
-        setNodeIPsecSetting $node_id $connection_name "sharedkey" ""
-#        checkAndClearSharedKeyAndAuthbySecret $node_id $connection_name
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "authby" ""]
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "sharedkey" ""]
     }
 
     if { $start_connection == 1 } {
-        setNodeIPsecSetting $node_id $connection_name "auto" "start"
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "auto" "start"]
     } else {
-        setNodeIPsecSetting $node_id $connection_name "auto" "add"
+        set node_cfg [_setNodeIPsecSetting $node_cfg $connection_name "auto" "add"]
     }
 
     if { $indicator == "add"} {
@@ -3693,9 +3703,11 @@ proc putIPsecConnectionInTree { node_id tab indicator } {
 #   tab - IPsec GUI tab widget
 #****
 proc refreshIPsecTree { node_id tab } {
+    global node_cfg
+
     $tab.tree delete [$tab.tree children {}]
-    foreach item [getNodeIPsecConnList $node_id] {
-	set peerIp [getNodeIPsecSetting $node_id $item "right"]
+    foreach item [_getNodeIPsecConnList $node_cfg] {
+	set peerIp [_getNodeIPsecSetting $node_cfg $item "right"]
 	if { $peerIp != "" } {
 	    $tab.tree insert {} end -id $item -text "$item" -tags "$item"
 	    $tab.tree set $item Peers_IP_address "$peerIp"
@@ -4028,6 +4040,7 @@ proc setDefaultsForIPsec { node_id connParamsLframe espOptionsLframe } {
     global how_long_before ike_encr ike_auth ike_modp peers_ip peers_name peers_id start_connection
     global peers_subnet local_cert_file local_name local_ip_address local_subnet type method esp_suits
     global ah_suits modp_suits secret_file no_encryption
+    global node_cfg
 
     set connection_name "home"
     set version ikev2
@@ -4043,7 +4056,7 @@ proc setDefaultsForIPsec { node_id connParamsLframe espOptionsLframe } {
     set ike_encr "aes128"
     set ike_auth "sha1"
     set ike_modp "modp2048"
-    set secret_file [getNodeIPsecItem $node_id "local_key_file"]
+    set secret_file [_getNodeIPsecItem $node_cfg "local_key_file"]
     set peers_id ""
     set psk_key ""
     set no_encryption "null"
@@ -4051,13 +4064,13 @@ proc setDefaultsForIPsec { node_id connParamsLframe espOptionsLframe } {
     set secret_dir "/usr/local/etc/ipsec.d/private"
     $espOptionsLframe.esp_container.null_encryption configure -state readonly
 
-    set local_cert_file [getNodeIPsecItem $node_id "local_cert_file"]
-    set local_name [getNodeName $node_id]
+    set local_cert_file [_getNodeIPsecItem $node_cfg "local_cert_file"]
+    set local_name [_getNodeName $node_cfg]
 
     set nodes [concat %any [getListOfOtherNodes $node_id]]
     $connParamsLframe.peer_name_entry configure -values $nodes
 
-    set localIPs [getAllIpAddresses $node_id]
+    set localIPs [_getAllIpAddresses $node_cfg]
     $connParamsLframe.local_ip_entry configure -values $localIPs
     set local_ip_address [lindex $localIPs 0]
 
@@ -4128,13 +4141,14 @@ proc populateValuesForUpdate { node_id tab connParamsLframe espOptionsLframe } {
     global how_long_before ike_encr ike_auth ike_modp peers_ip peers_name peers_id start_connection
     global peers_subnet local_cert_file local_name local_ip_address local_subnet type method esp_suits
     global ah_suits modp_suits secret_file no_encryption old_conn_name
+    global node_cfg
 
     set selected [$tab.tree focus]
     set connection_name $selected
     set version "ikev2"
 
-    set local_cert_file [getNodeIPsecSetting $node_id $selected "local_cert"]
-    set secret_file [getNodeIPsecSetting $node_id $selected "local_key_file"]
+    set local_cert_file [_getNodeIPsecSetting $node_cfg $selected "local_cert"]
+    set secret_file [_getNodeIPsecSetting $node_cfg $selected "local_key_file"]
 
     set var_list { \
 	{type "type" "tunnel" } \
@@ -4155,7 +4169,7 @@ proc populateValuesForUpdate { node_id tab connParamsLframe espOptionsLframe } {
     }
 
     foreach var $var_list {
-	set [lindex $var 0] [getNodeIPsecSetting $node_id $selected [lindex $var 1]]
+	set [lindex $var 0] [_getNodeIPsecSetting $node_cfg $selected [lindex $var 1]]
 	if { [set [lindex $var 0]] == "" } {
 	    set [lindex $var 0] [lindex $var 2]
 	}
@@ -4200,14 +4214,14 @@ proc populateValuesForUpdate { node_id tab connParamsLframe espOptionsLframe } {
 	showFullEncryption $espOptionsLframe
     }
 
-    set auto [getNodeIPsecSetting $node_id $selected "auto"]
+    set auto [_getNodeIPsecSetting $node_cfg $selected "auto"]
     if { $auto == "start" } {
 	set start_connection 1
     } else {
 	set start_connection 0
     }
 
-    set authby [getNodeIPsecSetting $node_id $selected "authby"]
+    set authby [_getNodeIPsecSetting $node_cfg $selected "authby"]
     if { $authby == "secret" } {
 	hideCertificates $connParamsLframe
     } else {
@@ -4217,8 +4231,8 @@ proc populateValuesForUpdate { node_id tab connParamsLframe espOptionsLframe } {
     set nodes [getListOfOtherNodes $node_id]
     $connParamsLframe.peer_name_entry configure -values [concat %any $nodes]
 
-    set local_ip_address [getNodeIPsecSetting $node_id $selected "left"]
-    set localIPs [getAllIpAddresses $node_id]
+    set local_ip_address [_getNodeIPsecSetting $node_cfg $selected "left"]
+    set localIPs [_getAllIpAddresses $node_cfg]
     $connParamsLframe.local_ip_entry configure -values $localIPs
     foreach localIp $localIPs {
 	if { $local_ip_address == [lindex [split $localIp /] 0]} {
@@ -4234,7 +4248,7 @@ proc populateValuesForUpdate { node_id tab connParamsLframe espOptionsLframe } {
 	    set peerIPs [getIPAddressForPeer $peers_node $local_ip_address]
 	    $connParamsLframe.peer_ip_entry configure -values $peerIPs
 	    if { [llength $peerIPs] != 0 } {
-		set peers_ip [getNodeIPsecSetting $node_id $selected "right"]
+		set peers_ip [_getNodeIPsecSetting $node_cfg $selected "right"]
 		foreach peerIp $peerIPs {
 		    if { $peers_ip == [lindex [split $peerIp /] 0]} {
 			set peers_ip $peerIp
@@ -4253,8 +4267,8 @@ proc populateValuesForUpdate { node_id tab connParamsLframe espOptionsLframe } {
     updateLocalSubnetCombobox $connParamsLframe
     updatePeerCombobox $connParamsLframe
 
-    set local_subnet [getNodeIPsecSetting $node_id $selected "leftsubnet"]
-    set peers_subnet [getNodeIPsecSetting $node_id $selected "rightsubnet"]
+    set local_subnet [_getNodeIPsecSetting $node_cfg $selected "leftsubnet"]
+    set peers_subnet [_getNodeIPsecSetting $node_cfg $selected "rightsubnet"]
 
     set local_cert_dir "/usr/local/etc/ipsec.d/certs"
     set secret_dir "/usr/local/etc/ipsec.d/private"
@@ -7213,4 +7227,77 @@ proc _getNodeDockerAttach { node_cfg } {
 
 proc _setNodeDockerAttach { node_cfg state } {
     return [_cfgSet $node_cfg "docker_attach" $state]
+}
+
+proc _getNodeIPsec { node_cfg } {
+    return [_cfgGet $node_cfg "ipsec" "ipsec_configs"]
+}
+
+proc _setNodeIPsec { node_cfg new_value } {
+    return [_cfgSet $node_cfg "ipsec" "ipsec_configs" $new_value]
+}
+
+proc _getNodeIPsecItem { node_cfg item } {
+    return [_cfgGet $node_cfg "ipsec" $item]
+}
+
+proc _setNodeIPsecItem { node_cfg item new_value } {
+    return [_cfgSet $node_cfg "ipsec" $item $new_value]
+}
+
+proc _setNodeIPsecConnection { node_cfg connection new_value } {
+    return [_cfgSet $node_cfg "ipsec" "ipsec_configs" $connection $new_value]
+}
+
+proc _delNodeIPsecConnection { node_cfg connection } {
+    return [_cfgSet $node_cfg "ipsec" "ipsec_configs" $connection]
+}
+
+proc _getNodeIPsecSetting { node_cfg connection setting } {
+    return [_cfgGet $node_cfg "ipsec" "ipsec_configs" $connection $setting]
+}
+
+proc _setNodeIPsecSetting { node_cfg connection setting new_value } {
+    return [_cfgSet $node_cfg "ipsec" "ipsec_configs" $connection $setting $new_value]
+}
+
+proc _getNodeIPsecConnList { node_cfg } {
+    return [dict keys [_cfgGet $node_cfg "ipsec" "ipsec_configs"]]
+}
+
+proc _nodeIPsecConnExists { node_cfg connection_name } {
+    if { $connection_name in [_getNodeIPsecConnList $node_cfg] } {
+        return 1
+    }
+
+    return 0
+}
+
+proc _getAllIpAddresses { node_cfg } {
+    set listOfInterfaces [_ifcList $node_cfg]
+    foreach logifc [_logIfcList $node_cfg] {
+	if { [string match "vlan*" $logifc]} {
+	    lappend listOfInterfaces $logifc
+	}
+    }
+
+    set listOfIP4s ""
+    set listOfIP6s ""
+    foreach item $listOfInterfaces {
+	set ifcIPs [_getIfcIPv4addrs $node_cfg $item]
+	foreach ifcIP $ifcIPs {
+	    if { $ifcIP != "" } {
+		lappend listOfIP4s $ifcIP
+	    }
+	}
+
+	set ifcIPs [_getIfcIPv6addrs $node_cfg $item]
+	foreach ifcIP $ifcIPs {
+	    if { $ifcIP != "" } {
+		lappend listOfIP6s $ifcIP
+	    }
+	}
+    }
+
+    return [concat $listOfIP4s $listOfIP6s]
 }
