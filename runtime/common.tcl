@@ -153,6 +153,28 @@ proc trigger_nodeReconfig { node_id } {
     trigger_nodeConfig $node_id
 }
 
+proc trigger_nodeFullConfig { node_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    trigger_nodeConfig $node_id
+    foreach iface_id [allIfcList $node_id] {
+	trigger_ifaceConfig $node_id $iface_id
+    }
+}
+
+proc trigger_nodeFullUnconfig { node_id } {
+    if { ! [getFromRunning "cfg_deployed"] } {
+	return
+    }
+
+    trigger_nodeUnconfig $node_id
+    foreach iface_id [allIfcList $node_id] {
+	trigger_ifaceUnconfig $node_id $iface_id
+    }
+}
+
 proc trigger_nodeFullReconfig { node_id } {
     if { ! [getFromRunning "cfg_deployed"] } {
 	return
@@ -384,7 +406,7 @@ proc trigger_linkRecreate { link_id } {
 }
 
 proc trigger_ifaceCreate { node_id iface_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
+    if { ! [getFromRunning "cfg_deployed"] || ! [getFromRunning "${node_id}_running"] } {
 	return
     }
 
@@ -401,7 +423,7 @@ proc trigger_ifaceCreate { node_id iface_id } {
 }
 
 proc trigger_ifaceDestroy { node_id iface_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
+    if { ! [getFromRunning "cfg_deployed"] || ! [getFromRunning "${node_id}_running"] } {
 	return
     }
 
@@ -433,7 +455,7 @@ proc trigger_ifaceDestroy { node_id iface_id } {
 }
 
 proc trigger_ifaceRecreate { node_id iface_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
+    if { ! [getFromRunning "cfg_deployed"] || ! [getFromRunning "${node_id}_running"] } {
 	return
     }
 
@@ -446,7 +468,7 @@ proc trigger_ifaceRecreate { node_id iface_id } {
 }
 
 proc trigger_ifaceConfig { node_id iface_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
+    if { ! [getFromRunning "cfg_deployed"] || ! [getFromRunning "${node_id}_running"] } {
 	return
     }
 
@@ -461,7 +483,7 @@ proc trigger_ifaceConfig { node_id iface_id } {
 }
 
 proc trigger_ifaceUnconfig { node_id iface_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
+    if { ! [getFromRunning "cfg_deployed"] || ! [getFromRunning "${node_id}_running"] } {
 	return
     }
 
@@ -491,7 +513,7 @@ proc trigger_ifaceUnconfig { node_id iface_id } {
 }
 
 proc trigger_ifaceReconfig { node_id iface_id } {
-    if { ! [getFromRunning "cfg_deployed"] } {
+    if { ! [getFromRunning "cfg_deployed"] || ! [getFromRunning "${node_id}_running"] } {
 	return
     }
 
