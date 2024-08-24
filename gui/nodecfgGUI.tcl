@@ -2109,23 +2109,26 @@ proc configGUI_ifcVlanConfig { wi node_id ifc } {
 proc configGUI_externalIfcs { wi node_id } {
     global guielements vlanEnable
     lappend guielements configGUI_externalIfcs
-    set ifc [lindex [split [ifcList $node_id] .] 0]
+
+    global node_cfg
+
+    set ifc [lindex [split [_ifcList $node_cfg] .] 0]
 
     ttk::frame $wi.if$ifc -borderwidth 2 -relief groove
     ttk::frame $wi.if$ifc.mac
     ttk::frame $wi.if$ifc.ipv4
     ttk::frame $wi.if$ifc.ipv6
 
-    ttk::label $wi.if$ifc.labelName -text "Interface [getIfcName $node_id $ifc]"
+    ttk::label $wi.if$ifc.labelName -text "Interface [_getIfcName $node_cfg $ifc]"
     ttk::label $wi.if$ifc.labelMAC -text "MAC address:" -width 11
     ttk::entry $wi.if$ifc.mac.addr -width 24 -validate focus
-    $wi.if$ifc.mac.addr insert 0 [getIfcMACaddr $node_id $ifc]
+    $wi.if$ifc.mac.addr insert 0 [_getIfcMACaddr $node_cfg $ifc]
     ttk::label $wi.if$ifc.labelIPv4 -text "IPv4 address:" -width 11
     ttk::entry $wi.if$ifc.ipv4.addr -width 24 -validate focus
-    $wi.if$ifc.ipv4.addr insert 0 [getIfcIPv4addr $node_id $ifc]
+    $wi.if$ifc.ipv4.addr insert 0 [_getIfcIPv4addr $node_cfg $ifc]
     ttk::label $wi.if$ifc.labelIPv6 -text "IPv6 address:" -width 11
     ttk::entry $wi.if$ifc.ipv6.addr -width 24 -validate focus
-    $wi.if$ifc.ipv6.addr insert 0 [getIfcIPv6addr $node_id $ifc]
+    $wi.if$ifc.ipv6.addr insert 0 [_getIfcIPv6addr $node_cfg $ifc]
 
     pack $wi.if$ifc -expand 1 -padx 1 -pady 1
     grid $wi.if$ifc.labelName -in $wi.if$ifc -columnspan 2 -row 0 -pady 4 -padx 4
@@ -2880,7 +2883,9 @@ proc configGUI_ifcVlanConfigApply { wi node_id ifc } {
 #   * ifc -- interface name
 #****
 proc configGUI_externalIfcsApply { wi node_id } {
-    set ifc [lindex [ifcList $node_id] 0]
+    global node_cfg
+
+    set ifc [lindex [_ifcList $node_cfg] 0]
 
     configGUI_ifcMACAddressApply $wi $node_id $ifc
     configGUI_ifcIPv4AddressApply $wi $node_id $ifc
