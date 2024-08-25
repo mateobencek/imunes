@@ -1339,10 +1339,11 @@ proc configGUI_rj45s { wi node_id } {
     global node_cfg
 
     set ifcs [getExtIfcs]
-    foreach group [_getNodeStolenIfaces $node_cfg] {
+    foreach iface_id [_allIfcList $node_cfg] {
+	set group "$iface_id [_getIfcName $node_cfg $iface_id]"
 	lassign $group ifc extIfc
-	set lbl "Interface [_getIfcName $node_cfg $ifc]"
-	lassign [_logicalPeerByIfc $node_cfg $ifc] peer -
+	set lbl "Interface $ifc"
+	lassign [logicalPeerByIfc $node_id $ifc] peer -
 	if { $peer != "" } {
 	    set lbl "$lbl (peer [getNodeName $peer])"
 	}
@@ -1653,6 +1654,8 @@ proc configGUI_etherVlan { wi node_id } {
     global guielements vlanEnable
     lappend guielements configGUI_etherVlan
 
+    global node_cfg
+
     ttk::frame $wi.vlancfg -borderwidth 2 -relief groove
     ttk::label $wi.vlancfg.label -text "Vlan:" -anchor w
     ttk::checkbutton $wi.vlancfg.enabled -text "enabled" -variable vlanEnable \
@@ -1671,8 +1674,8 @@ proc configGUI_etherVlan { wi node_id } {
 	-validatecommand {checkIntRange %P 1 4094} \
 	-from 1 -to 4094 -increment 1
 
-    $wi.vlancfg.tag insert 0 [getEtherVlanTag $node_id]
-    set vlanEnable [getEtherVlanEnabled $node_id]
+    $wi.vlancfg.tag insert 0 [_getEtherVlanTag $node_cfg]
+    set vlanEnable [_getEtherVlanEnabled $node_cfg]
     if { ! $vlanEnable } {
 	.popup.vlancfg.tag configure -state disabled
     }
@@ -2131,10 +2134,10 @@ proc configGUI_externalIfcs { wi node_id } {
     $wi.if$ifc.mac.addr insert 0 [_getIfcMACaddr $node_cfg $ifc]
     ttk::label $wi.if$ifc.labelIPv4 -text "IPv4 address:" -width 11
     ttk::entry $wi.if$ifc.ipv4.addr -width 24 -validate focus
-    $wi.if$ifc.ipv4.addr insert 0 [_getIfcIPv4addr $node_cfg $ifc]
+    $wi.if$ifc.ipv4.addr insert 0 [_getIfcIPv4addrs $node_cfg $ifc]
     ttk::label $wi.if$ifc.labelIPv6 -text "IPv6 address:" -width 11
     ttk::entry $wi.if$ifc.ipv6.addr -width 24 -validate focus
-    $wi.if$ifc.ipv6.addr insert 0 [_getIfcIPv6addr $node_cfg $ifc]
+    $wi.if$ifc.ipv6.addr insert 0 [_getIfcIPv6addrs $node_cfg $ifc]
 
     pack $wi.if$ifc -expand 1 -padx 1 -pady 1
     grid $wi.if$ifc.labelName -in $wi.if$ifc -columnspan 2 -row 0 -pady 4 -padx 4
@@ -2599,24 +2602,27 @@ proc checkStaticRoutesSyntax { text } {
 #   * node_id -- node id
 #****
 proc configGUI_etherVlanApply { wi node_id } {
-    global changed vlanEnable
-    set oldEnabled [getEtherVlanEnabled $node_id]
+    global changed vlanEnable node_cfg
+
+    set oldEnabled [_getEtherVlanEnabled $node_cfg]
     if { $vlanEnable != $oldEnabled } {
-	setEtherVlanEnabled $node_id $vlanEnable
+	set node_cfg [_setEtherVlanEnabled $node_cfg $vlanEnable]
 	set changed 1
     }
+
     set tag [$wi.vlancfg.tag get]
-    set oldTag [getEtherVlanTag $node_id]
+    set oldTag [_getEtherVlanTag $node_cfg]
     if { $tag != $oldTag } {
-	setEtherVlanTag $node_id $tag
+	set node_cfg [_setEtherVlanTag $node_cfg $tag]
 	if { $tag == "" } {
-	    setEtherVlanEnabled $node_id 0
+	    set node_cfg [_setEtherVlanEnabled $node_cfg 0]
 	    $wi.vlancfg.tag configure -state disabled
 	}
 	set changed 1
     }
 
-    setNodeName $node_id [getNodeName $node_id]
+    set iface_id [lindex [_allIfcList $node_cfg] 0]
+    set node_cfg [_setIfcName $node_cfg $iface_id [_getNodeName $node_cfg]]
 }
 
 #****f* nodecfgGUI.tcl/configGUI_customConfigApply
@@ -7023,18 +7029,12 @@ proc configGUI_rj45sApply { wi node_id } {
     set name [string trim [$wi.name.nodename get]]
     set node_cfg [_setNodeName $node_cfg $name]
 
-    set old_stolen_ifaces [_getNodeStolenIfaces $node_cfg]
     foreach iface [_ifcList $node_cfg] {
 	set new_stolen_iface [string trim [$wi.$iface.nodename get]]
-	if { $new_stolen_iface != [dictGet $old_stolen_ifaces $iface] } {
+	if { $new_stolen_iface != [_getIfcName $node_cfg $iface] } {
+	    set node_cfg [_setIfcName $node_cfg $iface $new_stolen_iface]
 	    set changed 1
-	    set node_cfg [_setIfcStolenIfc $node_cfg $iface $new_stolen_iface]
 	}
-    }
-
-    if { $changed == 1 } {
-	redrawAll
-	updateUndoLog
     }
 }
 
