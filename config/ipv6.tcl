@@ -147,33 +147,34 @@ proc autoIPv6addr { node iface } {
 	    foreach l2node [listLANNodes $peer_node {}] {
 		foreach ifc [ifcList $l2node] {
 		    lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
-		    set peer_ip6addr [getIfcIPv6addr $peer $peer_if]
+		    set peer_ip6addr [getIfcIPv6addrs $peer $peer_if]
 		    if { $peer_ip6addr == "" } {
 			continue
 		    }
 
 		    if { $changeAddressRange6 == 1 } {
 			if { "$peer $peer_if" in $autorenumbered_ifcs6 } {
-			    lappend peer_ip6addrs $peer_ip6addr
+			    lappend peer_ip6addrs {*}$peer_ip6addr
 			}
 		    } else {
-			lappend peer_ip6addrs $peer_ip6addr
+			lappend peer_ip6addrs {*}$peer_ip6addr
 		    }
 		}
 	    }
 	} else {
-	    set peer_ip6addrs [getIfcIPv6addr $peer_node $peer_if]
+	    set peer_ip6addrs [getIfcIPv6addrs $peer_node $peer_if]
 	}
     }
 
     if { $peer_ip6addrs != "" && $changeAddrRange6 == 0 } {
 	set targetbyte [expr 0x[$node_type.IPAddrRange]]
-	setIfcIPv6addrs $node $iface [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]
+	set addr [nextFreeIP6Addr [lindex $peer_ip6addrs 0] $targetbyte $peer_ip6addrs]
     } else {
-	setIfcIPv6addrs $node $iface [getNextIPv6addr $node_type [getFromRunning "ipv6_used_list"]]
+	set addr [getNextIPv6addr $node_type [getFromRunning "ipv6_used_list"]]
     }
 
-    lappendToRunning "ipv6_used_list" [getIfcIPv6addr $node $iface]
+    setIfcIPv6addrs $node $iface $addr
+    lappendToRunning "ipv6_used_list" $addr
 }
 
 proc getNextIPv6addr { node_type existing_addrs } {

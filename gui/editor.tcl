@@ -683,8 +683,8 @@ proc topologyElementsTree {} {
 		    $f.tree insert $node_id end -id $node_id$ifc -text "$ifc" -tags $node_id$ifc
 		    $f.tree set $node_id$ifc state [getIfcOperState $node_id $ifc]
 		    $f.tree set $node_id$ifc nat [getIfcNatState $node_id $ifc]
-		    $f.tree set $node_id$ifc IPv4 [getIfcIPv4addr $node_id $ifc]
-		    $f.tree set $node_id$ifc IPv6 [getIfcIPv6addr $node_id $ifc]
+		    $f.tree set $node_id$ifc IPv4 [getIfcIPv4addrs $node_id $ifc]
+		    $f.tree set $node_id$ifc IPv6 [getIfcIPv6addrs $node_id $ifc]
                     $f.tree set $node_id$ifc MAC [getIfcMACaddr $node_id $ifc]
 		}
 	    }
@@ -912,8 +912,8 @@ proc refreshTopologyTree {} {
 		    $f.tree insert $node_id end -id $node_id$ifc -text "$ifc" -tags $node_id$ifc
 		    $f.tree set $node_id$ifc state [getIfcOperState $node_id $ifc]
 		    $f.tree set $node_id$ifc nat [getIfcNatState $node_id $ifc]
-		    $f.tree set $node_id$ifc IPv4 [getIfcIPv4addr $node_id $ifc]
-		    $f.tree set $node_id$ifc IPv6 [getIfcIPv6addr $node_id $ifc]
+		    $f.tree set $node_id$ifc IPv4 [getIfcIPv4addrs $node_id $ifc]
+		    $f.tree set $node_id$ifc IPv6 [getIfcIPv6addrs $node_id $ifc]
                     $f.tree set $node_id$ifc MAC [getIfcMACaddr $node_id $ifc]
 	    }
 	}

@@ -452,8 +452,8 @@ proc showPhysIfcMenu { ifc } {
 	global node_existing_mac node_existing_ipv4 node_existing_ipv6
 
 	set node_existing_mac [removeFromList $node_existing_mac [_getIfcMACaddr $node_cfg $button3physifc_ifc] 1]
-	set node_existing_ipv4 [removeFromList $node_existing_ipv4 [_getIfcIPv4addr $node_cfg $button3physifc_ifc] 1]
-	set node_existing_ipv6 [removeFromList $node_existing_ipv6 [_getIfcIPv6addr $node_cfg $button3physifc_ifc] 1]
+	set node_existing_ipv4 [removeFromList $node_existing_ipv4 [_getIfcIPv4addrs $node_cfg $button3physifc_ifc] 1]
+	set node_existing_ipv6 [removeFromList $node_existing_ipv6 [_getIfcIPv6addrs $node_cfg $button3physifc_ifc] 1]
 
 	set changed 0
 	set node_cfg [_removeIface $node_cfg $button3physifc_ifc]
@@ -984,8 +984,8 @@ proc configGUI_physicalInterfaces { wi node_id ifc } {
 	}
 
 	set node_existing_mac [removeFromList $node_existing_mac [_getIfcMACaddr $node_cfg $iface_id] 1]
-	set node_existing_ipv4 [removeFromList $node_existing_ipv4 [_getIfcIPv4addr $node_cfg $iface_id] 1]
-	set node_existing_ipv6 [removeFromList $node_existing_ipv6 [_getIfcIPv6addr $node_cfg $iface_id] 1]
+	set node_existing_ipv4 [removeFromList $node_existing_ipv4 [_getIfcIPv4addrs $node_cfg $iface_id] 1]
+	set node_existing_ipv6 [removeFromList $node_existing_ipv6 [_getIfcIPv6addrs $node_cfg $iface_id] 1]
 
 	$wi.rmvbox set ""
 	set node_cfg [_removeIface $node_cfg $iface_id]
@@ -2359,10 +2359,12 @@ proc configGUI_ifcMACAddressApply { wi node_id ifc } {
 	}
 	set changed 1
 
-	# TODO: move to global node Apply
-	# replace old address in used_list with the new one
-	#setToRunning "mac_used_list" [removeFromList [getFromRunning "mac_used_list"] $oldmacaddr 1]
-	#lappendToRunning "mac_used_list" $macaddr
+	global node_existing_mac
+	if { $oldmacaddr != "" } {
+	    set node_existing_mac [removeFromList $node_existing_mac $oldmacaddr]
+	}
+
+	lappend node_existing_mac {*}$macaddr
     }
 }
 
@@ -2396,10 +2398,12 @@ proc configGUI_ifcIPv4AddressApply { wi node_id ifc } {
 	}
 	set changed 1
 
-	# TODO: move to global node Apply
-	# replace old address(es) in used_list with the new one(s)
-	#setToRunning "ipv4_used_list" [removeFromList [getFromRunning "ipv4_used_list"] $oldipaddrs 1]
-	#lappendToRunning "ipv4_used_list" $ipaddrs
+	global node_existing_ipv4
+	if { $oldipaddrs != "" } {
+	    set node_existing_ipv4 [removeFromList $node_existing_ipv4 $oldipaddrs]
+	}
+
+	lappend node_existing_ipv4 {*}$ipaddrs
     }
 }
 
@@ -2433,10 +2437,12 @@ proc configGUI_ifcIPv6AddressApply { wi node_id ifc } {
 	}
 	set changed 1
 
-	# TODO: move to global node Apply
-	# replace old address(es) in used_list with the new one(s)
-	#setToRunning "ipv6_used_list" [removeFromList [getFromRunning "ipv6_used_list"] $oldipaddrs 1]
-	#lappendToRunning "ipv6_used_list" $ipaddrs
+	global node_existing_ipv6
+	if { $oldipaddrs != "" } {
+	    set node_existing_ipv6 [removeFromList $node_existing_ipv6 $oldipaddrs]
+	}
+
+	lappend node_existing_ipv6 {*}$ipaddrs
     }
 }
 

@@ -282,32 +282,33 @@ proc autoIPv4addr { node iface } {
 	    foreach l2node [listLANNodes $peer_node {}] {
 		foreach ifc [ifcList $l2node] {
 		    lassign [logicalPeerByIfc $l2node $ifc] peer peer_if
-		    set peer_ip4addr [getIfcIPv4addr $peer $peer_if]
+		    set peer_ip4addr [getIfcIPv4addrs $peer $peer_if]
 		    if { $peer_ip4addr == "" } {
 			continue
 		    }
 
 		    if { $changeAddressRange == 1 } {
 			if { "$peer $peer_if" in $autorenumbered_ifcs } {
-			    lappend peer_ip4addrs $peer_ip4addr
+			    lappend peer_ip4addrs {*}$peer_ip4addr
 			}
 		    } else {
-			lappend peer_ip4addrs $peer_ip4addr
+			lappend peer_ip4addrs {*}$peer_ip4addr
 		    }
 		}
 	    }
 	} else {
-	    set peer_ip4addrs [getIfcIPv4addr $peer_node $peer_if]
+	    set peer_ip4addrs [getIfcIPv4addrs $peer_node $peer_if]
 	}
     }
 
     if { $peer_ip4addrs != "" && $changeAddrRange == 0 } {
-	setIfcIPv4addrs $node $iface [nextFreeIP4Addr [lindex $peer_ip4addrs 0] [$node_type.IPAddrRange] $peer_ip4addrs]
+	set addr [nextFreeIP4Addr [lindex $peer_ip4addrs 0] [$node_type.IPAddrRange] $peer_ip4addrs]
     } else {
-	setIfcIPv4addrs $node $iface [getNextIPv4addr $node_type [getFromRunning "ipv4_used_list"]]
+	set addr [getNextIPv4addr $node_type [getFromRunning "ipv4_used_list"]]
     }
 
-    lappendToRunning "ipv4_used_list" [getIfcIPv4addr $node $iface]
+    setIfcIPv4addrs $node $iface $addr
+    lappendToRunning "ipv4_used_list" $addr
 }
 
 proc getNextIPv4addr { node_type existing_addrs } {
