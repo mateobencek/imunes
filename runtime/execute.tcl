@@ -1027,8 +1027,6 @@ proc execute_nodesIfacesConfigure { nodes_ifaces nodeCount w } {
     set eid [getFromRunning "eid"]
 
     set batchStep 0
-    set subnet_gws {}
-    set nodes_l2data [dict create]
     dict for {node ifaces} $nodes_ifaces {
 	if { $ifaces == "*" } {
 	    set ifaces [allIfcList $node]
@@ -1105,8 +1103,6 @@ proc execute_nodesConfigure { nodes nodeCount w } {
     set eid [getFromRunning "eid"]
 
     set batchStep 0
-    set subnet_gws {}
-    set nodes_l2data [dict create]
     foreach node_id $nodes {
 	displayBatchProgress $batchStep $nodeCount
 

@@ -114,7 +114,31 @@ proc removeLink { link_id { keep_ifaces 0 } } {
     }
 
     lassign [getLinkPeers $link_id] node1_id node2_id
-    foreach node_id "$node1_id $node2_id" iface_id [getLinkPeersIfaces $link_id] {
+    lassign [getLinkPeersIfaces $link_id] iface1_id iface2_id
+
+    # before deleting the link, refresh nodes auto default routes
+    set subnet_gws {}
+    set subnet_data [dict create]
+    foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
+	lassign [getSubnetData $node_id $iface_id $subnet_gws $subnet_data 0] subnet_gws subnet_data
+	if { $subnet_gws != "{||}" } {
+	    set has_extnat [string match "*extnat*" $subnet_gws]
+	    foreach subnet_node [dict keys $subnet_data] {
+		set subnet_node_type [getNodeType $subnet_node]
+		if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		    continue
+		}
+
+		if { ! $has_extnat && [getNodeType $subnet_node] == "router" } {
+		    continue
+		}
+
+		trigger_nodeReconfig $subnet_node
+	    }
+	}
+    }
+
+    foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
 	if { $keep_ifaces } {
 	    cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
 	    continue
