@@ -1194,10 +1194,8 @@ proc configGUI_applyButtonNode { wi node_id phase } {
 	global node_cfg
 
 	updateNode $node_id "*" $node_cfg
-	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-	    undeployCfg
-	    deployCfg
-	}
+	undeployCfg
+	deployCfg
 
 	if { $node_existing_mac != [getFromRunning "mac_used_list"] } {
 	    setToRunning "mac_used_list" $node_existing_mac

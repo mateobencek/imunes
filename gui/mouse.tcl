@@ -76,10 +76,8 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
     }
 
     if { $atomic == "atomic" } {
-	if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-	    undeployCfg
-	    deployCfg
-	}
+	undeployCfg
+	deployCfg
 
 	set changed 1
 	if { $keep_ifaces } {
@@ -115,10 +113,8 @@ proc removeNodeGUI { node_id { keep_other_ifaces 0 } } {
 
     removeNode $node_id $keep_other_ifaces
 
-    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-	undeployCfg
-	deployCfg
-    }
+    undeployCfg
+    deployCfg
 
     .panwin.f1.c delete $node_id
 }
@@ -1449,10 +1445,8 @@ proc button1-release { c x y } {
 		set changed 1
 	    }
 
-	    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-		undeployCfg
-		deployCfg
-	    }
+	    undeployCfg
+	    deployCfg
 	}
     } elseif { $activetool in "rectangle oval text freeform" } {
 	popupAnnotationDialog $c 0 "false"
@@ -1645,10 +1639,8 @@ proc button1-release { c x y } {
 	}
 
 	if { $regular == "true" } {
-	    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-		undeployCfg
-		deployCfg
-	    }
+	    undeployCfg
+	    deployCfg
 
 	    foreach img [$c find withtag "selected"] {
 		drawNode [lindex [$c gettags $img] 1]

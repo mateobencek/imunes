@@ -610,10 +610,8 @@ proc newLinkWithIfacesGUI { lnode1 iface1 lnode2 iface2 } {
 	setNodeName $new_node2 $orig_node1
     }
 
-    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-	undeployCfg
-	deployCfg
-    }
+    undeployCfg
+    deployCfg
 
     redrawAll
     set changed 1

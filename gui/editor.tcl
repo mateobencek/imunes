@@ -1060,6 +1060,7 @@ proc resumeAndDestroy {} {
     }
 
     destroy .attachToExperimentDialog
+    toggleAutoExecutionGUI [getFromRunning "auto_execution"]
 }
 
 #****f* editor.tcl/updateScreenshotPreview
@@ -1156,10 +1157,14 @@ proc launchBrowser { url } {
     }
 }
 
-proc toggleAutoExecutionGUI {} {
+proc toggleAutoExecutionGUI { { new_value "" } } {
     for { set index 0 } { $index <= [.menubar.experiment index last] } { incr index } {
 	catch { .menubar.experiment entrycget $index -label } label_str
 	if { $label_str == "Pause auto execution" } {
+	    if { $new_value != "" && $new_value } {
+		break
+	    }
+
 	    .menubar.experiment entryconfigure $index -label "Resume auto execution"
 	    setToExecuteVars "terminate_cfg" [cfgGet]
 	    if { [getFromRunning "cfg_deployed"] } {
@@ -1168,6 +1173,10 @@ proc toggleAutoExecutionGUI {} {
 
 	    break
 	} elseif { $label_str == "Resume auto execution" } {
+	    if { $new_value != "" && ! $new_value } {
+		break
+	    }
+
 	    .menubar.experiment entryconfigure $index -label "Pause auto execution"
 	    redrawAll
 	    if { [getFromRunning "cfg_deployed"] } {

@@ -190,6 +190,31 @@ proc createExperimentFiles { eid } {
     }
 }
 
+proc createRunningVarsFile { eid } {
+    puts "[info level -1] - [info level 0]"
+    global runtimeDir
+
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+
+    # TODO: maybe remove some elements?
+    writeDataToFile $runtimeDir/$eid/runningVars [list "dict_run" "$dict_run" "execute_vars" "$execute_vars"]
+}
+
+proc readRunningVarsFile { eid } {
+    global runtimeDir
+
+    upvar 0 ::cf::[set ::curcfg]::dict_run dict_run
+    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
+
+    set fd [open $runtimeDir/$eid/runningVars r]
+    set vars_dict [read $fd]
+    close $fd
+
+    set dict_run [dictGet $vars_dict "dict_run"]
+    set execute_vars [dictGet $vars_dict "execute_vars"]
+}
+
 #****f* exec.tcl/saveRunningConfigurationInteractive
 # NAME
 #   saveRunningConfigurationInteractive -- save running configuration in
@@ -381,8 +406,21 @@ proc nodeIpsecInit { node } {
 #   as defined in configuration file of in GUI of imunes. Before deploying new
 #   configuration the old one is removed (vimageCleanup procedure).
 #****
-proc deployCfg {} {
+proc deployCfg { { execute 0 } } {
     global progressbarCount execMode
+
+    if { ! $execute } {
+	if { ! [getFromRunning "cfg_deployed"] } {
+	    return
+	}
+
+	if { ! [getFromRunning "auto_execution"] } {
+	    createExperimentFiles [getFromRunning "eid"]
+	    createRunningVarsFile [getFromRunning "eid"]
+
+	    return
+	}
+    }
 
     prepareInstantiateVars "force"
 
@@ -581,6 +619,11 @@ proc deployCfg {} {
     checkForErrors $error_check_nodes $error_check_nodes_count $w
 
     finishExecuting 1 "" $w
+
+    if { ! $execute } {
+	createExperimentFiles [getFromRunning "eid"]
+    }
+    createRunningVarsFile $eid
 
     statline "Network topology instantiated in [expr ([clock milliseconds] - $t_start)/1000.0] seconds ($allNodeCount nodes and $linkCount links)."
 

@@ -156,10 +156,8 @@ proc newNodes { node_num } {
 proc topoGenDone { nodes } {
     global changed
 
-    if { [getFromRunning "cfg_deployed"] && [getFromRunning "auto_execution"] } {
-	undeployCfg
-	deployCfg
-    }
+    undeployCfg
+    deployCfg
 
     set changed 1
     updateUndoLog

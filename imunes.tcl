@@ -353,7 +353,7 @@ if { $execMode == "interactive" } {
 	}
 
 	if { [allSnapshotsAvailable] == 1 } {
-	    deployCfg
+	    deployCfg 1
 	    createExperimentFilesFromBatch
 	}
     } else {

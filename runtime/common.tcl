@@ -744,7 +744,7 @@ proc setOperMode { oper_mode } {
 	    setToExecuteVars "configure_nodes_ifaces" "*"
 	    setToExecuteVars "configure_nodes" "*"
 
-	    deployCfg
+	    deployCfg 1
 
 	    setToRunning "cfg_deployed" true
 	}
@@ -973,6 +973,7 @@ proc resumeSelectedExperiment { exp } {
 
     setToRunning "current_file" [getExperimentConfigurationFromFile $exp]
     openFile
+    readRunningVarsFile $exp
 
     setToRunning "eid" $exp
     setToRunning "cfg_deployed" true

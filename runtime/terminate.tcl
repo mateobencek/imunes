@@ -237,6 +237,23 @@ proc finishTerminating { status msg w } {
 proc undeployCfg { { eid "" } { terminate 0 } } {
     global progressbarCount execMode
 
+    if { ! $terminate } {
+	if { ! [getFromRunning "cfg_deployed"] } {
+	    return
+	}
+
+	if { ! [getFromRunning "auto_execution"] } {
+	    if { $eid == "" } {
+		set eid [getFromRunning "eid"]
+	    }
+
+	    createExperimentFiles $eid
+	    createRunningVarsFile $eid
+
+	    return
+	}
+    }
+
     foreach var "terminate_nodes destroy_nodes_ifaces terminate_links
 	unconfigure_links unconfigure_nodes_ifaces unconfigure_nodes" {
 
@@ -246,8 +263,8 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
     prepareTerminateVars
 
     if { "$terminate_nodes$destroy_nodes_ifaces$terminate_links$unconfigure_links$unconfigure_nodes_ifaces$unconfigure_nodes" == "" } {
-
 	setToExecuteVars "terminate_cfg" ""
+
 	return
     }
 
@@ -443,6 +460,11 @@ proc undeployCfg { { eid "" } { terminate 0 } } {
     }
 
     finishTerminating 1 "" $w
+
+    if { ! $terminate } {
+	createExperimentFiles $eid
+	createRunningVarsFile $eid
+    }
 
     statline "Cleanup completed in [expr ([clock milliseconds] - $t_start)/1000.0] seconds."
 
