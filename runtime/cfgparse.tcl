@@ -1587,7 +1587,7 @@ proc getImageProperty { image_id property } {
 proc getJsonType { key_name } {
     if { $key_name in "canvases nodes links annotations images custom_configs ipsec_configs ifaces ifaces" } {
 	return "dictionary"
-    } elseif { $key_name in "custom_config croutes4 croutes6 ipv4_addrs ipv6_addrs services" } {
+    } elseif { $key_name in "custom_config croutes4 croutes6 ipv4_addrs ipv6_addrs services events" } {
 	return "array"
     } elseif { $key_name in "vlan ipsec nat64 packgen" } {
 	return "inner_dictionary"
