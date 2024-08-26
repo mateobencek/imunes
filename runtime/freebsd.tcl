@@ -2223,7 +2223,7 @@ proc taygaDestroy { eid node } {
     catch { exec jexec $eid.$node ifconfig [set nat64ifc_$eid.$node] destroy }
 }
 
-proc startExternalConnection { eid node } {
+proc configureExternalConnection { eid node } {
     set cmds ""
     set ifc [lindex [ifcList $node] 0]
     set outifc "$eid-$node"
@@ -2236,7 +2236,7 @@ proc startExternalConnection { eid node } {
     set cmds "ifconfig $outifc link $ether"
 
     foreach ipv4 [getIfcIPv4addrs $node $ifc] {
-	set cmds "ifconfig $outifc $ipv4"
+	set cmds "$cmds\n ifconfig $outifc $ipv4"
     }
 
     foreach ipv6 [getIfcIPv6addrs $node $ifc] {
@@ -2248,7 +2248,7 @@ proc startExternalConnection { eid node } {
     pipesExec "$cmds" "hold"
 }
 
-proc stopExternalConnection { eid node } {
+proc unconfigureExternalConnection { eid node } {
     pipesExec "ifconfig $eid-$node down" "hold"
 }
 

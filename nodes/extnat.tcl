@@ -202,7 +202,7 @@ proc $MODULE.shellcmds {} {
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node_id ifc } {
+proc $MODULE.nghook { eid node_id iface_id } {
     return [list $node_id-[getIfcName $node_id $iface_id] ether]
 }
 
@@ -234,6 +234,7 @@ proc $MODULE.maxLinks {} {
 #****
 proc $MODULE.prepareSystem {} {
     catch { exec kldload ipfilter }
+    catch { sysctl net.inet.ip.forwarding=1 }
 }
 
 #****f* extnat.tcl/extnat.nodeCreate
