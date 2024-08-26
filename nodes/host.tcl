@@ -314,8 +314,8 @@ proc $MODULE.shellcmds {} {
 #   * nghook -- the list containing netgraph node id and the
 #     netgraph hook (ngNode ngHook).
 #****
-proc $MODULE.nghook { eid node_id ifc } {
-    return [l3node.nghook $eid $node_id $ifc]
+proc $MODULE.nghook { eid node_id iface_id } {
+    return [list $node_id-[getIfcName $node_id $iface_id] ether]
 }
 
 ################################################################################
