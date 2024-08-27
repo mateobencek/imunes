@@ -1040,7 +1040,6 @@ proc configGUI_physicalInterfaces { wi node_id ifc } {
 #****
 proc configGUI_saveChangesPopup { wi node_id ifc } {
     global guielements treecolumns apply cancel changed
-    global
 
     #save changes
     set apply 1
@@ -1379,8 +1378,6 @@ proc configGUI_ifcMainFrame { wi node_id ifc } {
     global apply changed node_cfg
 
     set apply 0
-    # TODO: check if this needs to be set here
-    #set changed 0
     ttk::frame $wi.if$ifc -relief groove -borderwidth 2 -padding 4
     ttk::frame $wi.if$ifc.label -borderwidth 2
 
@@ -2287,7 +2284,6 @@ proc configGUI_ifcEssentialsApply { wi node_id ifc } {
 proc configGUI_ifcQueueConfigApply { wi node_id ifc } {
     global changed apply node_cfg
 
-    # TODO: fix getting peer
     if { [getNodeType [getIfcPeer $node_id $ifc]] != "rj45" } {
 	set qdisc [string trim [$wi.if$ifc.queuecfg.disc get]]
 	set oldqdisc [_getIfcQDisc $node_cfg $ifc]
@@ -5443,14 +5439,16 @@ proc configGUI_ifcBridgeMainFrame { wi node_id ifc } {
 }
 
 ## filter
-proc configGUI_addNotebookFilter { wi node_id labels } {
+proc configGUI_addNotebookFilter { wi node_id ifaces } {
+    global node_cfg
+
     ttk::notebook $wi.nbook -height 200
     pack $wi.nbook -fill both -expand 1
     pack propagate $wi.nbook 0
-    foreach label $labels {
-        ttk::frame $wi.nbook.nf$label
-        $wi.nbook add $wi.nbook.nf$label -text $label
-	configGUI_addFilterPanedWin $wi.nbook.nf$label
+    foreach iface_id $ifaces {
+        ttk::frame $wi.nbook.nf$iface_id
+        $wi.nbook add $wi.nbook.nf$iface_id -text [_getIfcName $node_cfg $iface_id]
+	configGUI_addFilterPanedWin $wi.nbook.nf$iface_id
     }
 
     bind $wi.nbook <<NotebookTabChanged>> \
@@ -5469,57 +5467,60 @@ proc configGUI_addFilterPanedWin { wi } {
 
     ttk::button $wi.panwin.f2.buttons.addnew -text "Add new rule" \
 	-command {
-	    global changed
+	    global changed node_cfg
 
 	    set sel [configGUI_ifcRuleConfigApply 1 0]
 	    if { $changed == 1 } {
 		configGUI_refreshIfcRulesTree
-		set ifc [.popup.nbook tab current -text]
-		set wi .popup.nbook.nf$ifc
+		set iface_id [_ifaceIdFromName $node_cfg [.popup.nbook tab current -text]]
+		set wi .popup.nbook.nf$iface_id
 		if { $sel != "" } {
 		    global curnode
 
 		    $wi.panwin.f1.tree focus $sel
 		    $wi.panwin.f1.tree selection set $sel
 
-		    configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $curnode $ifc $sel
+		    configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $curnode $iface_id $sel
 		}
 		set changed 0
 	    }
 	}
     ttk::button $wi.panwin.f2.buttons.duprul -text "Duplicate rule" \
 	-command {
-	    global changed
+	    global changed node_cfg
+
 	    set sel [configGUI_ifcRuleConfigApply 1 1]
 	    if { $changed == 1 } {
 		configGUI_refreshIfcRulesTree
-		set ifc [.popup.nbook tab current -text]
-		set wi .popup.nbook.nf$ifc
+		set iface_id [_ifaceIdFromName $node_cfg [.popup.nbook tab current -text]]
+		set wi .popup.nbook.nf$iface_id
 		if { $sel != "" } {
 		    global curnode
 
 		    $wi.panwin.f1.tree focus $sel
 		    $wi.panwin.f1.tree selection set $sel
 
-		    configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $curnode $ifc $sel
+		    configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $curnode $iface_id $sel
 		}
 		set changed 0
 	    }
 	}
     ttk::button $wi.panwin.f2.buttons.savrul -text "Save rule" \
 	-command {
+	    global node_cfg
+
 	    set sel [configGUI_ifcRuleConfigApply 0 0]
 	    if { $changed == 1 } {
 		configGUI_refreshIfcRulesTree
-		set ifc [.popup.nbook tab current -text]
-		set wi .popup.nbook.nf$ifc
+		set iface_id [_ifaceIdFromName $node_cfg [.popup.nbook tab current -text]]
+		set wi .popup.nbook.nf$iface_id
 		if { $sel != "" } {
 		    global curnode
 
 		    $wi.panwin.f1.tree focus $sel
 		    $wi.panwin.f1.tree selection set $sel
 
-		    configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $curnode $ifc $sel
+		    configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $curnode $iface_id $sel
 		}
 		set changed 0
 	    }
@@ -5527,10 +5528,12 @@ proc configGUI_addFilterPanedWin { wi } {
 
     ttk::button $wi.panwin.f2.buttons.delrul -text "Delete rule" \
 	-command {
+	    global node_cfg
+
 	    set sel [configGUI_ifcRuleConfigDelete]
 	    configGUI_refreshIfcRulesTree
-	    set ifc [.popup.nbook tab current -text]
-	    set wi .popup.nbook.nf$ifc
+	    set iface_id [_ifaceIdFromName $node_cfg [.popup.nbook tab current -text]]
+	    set wi .popup.nbook.nf$iface_id
 	    if { $sel != "" } {
 		global curnode
 
@@ -5538,7 +5541,7 @@ proc configGUI_addFilterPanedWin { wi } {
 		$wi.panwin.f1.tree selection set $sel
 	    }
 
-	    configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $curnode $ifc $sel
+	    configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $curnode $iface_id $sel
 	}
 
     grid $wi.panwin.f2 -sticky nsew
@@ -5565,35 +5568,62 @@ proc configGUI_buttonsACFilterNode { wi node_id } {
     ttk::button $wi.bottom.buttons.applyclose -text "Apply and Close" -command \
         "configGUI_applyFilterNode;set badentry -1;destroy $wi"
     ttk::button $wi.bottom.buttons.cancel -text "Cancel" -command \
-        "set badentry -1; destroy $wi"
+        "cancelNodeUpdate $node_id ; set badentry -1; destroy $wi"
+
     pack $wi.bottom.buttons.apply $wi.bottom.buttons.applyclose \
         $wi.bottom.buttons.cancel -side left -padx 2
     pack $wi.bottom.buttons -pady 2 -expand 1
     pack $wi.bottom -fill both -side bottom
-    bind $wi <Key-Escape> "set badentry -1; destroy $wi"
+
+    bind $wi <Key-Escape> "cancelNodeUpdate $node_id ; set badentry -1; destroy $wi"
 }
 
 proc configGUI_applyFilterNode { } {
-    global curnode changed
+    global apply curnode changed node_cfg
 
     configGUI_nodeNameApply .popup $curnode
+
+    global node_cfg
+
     set sel [configGUI_ifcRuleConfigApply 0 0]
     if { $changed == 1 } {
 	configGUI_refreshIfcRulesTree
-	set ifc [.popup.nbook tab current -text]
-	set wi .popup.nbook.nf$ifc
+	set iface_id [_ifaceIdFromName $node_cfg [.popup.nbook tab current -text]]
+	set wi .popup.nbook.nf$iface_id
 	if { $sel != "" } {
 	    $wi.panwin.f1.tree focus $sel
 	    $wi.panwin.f1.tree selection set $sel
-	    configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $curnode $ifc $sel
+
+	    configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $curnode $iface_id $sel
 	}
 	set changed 0
     }
+
+    global node_existing_mac node_existing_ipv4 node_existing_ipv6
+
+    updateNode $curnode "*" $node_cfg
+    undeployCfg
+    deployCfg
+
+    if { $node_existing_mac != [getFromRunning "mac_used_list"] } {
+	setToRunning "mac_used_list" $node_existing_mac
+    }
+
+    if { $node_existing_ipv4 != [getFromRunning "ipv4_used_list"] } {
+	setToRunning "ipv4_used_list" $node_existing_ipv4
+    }
+
+    if { $node_existing_ipv6 != [getFromRunning "ipv6_used_list"] } {
+	setToRunning "ipv6_used_list" $node_existing_ipv6
+    }
+
+    set node_cfg [cfgGet "nodes" $curnode]
+
     redrawAll
 }
 
 proc configGUI_addTreeFilter { wi node_id } {
-    global filtertreecolumns cancel
+    global filtertreecolumns cancel node_cfg
     #
     #cancel - indicates if the user has clicked on Cancel in the popup window about
     #         saving changes on the previously selected interface in the list of interfaces,
@@ -5633,10 +5663,10 @@ proc configGUI_addTreeFilter { wi node_id } {
 
     #Creating new items
 
-    foreach rule [lsort -integer [ifcFilterRuleList $node_id $ifc]] {
+    foreach rule [lsort -integer [_ifcFilterRuleList $node_cfg $ifc]] {
 	$wi.panwin.f1.tree insert {} end -id $rule -text "$rule" -tags $rule
 	foreach column $filtertreecolumns {
-	    $wi.panwin.f1.tree set $rule [lindex $column 0] [getFilterIfc[lindex $column 0] $node_id $ifc $rule]
+	    $wi.panwin.f1.tree set $rule [lindex $column 0] [_getFilterIfc[lindex $column 0] $node_cfg $ifc $rule]
 	}
     }
 
@@ -5644,8 +5674,8 @@ proc configGUI_addTreeFilter { wi node_id } {
     #selected in the topology tree and calling procedure configGUI_showIfcInfo with that
     #interfaces as the second argument
     global selectedFilterRule
-    if {[llength [ifcFilterRuleList $node_id $ifc]] != 0 && $selectedFilterRule == ""} {
-	set sorted [lsort -integer [ifcFilterRuleList $node_id $ifc]]
+    if {[llength [_ifcFilterRuleList $node_cfg $ifc]] != 0 && $selectedFilterRule == ""} {
+	set sorted [lsort -integer [_ifcFilterRuleList $node_cfg $ifc]]
 	if { $sorted != "" } {
 	    $wi.panwin.f1.tree focus [lindex $sorted 0]
 	    $wi.panwin.f1.tree selection set [lindex $sorted 0]
@@ -5678,32 +5708,36 @@ proc configGUI_addTreeFilter { wi node_id } {
 
 proc configGUI_refreshIfcRulesTree { } {
     global filtertreecolumns curnode
+    global node_cfg
+
     set node_id $curnode
-    set ifc [.popup.nbook tab current -text]
-    set rule [.popup.nbook.nf$ifc.panwin.f1.tree selection]
-    set wi .popup.nbook.nf$ifc
+    set iface_id [_ifaceIdFromName $node_cfg [.popup.nbook tab current -text]]
+    set rule [.popup.nbook.nf$iface_id.panwin.f1.tree selection]
+    set wi .popup.nbook.nf$iface_id
     $wi.panwin.f1.tree delete [$wi.panwin.f1.tree children {}]
-    foreach rule [lsort -integer [ifcFilterRuleList $node_id $ifc]] {
+    foreach rule [lsort -integer [_ifcFilterRuleList $node_cfg $iface_id]] {
 	$wi.panwin.f1.tree insert {} end -id $rule -text "$rule" -tags $rule
 	foreach column $filtertreecolumns {
-	    $wi.panwin.f1.tree set $rule [lindex $column 0] [getFilterIfc[lindex $column 0] $node_id $ifc $rule]
+	    $wi.panwin.f1.tree set $rule [lindex $column 0] [_getFilterIfc[lindex $column 0] $node_cfg $iface_id $rule]
 	}
     }
-    foreach rule [lsort -integer [ifcFilterRuleList $node_id $ifc]] {
+
+    foreach rule [lsort -integer [_ifcFilterRuleList $node_cfg $iface_id]] {
 	$wi.panwin.f1.tree tag bind $rule <1> \
 	  "$wi.panwin.f1.tree focus $rule
 	   $wi.panwin.f1.tree selection set $rule
-           configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $ifc $rule"
+           configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id $rule"
 	$wi.panwin.f1.tree tag bind $rule <Key-Up> \
 	    "if {![string equal {} [$wi.panwin.f1.tree prev $rule]]} {
-		configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $ifc [$wi.panwin.f1.tree prev $rule]
+		configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id [$wi.panwin.f1.tree prev $rule]
 	    }"
 	$wi.panwin.f1.tree tag bind $rule <Key-Down> \
 	    "if {![string equal {} [$wi.panwin.f1.tree next $rule]]} {
-		configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $ifc [$wi.panwin.f1.tree next $rule]
+		configGUI_showFilterIfcRuleInfo $wi.panwin.f2 0 $node_id $iface_id [$wi.panwin.f1.tree next $rule]
 	     }"
     }
-    set sorted [lsort -integer [ifcFilterRuleList $node_id $ifc]]
+
+    set sorted [lsort -integer [_ifcFilterRuleList $node_cfg $iface_id]]
     set first [lindex $sorted 0]
     if { $first != "" } {
 	$wi.panwin.f1.tree focus $first
@@ -5713,22 +5747,25 @@ proc configGUI_refreshIfcRulesTree { } {
 
 proc configGUI_showFilterIfcRuleInfo { wi phase node_id ifc rule } {
     global filterguielements
-    global changed apply cancel badentry
+    global changed apply cancel badentry node_cfg
+
     #
     #shownruleframe - frame that is currently shown below the list of interfaces
     #
     if { $badentry == -1 } {
 	return
     }
+
     set shownruleframe [grid slaves $wi]
     set i [lsearch $shownruleframe "*buttons*"]
     if { $i != -1 } {
 	set shownruleframe [lreplace $shownruleframe $i $i]
     }
+
     #
     #shownrule - interface whose parameters are shown in shownruleframe
     #
-    set shownrule [string trim [lindex [split $shownruleframe .] end] if]
+    set shownrule [string trim [lindex [split $shownruleframe .] end] "if"]
 
     #if there is already some frame shown below the list of interfaces and
     #parameters shown in that frame are not parameters of selected interface
@@ -5754,14 +5791,13 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node_id ifc rule } {
             #calling "apply" procedures to check if some parameters of previously
 	    #selected interface have been changed
             if { [llength $guielement] == 0 } {
-		[lindex $guielement 0]\Apply 0
+		[lindex $guielement 0]\Apply 0 0
 	    }
 	}
 
 	#creating popup window with warning about unsaved changes
 	if { $changed == 1 && $apply == 0 } {
-	    # TODO: fix this (new popup for these types of elements)
- 	    configGUI_saveChangesPopup $wi $node_id $shownrule
+	    configGUI_saveChangesFilterPopup $wi $node_id $shownrule
 	    if { $cancel == 0 } {
 		[string trimright $wi .f2].f1.tree selection set $rule
 	    }
@@ -5791,7 +5827,7 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node_id ifc rule } {
 
     #if user didn't select Cancel in the popup about saving changes on previously selected interface
     if { $cancel == 0 } {
-	set type [getNodeType $node_id]
+	set type [_getNodeType $node_cfg]
         #creating new frame below the list of interfaces and adding modules with
 	#parameters of selected interface
 	if {$rule != "" && $rule != $shownrule} {
@@ -5801,48 +5837,38 @@ proc configGUI_showFilterIfcRuleInfo { wi phase node_id ifc rule } {
     }
 }
 
-proc configGUI_saveFilterChangesPopup { wi node_id ifc rule } {
-    global filterguielements filtertreecolumns apply cancel changed
-    set answer [tk_messageBox -message "Do you want to save changes on rule $rule?" \
-        -icon question -type yesnocancel \
-        -detail "Select \"Yes\" to save changes before choosing another rule."]
+proc configGUI_saveChangesFilterPopup { wi node_id ifc } {
+    global guielements treecolumns apply cancel changed
 
-    switch -- $answer {
-        #save changes
-	yes {
-	    set apply 1
-	    set cancel 0
-	    foreach filterguielement $guielements {
-		if { [llength $guielement] == 2 } {
-		    [lindex $guielement 0]\Apply $wi $node_id [lrange $guielement 1 end]
-		}
-	    }
-	    #nbook - da li prozor sadrzi notebook
-	    if { $changed == 1 } {
-                if { $filtertreecolumns != "" } {
-		    configGUI_refreshIfcRulesTree
-		}
-            }
+    #save changes
+    set apply 1
+    set cancel 0
+    foreach guielement $guielements {
+	puts "GUI: '$guielement'"
+	if { [llength $guielement] == 2 } {
+	    [lindex $guielement 0]\Apply $wi $node_id [lindex $guielement 1]
 	}
-        #discard changes
-	no {
-	    set cancel 0
-	}
-        #get back on editing that interface
-        cancel {
-	    set cancel 1
+    }
+
+    # nbook - does it contain a notebook element
+    set nbook [lsearch [pack slaves .popup] .popup.nbook]
+    if { $changed == 1 } {
+	if { $nbook != -1 && $treecolumns != "" } {
+	    configGUI_refreshIfcRulesTree .popup.nbook.nfInterfaces.panwin.f1.tree $node_id
+	} elseif { $nbook == -1 && $treecolumns != "" } {
+	    configGUI_refreshIfcRulesTree .popup.panwin.f1.tree $node_id
 	}
     }
 }
 
 proc configGUI_ruleMainFrame { wi node_id ifc rule } {
-    global apply changed
+    global apply changed node_cfg
 
     set apply 0
     set changed 0
     ttk::frame $wi.if$rule -relief groove -borderwidth 2 -padding 4
     ttk::frame $wi.if$rule.label -borderwidth 2
-    ttk::label $wi.if$rule.label.txt -text "Interface [getIfcName $node_id $ifc] (Rule $rule):"
+    ttk::label $wi.if$rule.label.txt -text "Interface [_getIfcName $node_cfg $ifc] (Rule $rule):"
 
     grid $wi.if$rule -sticky nsew -column 1 -row 0 -columnspan 10 -ipadx 45
 
@@ -5850,11 +5876,11 @@ proc configGUI_ruleMainFrame { wi node_id ifc rule } {
 #    grid $wi.if$rule.label -sticky nsw
 }
 
-proc configGUI_ifcRuleConfig { wi node_id ifc rule } {
-    global filterguielements ifcFilterAction$ifc$rule ifcFilterActionData$ifc$rule
-    global curnode
+proc configGUI_ifcRuleConfig { wi node_id iface_id rule } {
+    global filterguielements ifcFilterAction$iface_id$rule ifcFilterActionData$iface_id$rule
+    global curnode node_cfg
 
-    lappend filterguielements "configGUI_ifcRuleConfig $ifc $rule"
+    lappend filterguielements "configGUI_ifcRuleConfig $iface_id $rule"
     ttk::frame $wi.if$rule.rconfig -borderwidth 2
     ttk::label $wi.if$rule.rconfig.rntxt -text "Rule Num: " -anchor w
     ttk::entry $wi.if$rule.rconfig.rnval -width 4 \
@@ -5862,46 +5888,48 @@ proc configGUI_ifcRuleConfig { wi node_id ifc rule } {
     $wi.if$rule.rconfig.rnval configure -validatecommand {checkRuleNum %P}
     $wi.if$rule.rconfig.rnval insert 0 $rule
 
-    set ifcFilterAction$ifc$rule [getFilterIfcAction $node_id $ifc $rule]
-    set ifcFilterActionData$ifc$rule [getFilterIfcActionData $node_id $ifc $rule]
+    set ifcFilterAction$iface_id$rule [_getFilterIfcAction $node_cfg $iface_id $rule]
+    set ifcFilterActionData$iface_id$rule [_getFilterIfcActionData $node_cfg $iface_id $rule]
     set values [list match_hook match_dupto match_skipto match_drop nomatch_hook \
     nomatch_dupto nomatch_skipto nomatch_drop]
-    set datavalues [refreshIfcActionDataValues $node_id 0]
+    set datavalues [refreshIfcActionDataValues $node_cfg 0]
 
     ttk::label $wi.if$rule.rconfig.atxt -text "Action: " -anchor w
     ttk::combobox $wi.if$rule.rconfig.aval -width 12 -textvariable \
-	ifcFilterAction$ifc$rule -values $values -state readonly
+	ifcFilterAction$iface_id$rule -values $values -state readonly
     bind $wi.if$rule.rconfig.aval <<ComboboxSelected>> {
-	set ifc [.popup.nbook tab current -text]
-	set rule [.popup.nbook.nf$ifc.panwin.f1.tree selection]
-	global curnode ifcFilterAction$ifc$rule
-	.popup.nbook.nf$ifc.panwin.f2.if$rule.rconfig.adval \
+	global node_cfg
+
+	set iface_id [_ifaceIdFromName $node_cfg [.popup.nbook tab current -text]]
+	set rule [.popup.nbook.nf$iface_id.panwin.f1.tree selection]
+	global curnode ifcFilterAction$iface_id$rule
+	.popup.nbook.nf$iface_id.panwin.f2.if$rule.rconfig.adval \
 	    configure -values [refreshIfcActionDataValues $curnode 1] \
-	    -state [actionDataState [set ifcFilterAction$ifc$rule]]
+	    -state [actionDataState [set ifcFilterAction$iface_id$rule]]
     }
 
     ttk::label $wi.if$rule.rconfig.adtxt -text "ActData: " -anchor w
     ttk::combobox $wi.if$rule.rconfig.adval -width 5 -textvariable \
-	ifcFilterActionData$ifc$rule -values $datavalues \
-	-state [actionDataState [set ifcFilterAction$ifc$rule]]
+	ifcFilterActionData$iface_id$rule -values $datavalues \
+	-state [actionDataState [set ifcFilterAction$iface_id$rule]]
 
     ttk::label $wi.if$rule.rconfig.ptxt -text "Pattern: " -anchor w
     ttk::entry $wi.if$rule.rconfig.pval -width 42 -font "Courier" \
 	-validate focus -invalidcommand "focusAndFlash %W"
     $wi.if$rule.rconfig.pval configure -validatecommand {checkPatternMask %P}
-    $wi.if$rule.rconfig.pval insert 0 [getFilterIfcPattern $node_id $ifc $rule]
+    $wi.if$rule.rconfig.pval insert 0 [_getFilterIfcPattern $node_cfg $iface_id $rule]
 
     ttk::label $wi.if$rule.rconfig.mtxt -text "Mask: " -anchor w
     ttk::entry $wi.if$rule.rconfig.mval -width 42 -font "Courier" \
 	-validate focus -invalidcommand "focusAndFlash %W"
     $wi.if$rule.rconfig.mval configure -validatecommand {checkPatternMask %P}
-    $wi.if$rule.rconfig.mval insert 0 [getFilterIfcMask $node_id $ifc $rule]
+    $wi.if$rule.rconfig.mval insert 0 [_getFilterIfcMask $node_cfg $iface_id $rule]
 
     ttk::label $wi.if$rule.rconfig.otxt -text "Offset: " -anchor w
     ttk::entry $wi.if$rule.rconfig.oval -width 12 \
 	-validate focus -invalidcommand "focusAndFlash %W"
     $wi.if$rule.rconfig.oval configure -validatecommand {checkOffset %P}
-    $wi.if$rule.rconfig.oval insert 0 [getFilterIfcOffset $node_id $ifc $rule]
+    $wi.if$rule.rconfig.oval insert 0 [_getFilterIfcOffset $node_cfg $iface_id $rule]
 
     grid $wi.if$rule.rconfig -sticky nsew -rowspan 5
 
@@ -5932,20 +5960,21 @@ proc configGUI_ifcRuleConfig { wi node_id ifc rule } {
 }
 
 proc configGUI_ifcRuleConfigApply { add dup } {
-    global changed curnode
+    global changed curnode node_cfg
 
     set ruleNumChanged 0
     set noPMO 0
 
-    set ifc [.popup.nbook tab current -text]
-    set rule [.popup.nbook.nf$ifc.panwin.f1.tree selection]
-    set wi .popup.nbook.nf$ifc.panwin.f2
+    set iface_name [.popup.nbook tab current -text]
+    set iface_id [_ifaceIdFromName $node_cfg $iface_name]
+    set rule [.popup.nbook.nf$iface_id.panwin.f1.tree selection]
+    set wi .popup.nbook.nf$iface_id.panwin.f2
 
-    if { $ifc == "" || $rule == "" } {
+    if { $iface_id == "" || $rule == "" } {
 	if { $add != 0 && $dup == 0} {
 	    set new_rule [dict create]
 	    dict set new_rule "action" "match_drop"
-	    addFilterIfcRule $curnode $ifc 10 $new_rule
+	    set node_cfg [_addFilterIfcRule $node_cfg $iface_id 10 $new_rule]
 	    set changed 1
 
 	    return 10
@@ -5975,7 +6004,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	set ruleNumChanged 1
     } else {
 	if { $add != 0 } {
-	    set rule_list [lsort -integer [ifcFilterRuleList $curnode $ifc]]
+	    set rule_list [lsort -integer [_ifcFilterRuleList $node_cfg $iface_id]]
 	    set rulnum [expr {[lindex $rule_list end] + 10}]
 	    if { $dup == 0 } {
 		set action "match_drop"
@@ -5992,7 +6021,7 @@ proc configGUI_ifcRuleConfigApply { add dup } {
     }
 
     if { $ruleNumChanged == 1 } {
-	set rule_list [removeFromList [ifcFilterRuleList $curnode $ifc] $old_rulnum]
+	set rule_list [removeFromList [_ifcFilterRuleList $node_cfg $iface_id] $old_rulnum]
 	if { $rulnum in $rule_list} {
 	    tk_dialog .dialog1 "IMUNES warning" \
 		"Rule number already exists." \
@@ -6012,24 +6041,20 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 
     switch -regexp $action {
 	(no)?match_hook {
-	    set vals [lsort [ifcList $curnode]]
-	    set c [lsearch $vals $ifc]
-	    set vals [lreplace $vals $c $c]
+	    set vals [removeFromList [lsort [_ifaceNames $node_cfg]] $iface_name]
 	    if { $action_data ni $vals } {
 		tk_dialog .dialog1 "IMUNES warning" \
-		    "ActData: Select one of the existing hooks, but not the current one ($ifc)." \
+		    "ActData: Select one of the existing hooks, but not the current one ($iface_name)." \
 		info 0 Dismiss
 
 		return
 	    }
 	}
 	(no)?match_dupto {
-	    set vals [lsort [ifcList $curnode]]
-	    set c [lsearch $vals $ifc]
-	    set vals [lreplace $vals $c $c]
+	    set vals [removeFromList [lsort [_ifaceNames $node_cfg]] $iface_name]
 	    if { $action_data ni $vals } {
 		tk_dialog .dialog1 "IMUNES warning" \
-		    "ActData: Select one of the existing hooks, but not the current one ($ifc)." \
+		    "ActData: Select one of the existing hooks, but not the current one ($iface_name)." \
 		info 0 Dismiss
 
 		return
@@ -6129,30 +6154,30 @@ proc configGUI_ifcRuleConfigApply { add dup } {
 	]
     }
 
-    set old_ruleline [getFilterIfcRule $curnode $ifc $old_rulnum]
+    set old_ruleline [_getFilterIfcRule $node_cfg $iface_id $old_rulnum]
     if { $add || $dup || $ruleNumChanged || $new_ruleline != $old_ruleline } {
 	set changed 1
 	if { $add == 0 } {
-	    removeFilterIfcRule $curnode $ifc $old_rulnum
+	    set node_cfg [_removeFilterIfcRule $node_cfg $iface_id $old_rulnum]
 	}
-	addFilterIfcRule $curnode $ifc $rulnum $new_ruleline
+	set node_cfg [_addFilterIfcRule $node_cfg $iface_id $rulnum $new_ruleline]
 
 	return $rulnum
     }
 }
 
 proc configGUI_ifcRuleConfigDelete { } {
-    global curnode
+    global curnode node_cfg
 
-    set ifc [.popup.nbook tab current -text]
-    set rule [.popup.nbook.nf$ifc.panwin.f1.tree selection]
+    set iface_id [_ifaceIdFromName $node_cfg [.popup.nbook tab current -text]]
+    set rule [.popup.nbook.nf$iface_id.panwin.f1.tree selection]
     if { $rule == "" } {
 	return
     }
 
-    removeFilterIfcRule $curnode $ifc $rule
-    set next [.popup.nbook.nf$ifc.panwin.f1.tree next $rule]
-    set prev [.popup.nbook.nf$ifc.panwin.f1.tree prev $rule]
+    set node_cfg [_removeFilterIfcRule $node_cfg $iface_id $rule]
+    set next [.popup.nbook.nf$iface_id.panwin.f1.tree next $rule]
+    set prev [.popup.nbook.nf$iface_id.panwin.f1.tree prev $rule]
     if { $next != "" } {
 	return $next
     } else {
@@ -6161,32 +6186,31 @@ proc configGUI_ifcRuleConfigDelete { } {
 }
 
 proc refreshIfcActionDataValues { node_id refresh } {
+    global node_cfg
+
     set vals ""
-    set ifc [.popup.nbook tab current -text]
-    set rule [.popup.nbook.nf$ifc.panwin.f1.tree selection]
+    set iface_id [_ifaceIdFromName $node_cfg [.popup.nbook tab current -text]]
+    set rule [.popup.nbook.nf$iface_id.panwin.f1.tree selection]
     if {$rule == ""} {
 	return $vals
     }
-    global ifcFilterAction$ifc$rule ifcFilterActionData$ifc$rule
-    switch -regexp [set ifcFilterAction$ifc$rule] {
+
+    global ifcFilterAction$iface_id$rule ifcFilterActionData$iface_id$rule
+    switch -regexp [set ifcFilterAction$iface_id$rule] {
 	(no)?match_hook {
-	    set vals [lsort [ifcList $node_id]]
-	    set c [lsearch $vals $ifc]
-	    set vals [lreplace $vals $c $c]
-	    if { [set ifcFilterActionData$ifc$rule] == "" || $refresh == 1 } {
-		set ifcFilterActionData$ifc$rule [lindex $vals 0]
+	    set vals [removeFromList [lsort [_ifaceNames $node_cfg]] [_getIfcName $node_cfg $iface_id]]
+	    if { [set ifcFilterActionData$iface_id$rule] == "" || $refresh == 1 } {
+		set ifcFilterActionData$iface_id$rule [lindex $vals 0]
 	    }
 	}
 	(no)?match_dupto {
-	    set vals [lsort [ifcList $node_id]]
-	    set c [lsearch $vals $ifc]
-	    set vals [lreplace $vals $c $c]
-	    if { [set ifcFilterActionData$ifc$rule] == "" || $refresh == 1 } {
-		set ifcFilterActionData$ifc$rule [lindex $vals 0]
+	    set vals [removeFromList [lsort [_ifaceNames $node_cfg]] [_getIfcName $node_cfg $iface_id]]
+	    if { [set ifcFilterActionData$iface_id$rule] == "" || $refresh == 1 } {
+		set ifcFilterActionData$iface_id$rule [lindex $vals 0]
 	    }
 	}
 	(no)?match_skipto {
-	    set l [lsort -integer [ifcFilterRuleList $node_id $ifc]]
+	    set l [lsort -integer [_ifcFilterRuleList $node_cfg $iface_id]]
 	    set i ""
 	    foreach e $l {
 		if { $e > $rule} {
@@ -6200,13 +6224,13 @@ proc refreshIfcActionDataValues { node_id refresh } {
 		set l {}
 	    }
 	    set vals $l
-	    if { [set ifcFilterActionData$ifc$rule] == "" || $refresh == 1 } {
-		set ifcFilterActionData$ifc$rule [lindex $vals 0]
+	    if { [set ifcFilterActionData$iface_id$rule] == "" || $refresh == 1 } {
+		set ifcFilterActionData$iface_id$rule [lindex $vals 0]
 	    }
 	}
 	(no)?match_drop {
 	    set vals ""
-	    set ifcFilterActionData$ifc$rule ""
+	    set ifcFilterActionData$iface_id$rule ""
 	}
     }
 

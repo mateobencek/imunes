@@ -38,15 +38,11 @@
 #****
 
 set MODULE filter
-
 registerModule $MODULE
 
-proc $MODULE.prepareSystem {} {
-    catch { exec kldload ng_patmat }
-}
-
-proc $MODULE.confNewIfc { node_id iface } {
-}
+################################################################################
+########################### CONFIGURATION PROCEDURES ###########################
+################################################################################
 
 proc $MODULE.confNewNode { node_id } {
     global nodeNamingBase
@@ -54,8 +50,40 @@ proc $MODULE.confNewNode { node_id } {
     setNodeName $node_id [getNewNodeNameType filter $nodeNamingBase(filter)]
 }
 
+proc $MODULE.confNewIfc { node_id iface } {
+}
+
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateConfig { node_id } {
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+}
+
 proc $MODULE.ifcName {l r} {
     return e
+}
+
+#****f* filter.tcl/filter.ifacePrefix
+# NAME
+#   filter.ifacePrefix -- interface name
+# SYNOPSIS
+#   filter.ifacePrefix
+# FUNCTION
+#   Returns filter interface name prefix.
+# RESULT
+#   * name -- name prefix string
+#****
+proc $MODULE.ifacePrefix {} {
+    return "e"
+}
+
+proc $MODULE.IPAddrRange {} {
 }
 
 #****f* filter.tcl/filter.netlayer
@@ -88,6 +116,42 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
+proc $MODULE.bootcmd { node_id } {
+}
+
+proc $MODULE.shellcmds {} {
+}
+
+#****f* filter.tcl/filter.nghook
+# NAME
+#   filter.nghook
+# SYNOPSIS
+#   filter.nghook $eid $node_id $iface
+# FUNCTION
+#   Returns the id of the netgraph node and the name of the
+#   netgraph hook which is used for connecting two netgraph
+#   nodes. This procedure calls l3node.hook procedure and
+#   passes the result of that procedure.
+# INPUTS
+#   * eid - experiment id
+#   * node_id - node id
+#   * iface - interface name
+# RESULT
+#   * nghook - the list containing netgraph node id and the
+#     netgraph hook (ngNode ngHook).
+#****
+proc $MODULE.nghook { eid node_id iface } {
+    return [list $node_id [getIfcName $node_id $iface]]
+}
+
+################################################################################
+############################ INSTANTIATE PROCEDURES ############################
+################################################################################
+
+proc $MODULE.prepareSystem {} {
+    catch { exec kldload ng_patmat }
+}
+
 #****f* filter.tcl/filter.nodeCreate
 # NAME
 #   filter.nodeCreate
@@ -110,6 +174,35 @@ proc $MODULE.nodeCreate { eid node_id } {
     \" | jexec $eid ngctl -f -" "hold"
 }
 
+proc $MODULE.nodeSetupNamespace { eid node_id } {
+}
+
+proc $MODULE.nodeInitConfigure { eid node_id } {
+}
+
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+}
+
+#****f* filter.tcl/filter.nodeIfacesConfigure
+# NAME
+#   filter.nodeIfacesConfigure -- configure filter node interfaces
+# SYNOPSIS
+#   filter.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a filter. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+}
+
 #****f* filter.tcl/filter.nodeConfigure
 # NAME
 #   filter.nodeConfigure
@@ -124,15 +217,29 @@ proc $MODULE.nodeCreate { eid node_id } {
 #   * node_id - id of the node
 #****
 proc $MODULE.nodeConfigure { eid node_id } {
-    foreach iface [ifcList $node_id] {
-	set ngcfgreq "shc $iface"
-	foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface]] {
-	    set rule [getFilterIfcRuleAsString $node_id $iface $rule_num]
+    foreach iface_id [ifcList $node_id] {
+	set ngcfgreq "shc [getIfcName $node_id $iface_id]"
+	foreach rule_num [lsort -dictionary [ifcFilterRuleList $node_id $iface_id]] {
+	    set rule [getFilterIfcRuleAsString $node_id $iface_id $rule_num]
 	    set ngcfgreq "${ngcfgreq} ${rule}"
 	}
 
 	pipesExec "jexec $eid ngctl msg $node_id: $ngcfgreq" "hold"
     }
+}
+
+################################################################################
+############################# TERMINATE PROCEDURES #############################
+################################################################################
+
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+}
+
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+    destroyNodeIfaces $eid $node_id $ifaces
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
 }
 
 #****f* filter.tcl/filter.nodeShutdown
@@ -156,10 +263,6 @@ proc $MODULE.nodeShutdown { eid node_id } {
     }
 }
 
-proc $MODULE.destroyIfcs { eid node_id ifcs } {
-    l2node.destroyIfcs $eid $node_id $ifcs
-}
-
 #****f* filter.tcl/filter.nodeDestroy
 # NAME
 #   filter.nodeDestroy
@@ -174,26 +277,4 @@ proc $MODULE.destroyIfcs { eid node_id ifcs } {
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
     pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"
-}
-
-#****f* filter.tcl/filter.nghook
-# NAME
-#   filter.nghook
-# SYNOPSIS
-#   filter.nghook $eid $node_id $iface
-# FUNCTION
-#   Returns the id of the netgraph node and the name of the
-#   netgraph hook which is used for connecting two netgraph
-#   nodes. This procedure calls l3node.hook procedure and
-#   passes the result of that procedure.
-# INPUTS
-#   * eid - experiment id
-#   * node_id - node id
-#   * iface - interface name
-# RESULT
-#   * nghook - the list containing netgraph node id and the
-#     netgraph hook (ngNode ngHook).
-#****
-proc $MODULE.nghook { eid node_id iface } {
-    return [list $node_id $iface]
 }

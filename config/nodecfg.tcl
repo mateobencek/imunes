@@ -2353,6 +2353,16 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 					    setIfcIPv6addrs $node_id $iface_id $iface_prop_new_value
 					}
 				    }
+
+				    "filter_rules" {
+					clearFilterIfcRules $node_id $iface_id
+
+					if { $iface_change != "removed" } {
+					    foreach {rule_id rule_cfg} $iface_prop_new_value {
+						addFilterIfcRule $node_id $iface_id $rule_id $rule_cfg
+					    }
+					}
+				    }
 				}
 			    }
 			}
