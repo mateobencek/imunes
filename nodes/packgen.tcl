@@ -38,15 +38,11 @@
 #****
 
 set MODULE packgen
-
 registerModule $MODULE
 
-proc $MODULE.prepareSystem {} {
-    catch { exec kldload ng_source }
-}
-
-proc $MODULE.confNewIfc { node_id iface } {
-}
+################################################################################
+########################### CONFIGURATION PROCEDURES ###########################
+################################################################################
 
 proc $MODULE.confNewNode { node_id } {
     global nodeNamingBase
@@ -54,8 +50,40 @@ proc $MODULE.confNewNode { node_id } {
     setNodeName $node_id [getNewNodeNameType packgen $nodeNamingBase(packgen)]
 }
 
+proc $MODULE.generateConfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateUnconfigIfaces { node_id ifaces } {
+}
+
+proc $MODULE.generateConfig { node_id } {
+}
+
+proc $MODULE.generateUnconfig { node_id } {
+}
+
+proc $MODULE.confNewIfc { node_id iface } {
+}
+
 proc $MODULE.ifcName { l r } {
     return e
+}
+
+#****f* hub.tcl/hub.ifacePrefix
+# NAME
+#   hub.ifacePrefix -- interface name
+# SYNOPSIS
+#   hub.ifacePrefix
+# FUNCTION
+#   Returns hub interface name prefix.
+# RESULT
+#   * name -- name prefix string
+#****
+proc $MODULE.ifacePrefix {} {
+    return "e"
+}
+
+proc $MODULE.IPAddrRange {} {
 }
 
 #****f* packgen.tcl/packgen.netlayer
@@ -90,6 +118,55 @@ proc $MODULE.virtlayer {} {
     return NATIVE
 }
 
+proc $MODULE.bootcmd { node_id } {
+}
+
+proc $MODULE.shellcmds {} {
+}
+
+#****f* packgen.tcl/packgen.nghook
+# NAME
+#   packgen.nghook
+# SYNOPSIS
+#   packgen.nghook $eid $node_id $iface
+# FUNCTION
+#   Returns the id of the netgraph node and the name of the
+#   netgraph hook which is used for connecting two netgraph
+#   nodes.
+# INPUTS
+#   * eid - experiment id
+#   * node_id - node id
+#   * iface - interface name
+# RESULT
+#   * nghook - the list containing netgraph node id and the
+#     netgraph hook (ngNode ngHook).
+#****
+proc $MODULE.nghook { eid node_id iface } {
+    return [list $node_id output]
+}
+
+#****f* packgen.tcl/packgen.maxLinks
+# NAME
+#   packgen.maxLinks -- maximum number of links
+# SYNOPSIS
+#   packgen.maxLinks
+# FUNCTION
+#   Returns packgen maximum number of links.
+# RESULT
+#   * maximum number of links.
+#****
+proc $MODULE.maxLinks {} {
+    return 1
+}
+
+################################################################################
+############################ INSTANTIATE PROCEDURES ############################
+################################################################################
+
+proc $MODULE.prepareSystem {} {
+    catch { exec kldload ng_source }
+}
+
 #****f* packgen.tcl/packgen.nodeCreate
 # NAME
 #   packgen.nodeCreate
@@ -105,7 +182,6 @@ proc $MODULE.virtlayer {} {
 #   * eid - experiment id
 #   * node_id - id of the node
 #****
-
 proc $MODULE.nodeCreate { eid node_id } {
     pipesExec "printf \"
     mkpeer . source inhook input \n
@@ -113,6 +189,34 @@ proc $MODULE.nodeCreate { eid node_id } {
     \" | jexec $eid ngctl -f -" "hold"
 }
 
+proc $MODULE.nodeSetupNamespace { eid node_id } {
+}
+
+proc $MODULE.nodeInitConfigure { eid node_id } {
+}
+
+proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
+}
+
+proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
+}
+
+#****f* exec.tcl/hub.nodeIfacesConfigure
+# NAME
+#   hub.nodeIfacesConfigure -- configure hub node interfaces
+# SYNOPSIS
+#   hub.nodeIfacesConfigure $eid $node_id $ifaces
+# FUNCTION
+#   Configure interfaces on a hub. Set MAC, MTU, queue parameters, assign the IP
+#   addresses to the interfaces, etc. This procedure can be called if the node
+#   is instantiated.
+# INPUTS
+#   * eid -- experiment id
+#   * node_id -- node id
+#   * ifaces -- list of interface ids
+#****
+proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
+}
 
 #****f* packgen.tcl/packgen.nodeConfigure
 # NAME
@@ -140,7 +244,26 @@ proc $MODULE.nodeConfigure { eid node_id } {
     set pps [getPackgenPacketRate $node_id]
 
     pipesExec "jexec $eid ngctl msg $node_id: setpps $pps" "hold"
-    pipesExec "jexec $eid ngctl msg $node_id: start [expr 2**63]" "hold"
+
+    set iface_id [lindex [ifcList $node_id] 0]
+    if { $iface_id != "" && [getIfcLink $node_id $iface_id] != "" } {
+	pipesExec "jexec $eid ngctl msg $node_id: start [expr 2**63]" "hold"
+    }
+}
+
+################################################################################
+############################# TERMINATE PROCEDURES #############################
+################################################################################
+
+proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
+}
+
+proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
+}
+
+proc $MODULE.nodeUnconfigure { eid node_id } {
+    pipesExec "jexec $eid ngctl msg $node_id: clrdata" "hold"
+    pipesExec "jexec $eid ngctl msg $node_id: stop" "hold"
 }
 
 #****f* packgen.tcl/packgen.nodeShutdown
@@ -155,12 +278,6 @@ proc $MODULE.nodeConfigure { eid node_id } {
 #   * node_id - id of the node
 #****
 proc $MODULE.nodeShutdown { eid node_id } {
-    pipesExec "jexec $eid ngctl msg $node_id: clrdata" "hold"
-    pipesExec "jexec $eid ngctl msg $node_id: stop" "hold"
-}
-
-proc $MODULE.destroyIfcs { eid node_id ifaces } {
-    l2node.destroyIfcs $eid $node_id $ifaces
 }
 
 #****f* packgen.tcl/packgen.nodeDestroy
@@ -176,40 +293,4 @@ proc $MODULE.destroyIfcs { eid node_id ifaces } {
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
     pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"
-}
-
-#****f* packgen.tcl/packgen.nghook
-# NAME
-#   packgen.nghook
-# SYNOPSIS
-#   packgen.nghook $eid $node_id $iface
-# FUNCTION
-#   Returns the id of the netgraph node and the name of the
-#   netgraph hook which is used for connecting two netgraph
-#   nodes.
-# INPUTS
-#   * eid - experiment id
-#   * node_id - node id
-#   * iface - interface name
-# RESULT
-#   * nghook - the list containing netgraph node id and the
-#     netgraph hook (ngNode ngHook).
-#****
-
-proc $MODULE.nghook { eid node_id iface } {
-    return [list $node_id output]
-}
-
-#****f* rj45.tcl/rj45.maxLinks
-# NAME
-#   rj45.maxLinks -- maximum number of links
-# SYNOPSIS
-#   rj45.maxLinks
-# FUNCTION
-#   Returns rj45 maximum number of links.
-# RESULT
-#   * maximum number of links.
-#****
-proc $MODULE.maxLinks {} {
-    return 1
 }

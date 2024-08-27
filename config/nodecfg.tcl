@@ -2360,6 +2360,65 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 		}
 	    }
 
+	    "packgen" {
+		set packgen_diff [dictDiff $old_value $new_value]
+		dict for {packets_key packets_change} $packgen_diff {
+		    if { $packets_change == "copy" } {
+			continue
+		    }
+
+		    puts "======== $packets_change: '$packets_key'"
+
+		    set packets_old_value [_cfgGet $old_value $packets_key]
+		    set packets_new_value [_cfgGet $new_value $packets_key]
+		    if { $packets_change in "changed" } {
+			puts "======== OLD: '$packets_old_value'"
+		    }
+		    if { $packets_change in "new changed" } {
+			puts "======== NEW: '$packets_new_value'"
+		    }
+
+		    if { $packets_key == "packetrate" } {
+			puts "setPackgenPacketRate $node_id $packets_new_value"
+			setPackgenPacketRate $node_id $packets_new_value
+			continue
+		    }
+
+		    set packets_diff [dictDiff $packets_old_value $packets_new_value]
+		    foreach {packet_key packet_change} $packets_diff {
+			if { $packet_change == "copy" } {
+			    continue
+			}
+
+			puts "============ $packet_change: '$packet_key'"
+
+			set packet_old_value [_cfgGet $packets_old_value $packet_key]
+			set packet_new_value [_cfgGet $packets_new_value $packet_key]
+			if { $packet_change in "changed" } {
+			    puts "============ OLD: '$packet_old_value'"
+			}
+			if { $packet_change in "new changed" } {
+			    puts "============ NEW: '$packet_new_value'"
+			}
+
+			switch -exact $packet_change {
+			    "removed" {
+				removePackgenPacket $node_id $packet_key
+			    }
+
+			    "new" {
+				addPackgenPacket $node_id $packet_key $packet_new_value
+			    }
+
+			    "changed" {
+				removePackgenPacket $node_id $packet_key
+				addPackgenPacket $node_id $packet_key $packet_new_value
+			    }
+			}
+		    }
+		}
+	    }
+
 	    default {
 		# do nothing
 	    }

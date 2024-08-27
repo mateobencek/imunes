@@ -1331,6 +1331,13 @@ proc cfgSetEmpty { args } {
     set dict_cfg [dictSet $dict_cfg {*}$args]
 }
 
+# to forcefully set empty values to a dictionary key
+proc _cfgSetEmpty { node_cfg args } {
+    set node_cfg [dictSet $node_cfg {*}$args]
+
+    return $node_cfg
+}
+
 proc cfgLappend { args } {
     upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 
@@ -1358,6 +1365,19 @@ proc cfgUnset { args } {
     }
 
     return $dict_cfg
+}
+
+proc _cfgUnset { node_cfg args } {
+    for {set i 0} {$i < [llength $args]} {incr i} {
+	set node_cfg [dictUnset $node_cfg {*}[lrange $args 0 end-$i]]
+
+	set new_upper [dictGet $node_cfg {*}[lrange $args 0 end-[expr $i+1]]]
+	if { $new_upper != "" } {
+	    break
+	}
+    }
+
+    return $node_cfg
 }
 
 proc clipboardGet { args } {
@@ -1611,7 +1631,7 @@ proc getJsonType { key_name } {
 	return "dictionary"
     } elseif { $key_name in "custom_config croutes4 croutes6 ipv4_addrs ipv6_addrs services events tayga_mappings" } {
 	return "array"
-    } elseif { $key_name in "vlan ipsec nat64 packgen" } {
+    } elseif { $key_name in "vlan ipsec nat64 packgen packets" } {
 	return "inner_dictionary"
     }
 

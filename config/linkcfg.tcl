@@ -139,6 +139,10 @@ proc removeLink { link_id { keep_ifaces 0 } } {
     }
 
     foreach node_id "$node1_id $node2_id" iface_id "$iface1_id $iface2_id" {
+	if { [getNodeType $node_id] in "packgen" } {
+	    trigger_nodeUnconfig $node_id
+	}
+
 	if { $keep_ifaces } {
 	    cfgUnset "nodes" $node_id "ifaces" $iface_id "link"
 	    continue
@@ -1011,6 +1015,14 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
     }
 
     trigger_linkCreate $link_id
+
+    if { [getNodeType $node1_id] in "packgen" } {
+	trigger_nodeConfig $node1_id
+    }
+
+    if { [getNodeType $node2_id] in "packgen" } {
+	trigger_nodeConfig $node2_id
+    }
 
     lassign [getSubnetData $node1_id $iface1_id {} {} 0] subnet_gws subnet_data
     if { $subnet_gws != "{||}" } {
