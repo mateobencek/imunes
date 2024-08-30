@@ -3060,9 +3060,9 @@ proc createTab { node_id cfg_id } {
     ttk::entry $w.bootcmd_e -width 25
 
     ttk::button $w.delete -text "Delete config" \
-	-command "_deleteConfig $wi $node_id"
+	-command "deleteConfig $wi $node_id"
     ttk::button $w.generate -text "Fill defaults" \
-	-command "_customConfigGUIFillDefaults $wi $node_id"
+	-command "customConfigGUIFillDefaults $wi $node_id"
 
     ttk::scrollbar $w.vsb -orient vertical -command [list $w.editor yview]
     ttk::scrollbar $w.hsb -orient horizontal -command [list $w.editor xview]
