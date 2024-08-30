@@ -434,7 +434,7 @@ proc setIfcIPv4addrs { node_id iface_id addrs } {
 
     trigger_ifaceReconfig $node_id $iface_id
 
-    if { [isIfcLogical $node_id $iface_id] || [getNodeType $node_id] ni "router extnat" } {
+    if { [isIfcLogical $node_id $iface_id] || [getNodeType $node_id] ni "router nat64 extnat" } {
 	return
     }
 
@@ -548,7 +548,7 @@ proc setIfcIPv6addrs { node_id iface_id addrs } {
 
     trigger_ifaceReconfig $node_id $iface_id
 
-    if { [isIfcLogical $node_id $iface_id] || [getNodeType $node_id] ni "router extnat" } {
+    if { [isIfcLogical $node_id $iface_id] || [getNodeType $node_id] ni "router nat64 extnat" } {
 	return
     }
 

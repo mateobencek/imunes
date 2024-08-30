@@ -129,7 +129,7 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 		    continue
 		}
 
-		if { ! $has_extnat && [getNodeType $subnet_node] == "router" } {
+		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
 		    continue
 		}
 
@@ -1020,7 +1020,7 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 		continue
 	    }
 
-	    if { ! $has_extnat && [getNodeType $subnet_node] == "router" } {
+	    if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
 		continue
 	    }
 

@@ -455,7 +455,7 @@ proc getSubnetData { this_node_id this_ifc subnet_gws nodes_l2data subnet_idx } 
 
     set this_type [getNodeType $this_node_id]
     if { [$this_type.netlayer] == "NETWORK" } {
-	if { $this_type in "router extnat" } {
+	if { $this_type in "router nat64 extnat" } {
 	    # this node is a router/extnat, add our IP addresses to lists
 	    set gw4 [lindex [split [getIfcIPv4addr $this_node_id $this_ifc] /] 0]
 	    set gw6 [lindex [split [getIfcIPv6addr $this_node_id $this_ifc] /] 0]
@@ -654,11 +654,12 @@ proc getDefaultRoutesConfig { node_id gws } {
     set all_routes6 {}
     foreach route $gws {
 	lassign [split $route "|"] route_type gateway4 gateway6
-	if { [getNodeType $node_id] == "router" } {
+	if { [getNodeType $node_id] in "router nat64" } {
 	    if { $route_type == "extnat" } {
 		if { "0.0.0.0/0 $gateway4" ni [list "0.0.0.0/0 " $all_routes4] } {
 		    lappend all_routes4 "0.0.0.0/0 $gateway4"
 		}
+
 		if { "::/0 $gateway6" ni [list "::/0 " $all_routes6] } {
 		    lappend all_routes6 "::/0 $gateway6"
 		}
@@ -667,6 +668,7 @@ proc getDefaultRoutesConfig { node_id gws } {
 	    if { "0.0.0.0/0 $gateway4" ni [list "0.0.0.0/0 " $all_routes4] } {
 		lappend all_routes4 "0.0.0.0/0 $gateway4"
 	    }
+
 	    if { "::/0 $gateway6" ni [list "::/0 " $all_routes6] } {
 		lappend all_routes6 "::/0 $gateway6"
 	    }
@@ -2156,6 +2158,52 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 				    }
 				}
 			    }
+			}
+		    }
+		}
+	    }
+
+	    "nat64" {
+		set nat64_diff [dictDiff $old_value $new_value]
+		dict for {nat64_key nat64_change} $nat64_diff {
+		    if { $nat64_change == "copy" } {
+			continue
+		    }
+
+		    puts "======== $nat64_change: '$nat64_key'"
+
+		    set nat64_old_value [_cfgGet $old_value $nat64_key]
+		    set nat64_new_value [_cfgGet $new_value $nat64_key]
+		    if { $nat64_change in "changed" } {
+			puts "======== OLD: '$nat64_old_value'"
+		    }
+		    if { $nat64_change in "new changed" } {
+			puts "======== NEW: '$nat64_new_value'"
+		    }
+
+		    switch -exact $nat64_key {
+			"tun_ipv4_addr" {
+			    setTunIPv4Addr $node_id $nat64_new_value
+			}
+
+			"tun_ipv6_addr" {
+			    setTunIPv6Addr $node_id $nat64_new_value
+			}
+
+			"tayga_ipv4_addr" {
+			    setTaygaIPv4Addr $node_id $nat64_new_value
+			}
+
+			"tayga_ipv6_prefix" {
+			    setTaygaIPv6Prefix $node_id $nat64_new_value
+			}
+
+			"tayga_ipv4_pool" {
+			    setTaygaIPv4DynPool $node_id $nat64_new_value
+			}
+
+			"tayga_mappings" {
+			    setTaygaMappings $node_id $nat64_new_value
 			}
 		    }
 		}

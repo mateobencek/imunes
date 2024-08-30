@@ -2155,6 +2155,22 @@ proc getRemoveIPv6RouteCmd { statrte } {
     return "route -q delete -inet6 $statrte"
 }
 
+proc getIPv4IfcRouteCmd { subnet iface } {
+    return "route -q add -inet $subnet -interface $iface"
+}
+
+proc getRemoveIPv4IfcRouteCmd { subnet iface } {
+    return "route -q delete -inet $subnet -interface $iface"
+}
+
+proc getIPv6IfcRouteCmd { subnet iface } {
+    return "route -q add -inet6 $subnet -interface $iface"
+}
+
+proc getRemoveIPv6IfcRouteCmd { subnet iface } {
+    return "route -q delete -inet6 $subnet -interface $iface"
+}
+
 proc checkSysPrerequisites {} {
 
     # XXX
@@ -2199,28 +2215,17 @@ proc inetdServiceRestartCmds {} {
     return "service inetd onerestart"
 }
 
-# XXX NAT64 procedures
-proc createStartTunIfc { eid node } {
-    # create and start tun interface and return its name
-    catch { exec jexec $eid.$node ifconfig tun create } tun
-    exec jexec $eid.$node ifconfig $tun up
+# XXX nat64 procedures
+proc configureTunIface { tayga4pool tayga6prefix } {
+    set tun_dev "tun64"
 
-    return $tun
-}
+    set cfg {}
+    lappend cfg "ifconfig $tun_dev inet6 -ifdisabled"
+    lappend cfg "[getStateIfcCmd "$tun_dev" "up"]"
+    lappend cfg "[getIPv4IfcRouteCmd $tayga4pool "$tun_dev"]"
+    lappend cfg "[getIPv6IfcRouteCmd $tayga6prefix "$tun_dev"]"
 
-proc prepareTaygaConf { eid node data datadir } {
-    exec jexec $eid.$node mkdir -p $datadir
-    writeDataToNodeFile $node "/usr/local/etc/tayga.conf" $data
-}
-
-proc taygaShutdown { eid node } {
-    catch "exec jexec $eid.$node killall -9 tayga"
-    exec jexec $eid.$node rm -rf /var/db/tayga
-}
-
-proc taygaDestroy { eid node } {
-    global nat64ifc_$eid.$node
-    catch { exec jexec $eid.$node ifconfig [set nat64ifc_$eid.$node] destroy }
+    return $cfg
 }
 
 proc configureExternalConnection { eid node } {
@@ -2298,6 +2303,7 @@ proc unsetupExtNat { eid node ifc } {
 
 proc startRoutingDaemons { node_id } {
     set cmds "zebra -dP0"
+    set cmds "$cmds; staticd -dP0"
 
     foreach protocol { rip ripng ospf ospf6 } {
 	if { [getNodeProtocol $node_id $protocol] != 1 } {

@@ -1494,6 +1494,22 @@ proc getRemoveIPv6RouteCmd { statrte } {
     return $cmd
 }
 
+proc getIPv4IfcRouteCmd { subnet iface } {
+    return "ip route add $subnet dev $iface"
+}
+
+proc getRemoveIPv4IfcRouteCmd { subnet iface } {
+    return "ip route del $subnet dev $iface"
+}
+
+proc getIPv6IfcRouteCmd { subnet iface } {
+    return "ip -6 route add $subnet dev $iface"
+}
+
+proc getRemoveIPv6IfcRouteCmd { subnet iface } {
+    return "ip -6 route del $subnet dev $iface"
+}
+
 proc getFlushIPv4IfcCmd { iface_name } {
     return "ip -4 a flush dev $iface_name"
 }
@@ -1721,30 +1737,14 @@ proc moveFileFromNode { node path ext_path } {
     catch { exec docker exec $eid.$node rm -fr $path }
 }
 
-# XXX NAT64 procedures
-proc createStartTunIfc { eid node } {
-    # create and start tun interface and return its name
-    exec docker exec -i $eid.$node ip tuntap add mode tun
-    catch "exec docker exec $eid.$node ip l | grep tun | tail -n1 | cut -d: -f2" tun
-    set tun [string trim $tun]
-    exec docker exec -i $eid.$node ip l set $tun up
+# XXX nat64 procedures
+proc configureTunIface { tayga4pool tayga6prefix } {
+    set tun_dev "tun64"
 
-    return $tun
-}
+    set cfg {}
+    lappend cfg "[getStateIfcCmd "$tun_dev" "up"]"
 
-proc prepareTaygaConf { eid node data datadir } {
-    exec docker exec -i $eid.$node mkdir -p $datadir
-    writeDataToNodeFile $node "/etc/tayga.conf" $data
-}
-
-proc taygaShutdown { eid node } {
-    catch "exec docker exec $eid.$node killall5 -9 tayga"
-    catch "exec docker exec $eid.$node rm -rf /var/db/tayga"
-}
-
-proc taygaDestroy { eid node } {
-    global nat64ifc_$eid.$node
-    catch { exec docker exec $eid.$node ip l delete [set nat64ifc_$eid.$node] }
+    return $cfg
 }
 
 proc configureExternalConnection { eid node } {

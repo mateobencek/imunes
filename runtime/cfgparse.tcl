@@ -334,12 +334,33 @@ proc loadCfgLegacy { cfg } {
 					}
 					"!" {
 					    if { $tayga_mappings != {} } {
-						cfgSet $dict_object $object "nat64" "taygaMappings" $tayga_mappings
+						cfgSet $dict_object $object "nat64" "tayga_mappings" $tayga_mappings
 					    }
 					    set nat64 false
 					}
 					default {
-					    cfgSet $dict_object $object "nat64" [lindex $zline 0] [lrange $zline 1 end]
+					    set key ""
+					    switch -exact -- [lindex $zline 0] {
+						"tunIPv4addr" {
+						    set key "tun_ipv4_addr"
+						}
+						"tunIPv6addr" {
+						    set key "tun_ipv6_addr"
+						}
+						"taygaIPv4addr" {
+						    set key "tayga_ipv4_addr"
+						}
+						"taygaIPv6prefix" {
+						    set key "tayga_ipv6_prefix"
+						}
+						"taygaIPv4pool" {
+						    set key "tayga_ipv4_pool"
+						}
+					    }
+
+					    if { $key != "" } {
+						cfgSet $dict_object $object "nat64" $key [lrange $zline 1 end]
+					    }
 					}
 				    }
 				}
@@ -422,6 +443,7 @@ proc loadCfgLegacy { cfg } {
 				    }
 				    "nat64" {
 					set nat64 true
+					cfgSet $dict_object $object "model" "frr"
 				    }
 				    "packets" -
 				    "packet generator" {
@@ -1587,7 +1609,7 @@ proc getImageProperty { image_id property } {
 proc getJsonType { key_name } {
     if { $key_name in "canvases nodes links annotations images custom_configs ipsec_configs ifaces ifaces" } {
 	return "dictionary"
-    } elseif { $key_name in "custom_config croutes4 croutes6 ipv4_addrs ipv6_addrs services events" } {
+    } elseif { $key_name in "custom_config croutes4 croutes6 ipv4_addrs ipv6_addrs services events tayga_mappings" } {
 	return "array"
     } elseif { $key_name in "vlan ipsec nat64 packgen" } {
 	return "inner_dictionary"
