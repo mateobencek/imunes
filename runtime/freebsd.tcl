@@ -1833,13 +1833,13 @@ proc destroyLinkBetween { eid lnode1 lnode2 link } {
 #   * vimages -- list of virtual nodes
 #****
 proc destroyNodeIfaces { eid node ifcs } {
-    if { [getNodeType $node] in "ext extnat" } {
-	pipesExec "jexec $eid ngctl rmnode $eid-$node:" "hold"
-	return
+    foreach ifc $ifcs {
+	set iface_name [getIfcName $node $ifc]
+	pipesExec "jexec $eid ngctl rmnode $node-$iface_name:" "hold"
     }
 
     foreach ifc $ifcs {
-	pipesExec "jexec $eid ngctl rmnode $node-$ifc:" "hold"
+	setToRunning "${node}|${ifc}_running" false
     }
 }
 
@@ -2235,11 +2235,15 @@ proc configureExternalConnection { eid node } {
     }
     set cmds "ifconfig $outifc link $ether"
 
-    foreach ipv4 [getIfcIPv4addrs $node $ifc] {
+    set addrs [getIfcIPv4addrs $node $ifc]
+    setToRunning "${node}|${ifc}_old_ipv4_addrs" $addrs
+    foreach ipv4 $addrs {
 	set cmds "$cmds\n ifconfig $outifc $ipv4"
     }
 
-    foreach ipv6 [getIfcIPv6addrs $node $ifc] {
+    set addrs [getIfcIPv6addrs $node $ifc]
+    setToRunning "${node}|${ifc}_old_ipv6_addrs" $addrs
+    foreach ipv6 $addrs {
 	set cmds "$cmds\n ifconfig $outifc inet6 $ipv6"
     }
 
@@ -2249,6 +2253,24 @@ proc configureExternalConnection { eid node } {
 }
 
 proc unconfigureExternalConnection { eid node } {
+    set cmds ""
+    set ifc [lindex [ifcList $node] 0]
+    set outifc "$eid-$node"
+
+    set addrs [getFromRunning "${node}|${ifc}_old_ipv4_addrs"]
+    foreach ipv4 $addrs {
+	set cmds "ifconfig $outifc inet $ipv4 -alias"
+    }
+
+    set addrs [getFromRunning "${node}|${ifc}_old_ipv6_addrs"]
+    foreach ipv6 $addrs {
+	set cmds "ifconfig $outifc inet $ipv6 -alias"
+    }
+
+    pipesExec "$cmds" "hold"
+}
+
+proc stopExternalConnection { eid node } {
     pipesExec "ifconfig $eid-$node down" "hold"
 }
 
