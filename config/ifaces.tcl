@@ -1043,6 +1043,8 @@ proc removeIface { node_id iface_id } {
 }
 
 proc nodeCfggenIfc { node_id iface_id } {
+    global isOSlinux
+
     set cfg {}
 
     set iface_name [getIfcName $node_id $iface_id]
@@ -1072,6 +1074,10 @@ proc nodeCfggenIfc { node_id iface_id } {
     set primary 1
     set addrs [getIfcIPv6addrs $node_id $iface_id]
     setToRunning "${node_id}|${iface_id}_old_ipv6_addrs" $addrs
+    if { $isOSlinux } {
+	# Linux is prioritizing IPv6 addresses in reversed order
+	set addrs [lreverse $addrs]
+    }
     foreach addr $addrs {
 	if { $addr != "" } {
 	    lappend cfg [getIPv6IfcCmd $iface_name $addr $primary]
