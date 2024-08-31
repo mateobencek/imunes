@@ -857,7 +857,7 @@ proc button3node { c x y } {
 
     if { $oper_mode == "exec" } {
 	.button3menu.sett add command -label "Import Running Configuration" \
-	    -command "fetchNodeConfiguration"
+	    -command "fetchNodesConfiguration"
     } else {
 	.button3menu.sett add command -label "Remove IPv4 addresses" \
 	    -command "removeIPv4nodes"

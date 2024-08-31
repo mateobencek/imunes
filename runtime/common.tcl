@@ -859,76 +859,21 @@ proc spawnShellExec {} {
     }
 }
 
-#****f* exec.tcl/fetchNodeConfiguration
+#****f* exec.tcl/fetchNodesConfiguration
 # NAME
-#   fetchNodeConfiguration -- fetches current node configuration
+#   fetchNodesConfiguration -- fetches current node configuration
 # SYNOPSIS
-#   fetchNodeConfiguration
+#   fetchNodesConfiguration
 # FUNCTION
 #   This procedure is called when the button3.menu.sett->Fetch Node
 #   Configurations button is pressed. It is used to update the selected nodes
 #   configurations from the running experiment settings.
 #****
-proc fetchNodeConfiguration {} {
-    global isOSfreebsd
-    set ip6Set 0
-    set ip4Set 0
-
+proc fetchNodesConfiguration {} {
     foreach node [selectedNodes] {
-	set lines [getRunningNodeIfcList $node]
-	# XXX - here we parse ifconfig output, maybe require virtual nodes on
-	# linux to have ifconfig, or create different parsing procedures for ip
-	# and ifconfig that will have the same output
-	if ($isOSfreebsd) {
-	    foreach line $lines {
-		if {[regexp {^([[:alnum:]]+):.*mtu ([^$]+)$} $line \
-		     -> ifc mtuvalue]} {
-		    setIfcMTU $node $ifc $mtuvalue
-		    set ip6Set 0
-		    set ip4Set 0
-		} elseif {[regexp {^\tether ([^ ]+)} $line -> macaddr]} {
-		    setIfcMACaddr $node $ifc $macaddr
-		} elseif {[regexp {^\tinet6 (?!fe80:)([^ ]+) prefixlen ([^ ]+)} $line -> ip6addr mask]} {
-		    if {$ip6Set == 0} {
-			setIfcIPv6addrs $node $ifc $ip6addr/$mask
-			set ip6Set 1
-		    }
-		} elseif {[regexp {^\tinet ([^ ]+) netmask ([^ ]+) } $line \
-		     -> ip4addr netmask]} {
-		    if {$ip4Set == 0} {
-			set length [ip::maskToLength $netmask]
-			setIfcIPv4addrs $node $ifc $ip4addr/$length
-			set ip4Set 1
-		    }
-		}
-	    }
-	} else {
-	    foreach line $lines {
-		if {[regexp {^([[:alnum:]]+)} $line -> ifc]} {
-		    set ip6Set 0
-		    set ip4Set 0
-		}
-		if {[regexp {^([[:alnum:]]+)\s.*HWaddr ([^$]+)$} $line \
-		     -> ifc macaddr]} {
-		    setIfcMACaddr $node $ifc $macaddr
-		} elseif {[regexp {^\s*inet addr:([^ ]+)\s.*\sMask:([^ ]+)} $line \
-		     -> ip4addr netmask]} {
-		    if {$ip4Set == 0} {
-			set length [ip::maskToLength $netmask]
-			setIfcIPv4addrs $node $ifc $ip4addr/$length
-			set ip4Set 1
-		    }
-		} elseif {[regexp {^\s*inet6 addr:\s(?!fe80:)([^ ]+)} $line -> ip6addr]} {
-		    if {$ip6Set == 0} {
-			setIfcIPv6addrs $node $ifc $ip6addr
-			set ip6Set 1
-		    }
-		} elseif {[regexp {MTU:([^ ]+)} $line -> mtuvalue]} {
-		    setIfcMTU $node $ifc $mtuvalue
-		}
-	    }
-	}
+	set lines [fetchNodeRunningConfig $node]
     }
+
     redrawAll
 }
 

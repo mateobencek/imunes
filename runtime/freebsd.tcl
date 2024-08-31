@@ -903,11 +903,236 @@ proc killExtProcess { regex } {
 # RESULT
 #   * list -- list in the form of {netgraph_node_name hook}
 #****
-proc getRunningNodeIfcList { node } {
-    catch { exec jexec [getFromRunning "eid"].$node ifconfig } full
-    set lines [split $full "\n"]
+proc getRunningNodeIfcList { node_id } {
+    global node_existing_mac node_existing_ipv4 node_existing_ipv6
+    set node_existing_mac [getFromRunning "mac_used_list"]
+    set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
+    set node_existing_ipv6 [getFromRunning "ipv6_used_list"]
 
-    return $lines
+    # overwrite any unsaved changes to this node
+    set node_cfg [cfgGet "nodes" $node_id]
+
+    set ifaces_names "[logIfaceNames $node_id] [ifaceNames $node_id]"
+    puts "IFACES_NAMES: '$ifaces_names'"
+
+    set iface_id ""
+    set loopback 0
+    set ipv4_addrs {}
+    set ipv6_addrs {}
+    catch { exec jexec [getFromRunning "eid"].$node_id ifconfig -v -f inet:cidr,inet6:cidr } full
+    set lines [split $full "\n"]
+    foreach line $lines {
+	puts "LINE: '$line'"
+	if { [regexp {^([[:alnum:]]+):.*<([^>]+)>.*mtu ([^$]+)$} $line \
+	    -> iface_name flags mtu]} {
+
+	    if { $iface_id != "" } {
+		puts "SETTING '$iface_id'"
+		set old_ipv4_addrs [lsort [_getIfcIPv4addrs $node_cfg $iface_id]]
+		set new_ipv4_addrs [lsort $ipv4_addrs]
+		if { $old_ipv4_addrs != $new_ipv4_addrs } {
+		    set node_existing_ipv4 [removeFromList $node_existing_ipv4 $old_ipv4_addrs 1]
+		    lappend node_existing_ipv4 {*}$new_ipv4_addrs
+
+		    setToRunning "${node_id}|${iface_id}_old_ipv4_addrs" $ipv4_addrs
+		    set node_cfg [_setIfcIPv4addrs $node_cfg $iface_id $ipv4_addrs]
+		}
+
+		set old_ipv6_addrs [lsort [_getIfcIPv6addrs $node_cfg $iface_id]]
+		set new_ipv6_addrs [lsort $ipv6_addrs]
+		if { $old_ipv6_addrs != $new_ipv6_addrs } {
+		    set node_existing_ipv6 [removeFromList $node_existing_ipv6 $old_ipv6_addrs 1]
+		    lappend node_existing_ipv6 {*}$new_ipv6_addrs
+
+		    setToRunning "${node_id}|${iface_id}_old_ipv6_addrs" $ipv6_addrs
+		    set node_cfg [_setIfcIPv6addrs $node_cfg $iface_id $ipv6_addrs]
+		}
+	    }
+
+	    set iface_id ""
+	    set loopback 0
+	    set ipv4_addrs {}
+	    set ipv6_addrs {}
+	    if { $iface_name ni $ifaces_names } {
+		puts "not our iface"
+		puts "================================================"
+		continue
+	    }
+
+	    set iface_id [ifaceIdFromName $node_id $iface_name]
+	    puts "IFACE: '$iface_id'"
+
+	    if { "UP" in [split $flags ","] } {
+		set oper_state ""
+	    } else {
+		set oper_state "down"
+	    }
+	    set node_cfg [_setIfcOperState $node_cfg $iface_id $oper_state]
+
+	    if { "LOOPBACK" in [split $flags ","] } {
+		set loopback 1
+	    }
+
+	    if { $mtu != "" && [_getIfcMTU $node_cfg $iface_id] != $mtu} {
+		set node_cfg [_setIfcMTU $node_cfg $iface_id $mtu]
+	    }
+
+	} elseif { $iface_id != "" && [regexp {^\tether ([^ ]+)} $line \
+	    -> new_mac] } {
+
+	    if { $loopback } {
+		continue
+	    }
+
+	    set old_mac [_getIfcMACaddr $node_cfg $iface_id]
+
+	    if { $old_mac != $new_mac } {
+		set node_existing_mac [removeFromList $node_existing_mac $old_mac 1]
+		lappend node_existing_mac $new_mac
+
+		set node_cfg [_setIfcMACaddr $node_cfg $iface_id $new_mac]
+	    }
+	} elseif { $iface_id != "" && [regexp {^\tinet ([^ ]+)} $line \
+	    -> ip4addr] } {
+
+	    lappend ipv4_addrs $ip4addr
+	} elseif { $iface_id != "" && [regexp {^\tinet6 (?!fe80:)([^ ]+)} $line \
+	    -> ip6addr]} {
+
+	    lappend ipv6_addrs $ip6addr
+	}
+    }
+
+    if { $iface_id != "" } {
+	puts "SETTING '$iface_id'"
+	set old_ipv4_addrs [lsort [_getIfcIPv4addrs $node_cfg $iface_id]]
+	set new_ipv4_addrs [lsort $ipv4_addrs]
+	if { $old_ipv4_addrs != $new_ipv4_addrs } {
+	    set node_existing_ipv4 [removeFromList $node_existing_ipv4 $old_ipv4_addrs 1]
+	    lappend node_existing_ipv4 {*}$new_ipv4_addrs
+
+	    setToRunning "${node_id}|${iface_id}_old_ipv4_addrs" $ipv4_addrs
+	    set node_cfg [_setIfcIPv4addrs $node_cfg $iface_id $ipv4_addrs]
+	}
+
+	set old_ipv6_addrs [lsort [_getIfcIPv6addrs $node_cfg $iface_id]]
+	set new_ipv6_addrs [lsort $ipv6_addrs]
+	if { $old_ipv6_addrs != $new_ipv6_addrs } {
+	    set node_existing_ipv6 [removeFromList $node_existing_ipv6 $old_ipv6_addrs 1]
+	    lappend node_existing_ipv6 {*}$new_ipv6_addrs
+
+	    setToRunning "${node_id}|${iface_id}_old_ipv6_addrs" $ipv6_addrs
+	    set node_cfg [_setIfcIPv6addrs $node_cfg $iface_id $ipv6_addrs]
+	}
+    }
+
+    puts "#####################################################################################"
+    lassign [getDefaultGateways $node_id {} {}] my_gws {} {}
+    lassign [getDefaultRoutesConfig $node_id $my_gws] default_routes4 default_routes6
+    puts "default_routes4 '$default_routes4'"
+    puts "default_routes6 '$default_routes6'"
+
+    set croutes4 {}
+    set croutes6 {}
+
+    catch { exec jexec [getFromRunning "eid"].$node_id netstat -rn4 --libxo json} json
+    set route_table [dictGet [json::json2dict $json] "statistics" "route-information" "route-table" "rt-family"]
+
+    foreach elem $route_table {
+	foreach rt [dictGet $elem "rt-entry"] {
+	    if { "G" ni [split [dictGet $rt "flags"] ""] } {
+		continue
+	    }
+
+	    set dst [dictGet $rt "destination"]
+	    if { $dst == "default" } {
+		set dst "0.0.0.0/0"
+	    } elseif { [string first "/" $dst] == -1 } {
+		set dst "$dst/32"
+	    }
+	    set gateway [dictGet $rt "gateway"]
+
+	    set new_route "$dst $gateway"
+	    if { $new_route in $default_routes4 } {
+		puts "auto route, skipping"
+		puts "================================================"
+		continue
+	    }
+
+	    lappend croutes4 $new_route
+	}
+    }
+
+    puts "croutes4: '$croutes4'"
+    set old_croutes4 [lsort [_getStatIPv4routes $node_cfg]]
+    set new_croutes4 [lsort $croutes4]
+    if { $old_croutes4 != $new_croutes4 } {
+	setToRunning "${node_id}_old_croutes4" $new_croutes4
+	set node_cfg [_setStatIPv4routes $node_cfg $new_croutes4]
+    }
+
+    catch { exec jexec [getFromRunning "eid"].$node_id netstat -rn6 --libxo json} json
+    set route_table [dictGet [json::json2dict $json] "statistics" "route-information" "route-table" "rt-family"]
+
+    foreach elem $route_table {
+	foreach rt [dictGet $elem "rt-entry"] {
+	    puts "RT: '$rt'"
+	    set flags [dictGet $rt "flags"]
+	    puts "FLAGS: '$flags'"
+	    if { "G" ni [split $flags ""] } {
+		continue
+	    }
+
+	    set dst [dictGet $rt "destination"]
+	    if { $dst == "default" } {
+		set dst "::/0"
+	    } elseif { [string first "/" $dst] == -1 } {
+		set dst "$dst/128"
+	    }
+	    set gateway [dictGet $rt "gateway"]
+
+	    set new_route "$dst $gateway"
+	    if { $new_route in $default_routes6 } {
+		puts "auto route, skipping"
+		puts "================================================"
+		continue
+	    }
+
+	    lappend croutes6 $new_route
+	}
+    }
+
+    puts "croutes6: '$croutes6'"
+    set old_croutes6 [lsort [_getStatIPv6routes $node_cfg]]
+    set new_croutes6 [lsort $croutes6]
+    if { $old_croutes6 != $new_croutes6 } {
+	setToRunning "${node_id}_old_croutes6" $new_croutes6
+	set node_cfg [_setStatIPv6routes $node_cfg $new_croutes6]
+    }
+
+    # don't trigger anything new - save variables state
+    prepareInstantiateVars
+    prepareTerminateVars
+
+    updateNode $node_id "*" $node_cfg
+
+    # don't trigger anything new - restore variables state
+    updateInstantiateVars
+    updateTerminateVars
+
+    if { $node_existing_mac != [getFromRunning "mac_used_list"] } {
+	setToRunning "mac_used_list" $node_existing_mac
+    }
+
+    if { $node_existing_ipv4 != [getFromRunning "ipv4_used_list"] } {
+	setToRunning "ipv4_used_list" $node_existing_ipv4
+    }
+
+    if { $node_existing_ipv6 != [getFromRunning "ipv6_used_list"] } {
+	setToRunning "ipv6_used_list" $node_existing_ipv6
+    }
+
+    return $node_cfg
 }
 
 # ifconfig parse proc !
