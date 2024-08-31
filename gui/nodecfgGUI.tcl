@@ -1314,6 +1314,17 @@ proc configGUI_nodeRestart { wi node_id } {
 	if { [getFromRunning "oper_mode"] == "edit" || ! [getFromRunning "${node_id}_running"] } {
 	    $w.options.$element configure -state disabled
 	}
+
+	if { [[getNodeType $node_id].virtlayer] != "VIRTUALIZED" } {
+	    continue
+	}
+
+	if { $element == "reconfigure" && [_getAutoDefaultRoutesStatus $node_id] == "enabled" } {
+	    set auto_routes [string trim [.popup.nbook.nfConfiguration.sroutes.auto.editor get 0.0 end]]
+	    if { $auto_routes != "" } {
+		$w.options.$element state selected
+	    }
+	}
     }
 
     pack $w -fill both
@@ -1596,7 +1607,14 @@ proc configGUI_staticRoutes { wi node_id } {
 
     set ifc_routes_enable $wi.ifc_routes_enable
     ttk::checkbutton $ifc_routes_enable -text "Enable automatic default routes" \
-	-variable auto_default_routes -padding 4 -onvalue "enabled" -offvalue "disabled"
+	-variable auto_default_routes -padding 4 -onvalue "enabled" -offvalue "disabled" \
+	-command "
+	    global auto_default_routes
+
+	    if { \$auto_default_routes == \"enabled\" && (\"$all_routes4\" != \"\" || \"$all_routes6\" != \"\")} {
+		.popup.node_force_options.options.reconfigure state selected
+	    }
+	"
     pack $ifc_routes_enable -anchor w
 
     set sroutes_nb $wi.sroutes
