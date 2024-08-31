@@ -1296,8 +1296,6 @@ proc cfgSet { args } {
 		break
 	    }
 	}
-    } elseif { [dict exists $dict_cfg {*}$args] } {
-	set dict_cfg [dictUnset $dict_cfg {*}$args]
     } else {
 	set dict_cfg [dictSet $dict_cfg {*}$args]
     }
@@ -1315,8 +1313,6 @@ proc _cfgSet { node_cfg args } {
 		break
 	    }
 	}
-    } elseif { [dict exists $node_cfg {*}$args] } {
-	set node_cfg [dictUnset $node_cfg {*}$args]
     } else {
 	set node_cfg [dictSet $node_cfg {*}$args]
     }
