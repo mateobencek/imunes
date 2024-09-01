@@ -989,7 +989,7 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
     set config_iface2 0
     if { $iface2_id == "" } {
 	set config_iface2 1
-	if { [getNodeType $node1_id] in "rj45 extelem" } {
+	if { [getNodeType $node2_id] in "rj45 extelem" } {
 	    set iface2_id [newIface $node2_id "stolen" 0]
 	} else {
 	    set iface2_id [newIface $node2_id "phys" 0]
