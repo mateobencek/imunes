@@ -717,9 +717,7 @@ proc button3node { c x y } {
 			continue
 		    }
 
-		    if { [getIfcLink $peer_node_id $other_iface_id] != "" ||
-			[getIfcType $peer_node_id $other_iface_id] == "stolen" } {
-
+		    if { [getIfcLink $peer_node_id $other_iface_id] != "" } {
 			continue
 		    }
 
