@@ -73,7 +73,6 @@ proc $MODULE.confNewNode { node_id } {
 #   * ifc -- interface name
 #****
 proc $MODULE.confNewIfc { node_id ifc } {
-    setIfcName $node_id $ifc "UNASSIGNED"
 }
 
 proc $MODULE.generateConfigIfaces { node_id ifaces } {
@@ -164,8 +163,8 @@ proc $MODULE.virtlayer {} {
 proc $MODULE.nghook { eid node_id ifc } {
     set iface_id [lindex [allIfcList $node_id] 0]
     set ifname [getIfcName $node_id $iface_id]
-    if { [getEtherVlanEnabled $node_id] } {
-	set vlan [getEtherVlanTag $node_id]
+    if { [getIfcVlanDev $node_id $iface_id] != "" } {
+	set vlan [getIfcVlanTag $node_id $iface_id]
 	set ifname ${ifname}_$vlan
     }
 
@@ -214,6 +213,7 @@ proc $MODULE.prepareSystem {} {
 #   * node_id -- node id (type of the node is rj45)
 #****
 proc $MODULE.nodeCreate { eid node_id } {
+    setToRunning "${node_id}_running" true
 }
 
 #****f* pc.tcl/pc.nodeSetupNamespace
@@ -246,7 +246,16 @@ proc $MODULE.nodeInitConfigure { eid node_id } {
 }
 
 proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
-    nodePhysIfacesCreate $node_id $ifaces
+    foreach iface_id $ifaces {
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id != "" && [getLinkDirect $link_id] } {
+	    # do direct link stuff
+	} else {
+	    captureExtIfc $eid $node_id $iface_id
+	}
+
+	setToRunning "${node_id}|${iface_id}_running" true
+    }
 }
 
 proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
@@ -308,7 +317,20 @@ proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
-    destroyNodeIfaces $eid $node_id $ifaces
+    if { $ifaces == "*" } {
+	set ifaces [ifcList $node_id]
+    }
+
+    foreach iface_id $ifaces {
+	set link_id [getIfcLink $node_id $iface_id]
+	if { $link_id != "" && [getLinkDirect $link_id] } {
+	    # do direct link stuff
+	} else {
+	    releaseExtIfc $eid $node_id $iface_id
+	}
+
+	setToRunning "${node_id}|${iface_id}_running" false
+    }
 }
 
 proc $MODULE.nodeUnconfigure { eid node_id } {
@@ -342,4 +364,5 @@ proc $MODULE.nodeShutdown { eid node_id } {
 #   * node_id -- node id (type of the node is rj45)
 #****
 proc $MODULE.nodeDestroy { eid node_id } {
+    setToRunning "${node_id}_running" false
 }

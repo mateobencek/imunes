@@ -492,6 +492,11 @@ proc setIfcName { node_id iface_id name } {
 
     # TODO
     trigger_ifaceRecreate $node_id $iface_id
+
+    set link_id [getIfcLink $node_id $iface_id]
+    if { $link_id != "" } {
+	trigger_linkRecreate $link_id
+    }
 }
 
 #****f* nodecfg.tcl/getIfcIPv6addr
@@ -882,6 +887,10 @@ proc getIfcVlanDev { node_id iface } {
 #****
 proc setIfcVlanDev { node_id iface dev } {
     cfgSet "nodes" $node_id "ifaces" $iface "vlan_dev" $dev
+
+    if { [getNodeType $node_id] in "rj45 extelem" } {
+	trigger_nodeRecreate $node_id
+    }
 }
 
 #****f* nodecfg.tcl/getIfcVlanTag
@@ -915,6 +924,10 @@ proc getIfcVlanTag { node_id iface } {
 #****
 proc setIfcVlanTag { node_id iface_id tag } {
     cfgSet "nodes" $node_id "ifaces" $iface_id "vlan_tag" $tag
+
+    if { [getNodeType $node_id] in "rj45 extelem" } {
+	trigger_nodeRecreate $node_id
+    }
 }
 
 proc getNodeIface { node_id iface_id } {

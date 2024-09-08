@@ -149,13 +149,10 @@ proc drawNode { node_id } {
     lassign [lmap coord [getNodeLabelCoords $node_id] {expr int($coord * $zoom)}] x y
     if { $type != "pseudo" } {
 	set label_str [getNodeName $node_id]
-	if { $type == "rj45" && [getEtherVlanEnabled $node_id] } {
-	    set label_str "$label_str (VLAN [getEtherVlanTag $node_id])"
-	}
 
 	set has_empty_ifaces 0
 	foreach ifc [ifcList $node_id] {
-	    if { [getNodeType $node_id] == "wlan" } {
+	    if { $type == "wlan" } {
 		set label_str "$label_str [getIfcIPv4addr $node_id $ifc]"
 	    } elseif { [getIfcLink $node_id $ifc] == "" } {
 		if { [getIfcType $node_id $ifc] == "stolen" } {
@@ -171,6 +168,8 @@ proc drawNode { node_id } {
 		} else {
 		    set label_str "$label_str $iflabel"
 		}
+	    } elseif { $type == "rj45" && [getIfcVlanDev $node_id $ifc] != "" } {
+		set label_str "$label_str (VLAN [getIfcVlanTag $node_id $ifc])"
 	    }
 	}
     } else {
@@ -320,7 +319,7 @@ proc updateIfcLabel { link_id node_id iface } {
 
     set labelstr ""
     if { $show_interface_names } {
-	if { [getNodeType $node_id] == "extelem" } {
+	if { [getNodeType $node_id] in "rj45 extelem" } {
 	    lappend labelstr "$iface - [getIfcName $node_id $iface]"
 	} else {
 	    lappend labelstr "[getIfcName $node_id $iface]"

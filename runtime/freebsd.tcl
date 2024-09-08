@@ -1177,7 +1177,8 @@ proc getHostIfcVlanExists { node ifname } {
     # check if VLAN ID is already taken
     # this can be only done by trying to create it, as it's possible that the same
     # VLAN interface already exists in some other namespace
-    set vlan [getEtherVlanTag $node]
+    set iface_id [ifaceIdFromName $node $ifname]
+    set vlan [getIfcVlanTag $node $iface_id]
     try {
 	exec ifconfig $ifname.$vlan create
     } on ok {} {
@@ -2184,19 +2185,20 @@ proc getCpuCount {} {
 # NAME
 #   captureExtIfc -- capture external interface
 # SYNOPSIS
-#   captureExtIfc $eid $node
+#   captureExtIfc $eid $node $iface_id
 # FUNCTION
 #   Captures the external interface given by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
+#   * iface_id -- interface id
 #****
-proc captureExtIfc { eid node } {
+proc captureExtIfc { eid node iface_id } {
     global execMode
 
-    set ifname [getNodeName $node]
-    if { [getEtherVlanEnabled $node] } {
-	set vlan [getEtherVlanTag $node]
+    set ifname [getIfcName $node $iface_id]
+    if { [getIfcVlanDev $node $iface_id] != "" } {
+	set vlan [getIfcVlanTag $node $iface_id]
 	try {
 	    exec ifconfig $ifname.$vlan create
 	} on error err {
@@ -2240,17 +2242,18 @@ proc captureExtIfcByName { eid ifname } {
 # NAME
 #   releaseExtIfc -- release external interface
 # SYNOPSIS
-#   releaseExtIfc $eid $node
+#   releaseExtIfc $eid $node $iface_id
 # FUNCTION
 #   Releases the external interface captured by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
 #   * node -- node id
+#   * iface_id -- interface id
 #****
-proc releaseExtIfc { eid node } {
-    set ifname [getNodeName $node]
-    if { [getEtherVlanEnabled $node] } {
-	set vlan [getEtherVlanTag $node]
+proc releaseExtIfc { eid node iface_id } {
+    set ifname [getIfcName $node $iface_id]
+    if { [getIfcVlanDev $node $iface_id] != "" } {
+	set vlan [getIfcVlanTag $node $iface_id]
 	set ifname $ifname.$vlan
 	catch { exec ifconfig $ifname -vnet $eid destroy }
 

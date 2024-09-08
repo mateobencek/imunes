@@ -1670,6 +1670,7 @@ proc configGUI_etherVlan { wi node_id } {
     lappend guielements configGUI_etherVlan
 
     global node_cfg
+    set iface_id [lindex [_allIfcList $node_cfg] 0]
 
     ttk::frame $wi.vlancfg -borderwidth 2 -relief groove
     ttk::label $wi.vlancfg.label -text "Vlan:" -anchor w
@@ -1689,9 +1690,11 @@ proc configGUI_etherVlan { wi node_id } {
 	-validatecommand {checkIntRange %P 1 4094} \
 	-from 1 -to 4094 -increment 1
 
-    $wi.vlancfg.tag insert 0 [_getEtherVlanTag $node_cfg]
-    set vlanEnable [_getEtherVlanEnabled $node_cfg]
-    if { ! $vlanEnable } {
+    $wi.vlancfg.tag insert 0 [_getIfcVlanTag $node_cfg $iface_id]
+    if { [_getIfcVlanDev $node_cfg $iface_id] != "" } {
+	set vlanEnable 1
+    } else {
+	set vlanEnable 0
 	.popup.vlancfg.tag configure -state disabled
     }
 
@@ -2131,7 +2134,7 @@ proc configGUI_ifcVlanConfig { wi node_id ifc } {
 #   * node_id -- node id
 #****
 proc configGUI_externalIfcs { wi node_id } {
-    global guielements vlanEnable
+    global guielements
     lappend guielements configGUI_externalIfcs
 
     global node_cfg
@@ -2606,9 +2609,9 @@ proc checkStaticRoutesSyntax { text } {
 
 #****f* nodecfgGUI.tcl/configGUI_etherVlanApply
 # NAME
-#   configGUI_etherVlan -- configure GUI - vlan for rj45 nodes
+#   configGUI_etherVlanApply -- configure GUI - vlan for rj45 nodes
 # SYNOPSIS
-#   configGUI_etherVlan $wi $node_id
+#   configGUI_etherVlanApply $wi $node_id
 # FUNCTION
 #   Creating module for assigning vlan to rj45 nodes.
 # INPUTS
@@ -2618,24 +2621,34 @@ proc checkStaticRoutesSyntax { text } {
 proc configGUI_etherVlanApply { wi node_id } {
     global changed vlanEnable node_cfg
 
-    set oldEnabled [_getEtherVlanEnabled $node_cfg]
+    set iface_id [lindex [_allIfcList $node_cfg] 0]
+    if { [_getIfcVlanDev $node_cfg $iface_id] != "" } {
+	set oldEnabled 1
+    } else {
+	set oldEnabled 0
+    }
+
     if { $vlanEnable != $oldEnabled } {
-	set node_cfg [_setEtherVlanEnabled $node_cfg $vlanEnable]
+	if { $vlanEnable } {
+	    set node_cfg [_setIfcVlanDev $node_cfg $iface_id [_getIfcName $node_cfg $iface_id]]
+	} else {
+	    set node_cfg [_setIfcVlanDev $node_cfg $iface_id ""]
+	}
 	set changed 1
     }
 
     set tag [$wi.vlancfg.tag get]
-    set oldTag [_getEtherVlanTag $node_cfg]
+    set oldTag [_getIfcVlanTag $node_cfg $iface_id]
     if { $tag != $oldTag } {
-	set node_cfg [_setEtherVlanTag $node_cfg $tag]
+	set node_cfg [_setIfcVlanTag $node_cfg $iface_id $tag]
 	if { $tag == "" } {
-	    set node_cfg [_setEtherVlanEnabled $node_cfg 0]
+	    set node_cfg [_setIfcVlanDev $node_cfg $iface_id ""]
 	    $wi.vlancfg.tag configure -state disabled
 	}
 	set changed 1
     }
 
-    set iface_id [lindex [_allIfcList $node_cfg] 0]
+    set node_cfg [_setIfcType $node_cfg $iface_id "stolen"]
     set node_cfg [_setIfcName $node_cfg $iface_id [_getNodeName $node_cfg]]
 }
 
@@ -7222,22 +7235,6 @@ proc _setNodeProtocol { node_cfg protocol state } {
 
 proc _setNodeType { node_cfg type } {
     return [_cfgSet $node_cfg "type" $type]
-}
-
-proc _getEtherVlanEnabled { node_cfg } {
-    return [_cfgGetWithDefault 0 $node_cfg "vlan" "enabled"]
-}
-
-proc _setEtherVlanEnabled { node_cfg state } {
-    return [_cfgSet $node_cfg "vlan" "enabled" $state]
-}
-
-proc _getEtherVlanTag { node_cfg } {
-    return [_cfgGetWithDefault 1 $node_cfg "vlan" "tag"]
-}
-
-proc _setEtherVlanTag { node_cfg tag } {
-    return [_cfgSet $node_cfg "vlan" "tag" $tag]
 }
 
 proc _getNodeServices { node_cfg } {

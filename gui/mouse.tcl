@@ -57,8 +57,10 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 	set mirror_node_id [getNodeMirror $node1]
     }
 
+    set node1_type [getNodeType $node1]
+    set node2_type [getNodeType $node2]
     # TODO: check this when wlan node turn comes
-    if { [getNodeType $node1] == "wlan" || [getNodeType $node2] == "wlan" } {
+    if { "wlan" in "$node1_type $node2_type" } {
 	removeLink $link_id
 	return
     }
@@ -80,7 +82,7 @@ proc removeLinkGUI { link_id atomic { keep_ifaces 0 } } {
 	deployCfg
 
 	set changed 1
-	if { $keep_ifaces } {
+	if { $keep_ifaces || "rj45" in "$node1_type $node2_type" } {
 	    redrawAll
 	}
 
