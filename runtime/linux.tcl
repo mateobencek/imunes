@@ -1808,13 +1808,11 @@ proc getNetemConfigLine { bandwidth delay loss dup } {
     return $cmd
 }
 
-proc configureIfcLinkParams { eid node ifname bandwidth delay ber loss dup } {
-    global debug
+proc configureIfcLinkParams { eid node iface_id bandwidth delay ber loss dup } {
+    set devname [getIfcName $node $iface_id]
 
-    if { [getNodeType $node] == "rj45" } {
-        set devname [getIfcName $node $ifname]
-    } else {
-	set devname $node-$ifname
+    if { [getNodeType $node] != "rj45" } {
+	set devname $node-$devname
     }
 
     set netem_cfg [getNetemConfigLine $bandwidth $delay $loss $dup]

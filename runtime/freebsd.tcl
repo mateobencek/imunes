@@ -529,18 +529,6 @@ proc execSetIfcQLen { eid node_id iface qlen } {
 proc execSetLinkParams { eid link } {
     global debug
 
-    set lnode1 [lindex [getLinkPeers $link] 0]
-    set lnode2 [lindex [getLinkPeers $link] 1]
-
-    if { [getLinkMirror $link] != "" } {
-	set mirror_link [getLinkMirror $link]
-	if { [getNodeType $lnode1] == "pseudo" } {
-	    set lnode1 [lindex [getLinkPeers $mirror_link] 0]
-	} else {
-	    set lnode2 [lindex [getLinkPeers $mirror_link] 0]
-	}
-    }
-
     set bandwidth [expr [getLinkBandwidth $link] + 0]
     set delay [expr [getLinkDelay $link] + 0]
     set ber [expr [getLinkBER $link] + 0]
