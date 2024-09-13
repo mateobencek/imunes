@@ -1412,31 +1412,30 @@ proc destroyNamespace { ns } {}
 # NAME
 #   nodeLogIfacesCreate -- create node logical interfaces
 # SYNOPSIS
-#   nodeLogIfacesCreate $node
+#   nodeLogIfacesCreate $node_id
 # FUNCTION
 #   Creates logical interfaces for the given node.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 #****
-proc nodeLogIfacesCreate { node ifaces } {
-    set node_id "[getFromRunning "eid"].$node"
+proc nodeLogIfacesCreate { node_id ifaces } {
+    set jail_node "[getFromRunning "eid"].$node_id"
 
-    if { $ifaces == "*" } {
-	set ifaces [cfgGet "nodes" $node_id "ifaces"]
-    }
+    foreach iface_id $ifaces {
+	setToRunning "${node_id}|${iface_id}_running" true
 
-    foreach {liface_id liface_cfg} $ifaces {
-	switch -exact [dictGet $liface_cfg "type"] {
+	set iface_name [getIfcName $node_id $iface_id]
+	switch -exact [getIfcType $node_id $iface_id] {
 	    vlan {
 		set tag [getIfcVlanTag $node_id $iface_id]
 		set dev [getIfcVlanDev $node_id $iface_id]
 		if { $tag != "" && $dev != "" } {
-		    pipesExec "jexec $node_id [getVlanTagIfcCmd $iface_name $dev $tag]" "hold"
+		    pipesExec "jexec $jail_node [getVlanTagIfcCmd $iface_name $dev $tag]" "hold"
 		}
 	    }
 	    lo {
-		if { $liface_id != "lo0" } {
-		    pipesExec "jexec $node_id ifconfig $liface_id create" "hold"
+		if { $iface_id != "lo0" } {
+		    pipesExec "jexec $jail_node ifconfig $iface_id create" "hold"
 		}
 	    }
 	}
