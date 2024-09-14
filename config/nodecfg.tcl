@@ -2300,6 +2300,58 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 					    }
 					}
 				    }
+
+				    "stp_discover" {
+					setBridgeIfcDiscover $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_learn" {
+					setBridgeIfcLearn $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_sticky" {
+					setBridgeIfcSticky $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_private" {
+					setBridgeIfcPrivate $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_snoop" {
+					setBridgeIfcSnoop $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_enabled" {
+					setBridgeIfcStp $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_edge" {
+					setBridgeIfcEdge $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_autoedge" {
+					setBridgeIfcAutoedge $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_ptp" {
+					setBridgeIfcPtp $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_autoptp" {
+					setBridgeIfcAutoptp $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_priority" {
+					setBridgeIfcPriority $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_path_cost" {
+					setBridgeIfcPathcost $node_id $iface_id $iface_prop_new_value
+				    }
+
+				    "stp_max_addresses" {
+					setBridgeIfcMaxaddr $node_id $iface_id $iface_prop_new_value
+				    }
 				}
 			    }
 			}
@@ -2361,6 +2413,60 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 				removePackgenPacket $node_id $packet_key
 				addPackgenPacket $node_id $packet_key $packet_new_value
 			    }
+			}
+		    }
+		}
+	    }
+
+	    "bridge" {
+		set bridge_diff [dictDiff $old_value $new_value]
+		dict for {bridge_key bridge_change} $bridge_diff {
+		    if { $bridge_change == "copy" } {
+			continue
+		    }
+
+		    puts "======== $bridge_change: '$bridge_key'"
+
+		    set bridge_old_value [_cfgGet $old_value $bridge_key]
+		    set bridge_new_value [_cfgGet $new_value $bridge_key]
+		    if { $bridge_change in "changed" } {
+			puts "======== OLD: '$bridge_old_value'"
+		    }
+		    if { $bridge_change in "new changed" } {
+			puts "======== NEW: '$bridge_new_value'"
+		    }
+
+		    switch -exact $bridge_key {
+			"protocol" {
+			    setBridgeProtocol $node_id $bridge_new_value
+			}
+
+			"priority" {
+			    setBridgePriority $node_id $bridge_new_value
+			}
+
+			"hold_count" {
+			    setBridgeHoldCount $node_id $bridge_new_value
+			}
+
+			"max_age" {
+			    setBridgeMaxAge $node_id $bridge_new_value
+			}
+
+			"forwarding_delay" {
+			    setBridgeFwdDelay $node_id $bridge_new_value
+			}
+
+			"hello_time" {
+			    setBridgeHelloTime $node_id $bridge_new_value
+			}
+
+			"max_addresses" {
+			    setBridgeMaxAddr $node_id $bridge_new_value
+			}
+
+			"address_timeout" {
+			    setBridgeTimeout $node_id $bridge_new_value
 			}
 		    }
 		}
