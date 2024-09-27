@@ -407,20 +407,21 @@ proc configGUI_addTree { wi node_id } {
 #   * ifc -- interface name
 #****
 proc showLogIfcMenu { ifc } {
-    global button3logifc_ifc
+    global button3logifc_ifc node_cfg
 
     set button3logifc_ifc $ifc
+    set iface_name [_getIfcName $node_cfg $ifc]
     .button3logifc delete 0 end
-    .button3logifc add command -label "Remove interface $ifc" -command {
-	global curnode logifaces_list button3logifc_ifc changed
+    .button3logifc add command -label "Remove interface $iface_name" -command {
+	global curnode logifaces_list button3logifc_ifc changed node_cfg
 
 	set changed 0
-	set ifc $button3logifc_ifc
-	if { $ifc != "lo0" } {
-	    cfgUnset "nodes" $curnode "ifaces" $ifc
+	set iface_name [_getIfcName $node_cfg $button3logifc_ifc]
+	if { $iface_name != "lo0" } {
+	    set node_cfg [_removeIface $node_cfg $button3logifc_ifc]
 
 	    set wi .popup.nbook.nfInterfaces.panwin
-	    set logifaces_list [lsort [logIfcList $curnode]]
+	    set logifaces_list [lsort [_logIfcList $node_cfg]]
 
 	    configGUI_refreshIfcsTree $wi.f1.tree $curnode
 	    configGUI_showIfcInfo $wi.f2 0 $curnode logIfcFrame
@@ -492,48 +493,6 @@ proc showPhysIfcMenu { ifc } {
     set x [winfo pointerx .]
     set y [winfo pointery .]
     tk_popup .button3physifc $x $y
-}
-
-#****f* nodecfgGUI.tcl/showLogIfcMenu
-# NAME
-#   showLogIfcMenu -- show logical interface menu
-# SYNOPSIS
-#   showLogIfcMenu $ifc
-# FUNCTION
-#   Creates and shows a dialog for a logical interface.
-# INPUTS
-#   * ifc -- interface name
-#****
-proc showLogIfcMenu { ifc } {
-    global button3logifc_ifc node_cfg
-
-    set button3logifc_ifc $ifc
-    set iface_name [_getIfcName $node_cfg $ifc]
-    .button3logifc delete 0 end
-    .button3logifc add command -label "Remove interface $iface_name" -command {
-	global curnode logifaces_list button3logifc_ifc changed node_cfg
-
-	set changed 0
-	set iface_name [_getIfcName $node_cfg $button3logifc_ifc]
-	if { $iface_name != "lo0" } {
-	    set node_cfg [_removeIface $node_cfg $button3logifc_ifc]
-
-	    set wi .popup.nbook.nfInterfaces.panwin
-	    set logifaces_list [lsort [_logIfcList $node_cfg]]
-
-	    configGUI_refreshIfcsTree $wi.f1.tree $curnode
-	    configGUI_showIfcInfo $wi.f2 0 $curnode logIfcFrame
-	    $wi.f1.tree selection set logIfcFrame
-	} else {
-	    tk_dialog .dialog1 "IMUNES warning" \
-		"The loopback interface lo0 cannot be deleted!" \
-		info 0 Dismiss
-	}
-    }
-
-    set x [winfo pointerx .]
-    set y [winfo pointery .]
-    tk_popup .button3logifc $x $y
 }
 
 #****f* nodecfgGUI.tcl/configGUI_refreshIfcsTree
