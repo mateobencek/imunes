@@ -2240,6 +2240,13 @@ proc updateNode { node_id old_node_cfg new_node_cfg } {
 				}
 
 				switch -exact $iface_prop_key {
+				    "link" {
+					# link cannot be changed, only removed
+					if { $iface_prop_change == "removed" } {
+					    removeLink $iface_prop_old_value 1
+					}
+				    }
+
 				    "type" {
 					setIfcType $node_id $iface_id $iface_prop_new_value
 				    }
