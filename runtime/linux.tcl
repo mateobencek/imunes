@@ -1219,7 +1219,6 @@ proc destroyLinkBetween { eid lnode1 lnode2 link } {
 #   * vimages -- list of virtual nodes
 #****
 proc destroyNodeIfaces { eid node_id ifaces } {
-    puts "destroyNodeIfaces $eid $node_id $ifaces"
     set node_type [getNodeType $node_id]
     if { $node_type in "ext extnat" } {
 	pipesExec "ip link del $eid-$node_id" "hold"
@@ -1233,7 +1232,7 @@ proc destroyNodeIfaces { eid node_id ifaces } {
 	    if { [getIfcType $node_id $iface_id] == "stolen" } {
 		releaseExtIfcByName $eid $iface_name $node_id
 	    } else {
-		pipesExec "ip -n $eid link del $node_id-$iface_name" "hold"
+		pipesExec "ip -n $eid-$node_id link del $iface_name" "hold"
 	    }
 	}
     }

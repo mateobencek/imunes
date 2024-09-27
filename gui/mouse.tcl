@@ -399,7 +399,12 @@ proc button3link { c x y } {
     #
     # Toggle direct link
     #
-    if { $oper_mode != "exec" } {
+    lassign [getLinkPeers $link_id] peer1_id peer2_id
+    lassign [getLinkPeersIfaces $link_id] peer1_iface peer2_iface
+    if { ($oper_mode != "exec" || ! [getFromRunning "auto_execution"]) && \
+   	 (! [getFromRunning "${peer1_id}|${peer1_iface}_running"] && \
+	 ! [getFromRunning "${peer1_id}|${peer1_iface}_running"]) } {
+
 	.button3menu add checkbutton -label "Direct link" \
 	    -underline 5 -variable linkDirect_$link_id \
 	    -command "toggleDirectLink $c $link_id"
@@ -418,8 +423,17 @@ proc button3link { c x y } {
     #
     # Delete link (keep ifaces)
     #
-    .button3menu add command -label "Delete (keep interfaces)" \
-	-command "removeLinkGUI $link_id atomic 1"
+    if { ! [set linkDirect_$link_id] || \
+	 ($oper_mode != "exec" || ! [getFromRunning "auto_execution"]) && \
+   	 (! [getFromRunning "${peer1_id}|${peer1_iface}_running"] && \
+	 ! [getFromRunning "${peer1_id}|${peer1_iface}_running"]) } {
+
+	.button3menu add command -label "Delete (keep interfaces)" \
+	    -command "removeLinkGUI $link_id atomic 1"
+    } else {
+	.button3menu add command -label "Delete (keep interfaces)" \
+	    -state disabled
+    }
 
     #
     # Split link
