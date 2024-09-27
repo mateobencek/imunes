@@ -15,7 +15,7 @@ proc showCfg { c node } {
     upvar 0 ::lastObservedNode lastObservedNode
 
     #Show only if in exec mode
-    if { ! [getFromRunning "${node}_running"] } {
+    if { [getFromRunning "${node}_running"] == false } {
     	return
     }
 
