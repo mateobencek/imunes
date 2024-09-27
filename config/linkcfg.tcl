@@ -1021,6 +1021,10 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 	}
     }
 
+    # save old subnet data for comparation
+    lassign [getSubnetData $node1_id $iface1_id {} {} 0] old_subnet1_gws old_subnet1_data
+    lassign [getSubnetData $node2_id $iface2_id {} {} 0] old_subnet2_gws old_subnet2_data
+
     set link_id [newObjectIdAlt [getFromRunning "link_list"] "l"]
     setToRunning "${link_id}_running" false
 
@@ -1041,27 +1045,50 @@ proc newLinkWithIfaces { node1_id iface1_id node2_id iface2_id } {
 
     trigger_linkCreate $link_id
 
-    if { [getNodeType $node1_id] in "packgen" } {
-	trigger_nodeConfig $node1_id
+    lassign [getSubnetData $node1_id $iface1_id {} {} 0] new_subnet1_gws new_subnet1_data
+    lassign [getSubnetData $node2_id $iface2_id {} {} 0] new_subnet2_gws new_subnet2_data
+
+    if { $old_subnet1_gws != "" } {
+	set diff [removeFromList {*}$new_subnet1_gws {*}$old_subnet1_gws]
+	if { $diff ni "{} {||}" } {
+	    # there was a change in subnet1, go through its old nodes and attach new data
+	    set has_extnat [string match "*extnat*" $diff]
+	    foreach subnet_node [dict keys $old_subnet1_data] {
+		set subnet_node_type [getNodeType $subnet_node]
+		if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		    # skip extnat and L2 nodes
+		    continue
+		}
+
+		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+		    # skip routers if there is no extnats
+		    continue
+		}
+
+		trigger_nodeReconfig $subnet_node
+	    }
+	}
     }
 
-    if { [getNodeType $node2_id] in "packgen" } {
-	trigger_nodeConfig $node2_id
-    }
+    if { $old_subnet2_gws != "" } {
+	set diff [removeFromList {*}$new_subnet2_gws {*}$old_subnet2_gws]
+	if { $diff ni "{} {||}" } {
+	    # change in subnet1, go through its old nodes and attach new data
+	    set has_extnat [string match "*extnat*" $diff]
+	    foreach subnet_node [dict keys $old_subnet2_data] {
+		set subnet_node_type [getNodeType $subnet_node]
+		if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+		    # skip extnat and L2 nodes
+		    continue
+		}
 
-    lassign [getSubnetData $node1_id $iface1_id {} {} 0] subnet_gws subnet_data
-    if { $subnet_gws != "{||}" } {
-	set has_extnat [string match "*extnat*" $subnet_gws]
-	foreach subnet_node [dict keys $subnet_data] {
-	    if { [getNodeType $subnet_node] == "extnat" } {
-		continue
+		if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+		    # skip routers if there is no extnats
+		    continue
+		}
+
+		trigger_nodeReconfig $subnet_node
 	    }
-
-	    if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
-		continue
-	    }
-
-	    trigger_nodeReconfig $subnet_node
 	}
     }
 
