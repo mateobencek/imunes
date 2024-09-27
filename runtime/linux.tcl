@@ -1190,14 +1190,14 @@ proc runConfOnNode { node } {
 
 proc destroyDirectLinkBetween { eid lnode1 lnode2 } {
     if { [getNodeType $lnode1] in "ext extnat" } {
-	pipesExec "ip link del $eid-$lnode1"
+	pipesExec "ip link del $eid-$lnode1" "hold"
     } elseif { [getNodeType $lnode2] in "ext extnat" } {
-	pipesExec "ip link del $eid-$lnode2"
+	pipesExec "ip link del $eid-$lnode2" "hold"
     }
 }
 
 proc destroyLinkBetween { eid lnode1 lnode2 link } {
-    pipesExec "ip -n $eid link del $link"
+    pipesExec "ip -n $eid link del $link" "hold"
 }
 
 #****f* linux.tcl/destroyNodeIfaces
