@@ -199,7 +199,7 @@ proc configGUI_addTree { wi node_id } {
     set sorted_iface_list [lsort -ascii $iface_list]
     set logiface_list [_logIfcList $node_cfg]
     set sorted_logiface_list [lsort -ascii $logiface_list]
-    set all_iface_list "$iface_list $logiface_list"
+    set all_iface_list [concat $iface_list $logiface_list]
     set sorted_all_iface_list [lsort -ascii $all_iface_list]
 
     #
@@ -296,6 +296,12 @@ proc configGUI_addTree { wi node_id } {
 
 	set cancel 0
 	configGUI_showIfcInfo $wi.panwin.f2 0 $node_id [lindex $sorted_all_iface_list 0]
+    } else {
+	$wi.panwin.f1.tree focus "physIfcFrame"
+	$wi.panwin.f1.tree selection set "physIfcFrame"
+
+	set cancel 0
+	configGUI_showIfcInfo $wi.panwin.f2 0 $node_id "physIfcFrame"
     }
 
     if { $iface_list != "" && $selectedIfc != "" } {
@@ -451,14 +457,19 @@ proc showPhysIfcMenu { ifc } {
 	global curnode ifaces_list button3physifc_ifc changed node_cfg
 	global node_existing_mac node_existing_ipv4 node_existing_ipv6
 
-	set node_existing_mac [removeFromList $node_existing_mac [_getIfcMACaddr $node_cfg $button3physifc_ifc] 1]
-	set node_existing_ipv4 [removeFromList $node_existing_ipv4 [_getIfcIPv4addrs $node_cfg $button3physifc_ifc] 1]
-	set node_existing_ipv6 [removeFromList $node_existing_ipv6 [_getIfcIPv6addrs $node_cfg $button3physifc_ifc] 1]
+	if { [_getNodeType $node_cfg] in "hub lanswitch" } {
+	    set wi .popup.panwin
+	} else {
+	    set wi .popup.nbook.nfInterfaces.panwin
+
+	    set node_existing_mac [removeFromList $node_existing_mac [_getIfcMACaddr $node_cfg $button3physifc_ifc] 1]
+	    set node_existing_ipv4 [removeFromList $node_existing_ipv4 [_getIfcIPv4addrs $node_cfg $button3physifc_ifc] 1]
+	    set node_existing_ipv6 [removeFromList $node_existing_ipv6 [_getIfcIPv6addrs $node_cfg $button3physifc_ifc] 1]
+	}
 
 	set changed 0
 	set node_cfg [_removeIface $node_cfg $button3physifc_ifc]
 
-	set wi .popup.nbook.nfInterfaces.panwin
 	set ifaces_list [lsort [_ifcList $node_cfg]]
 
 	configGUI_refreshIfcsTree $wi.f1.tree $curnode
@@ -576,7 +587,7 @@ proc configGUI_refreshIfcsTree { wi node_id } {
 	}
     }
 
-    set wi_bind [string trimright $wi ".panwin.f1.tree"]
+    regsub ***=.panwin.f1.tree $wi "" wi_bind
 
     $wi tag bind physIfcFrame <1> \
 	    "configGUI_showIfcInfo $wi_bind.panwin.f2 0 $node_id \"\""
@@ -742,37 +753,17 @@ proc configGUI_showIfcInfo { wi phase node_id ifc } {
 	    if { $ifc in "\"\" physIfcFrame" } {
 		#manage physical interfaces
 		configGUI_physicalInterfaces $wi $node_id "physIfcFrame"
-
-		set wi1 [string trimright $wi ".f2"]
-		set h [winfo height $wi1]
-		set pos [expr $h-100]
-		$wi1 sashpos 0 $pos
 	    } elseif { [_isIfcLogical $node_cfg $ifc] } {
 		#logical interfaces
 		configGUI_ifcMainFrame $wi $node_id $ifc
 		logical.configInterfacesGUI $wi $node_id $ifc
-
-		set wi1 [string trimright $wi ".f2"]
-		set h [winfo height $wi1]
-		set pos [expr $h-160]
-		$wi1 sashpos 0 $pos
 	    } elseif { $ifc != "logIfcFrame" } {
 		#physical interfaces
 		configGUI_ifcMainFrame $wi $node_id $ifc
-
 		$type.configInterfacesGUI $wi $node_id $ifc
-		set wi1 [string trimright $wi ".f2"]
-		set h [winfo height $wi1]
-		set pos [expr $h-160]
-		$wi1 sashpos 0 $pos
 	    } else {
 		#manage logical interfaces
 		configGUI_logicalInterfaces $wi $node_id $ifc
-
-		set wi1 [string trimright $wi ".f2"]
-		set h [winfo height $wi1]
-		set pos [expr $h-100]
-		$wi1 sashpos 0 $pos
 	    }
 	}
     }
@@ -823,6 +814,8 @@ proc logical.configInterfacesGUI { wi node_id ifc } {
 	    configGUI_ifcIPv6Address $wi $node_id $ifc
 	}
     }
+
+    configGUI_ifcGap $wi $ifc 60
 }
 
 #****f* nodecfgGUI.tcl/configGUI_logicalInterfaces
@@ -838,8 +831,9 @@ proc logical.configInterfacesGUI { wi node_id ifc } {
 #   * ifc -- interface name
 #****
 proc configGUI_logicalInterfaces { wi node_id ifc } {
-    global logifaces_list curnode node_cfg
+    global apply logifaces_list curnode node_cfg
 
+    set apply 0
     set curnode $node_id
     ttk::frame $wi.if$ifc -relief groove -borderwidth 2 -padding 4
     ttk::label $wi.if$ifc.txt -text "Manage logical interfaces:"
@@ -942,8 +936,9 @@ proc configGUI_logicalInterfaces { wi node_id ifc } {
 #   * ifc -- interface name
 #****
 proc configGUI_physicalInterfaces { wi node_id ifc } {
-    global ifaces_list curnode node_cfg
+    global apply ifaces_list curnode node_cfg
 
+    set apply 0
     set curnode $node_id
     ttk::frame $wi.if$ifc -relief groove -borderwidth 2 -padding 4
     ttk::label $wi.if$ifc.txt -text "Manage physical interfaces:"
@@ -961,7 +956,13 @@ proc configGUI_physicalInterfaces { wi node_id ifc } {
 	global curnode ifaces_list node_cfg
 	global changed force
 
-	set wi .popup.nbook.nfInterfaces.panwin.f2.ifphysIfcFrame
+	if { [_getNodeType $node_cfg] in "hub lanswitch" } {
+	    set wi_prefix .popup.panwin
+	} else {
+	    set wi_prefix .popup.nbook.nfInterfaces.panwin
+	}
+	set wi $wi_prefix.f2.ifphysIfcFrame
+
 	set ifctype [$wi.addbox get]
 	if { $ifctype != "phys" } {
 	    set iface_name $ifctype
@@ -977,9 +978,9 @@ proc configGUI_physicalInterfaces { wi node_id ifc } {
 	$wi.rmvbox configure -values $ifaces_list
 	$wi.list configure -listvariable ifaces_list
 
-	configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $curnode
-	configGUI_showIfcInfo .popup.nbook.nfInterfaces.panwin.f2 0 $curnode $iface_id
-	.popup.nbook.nfInterfaces.panwin.f1.tree selection set $iface_id
+	configGUI_refreshIfcsTree $wi_prefix.f1.tree $curnode
+	configGUI_showIfcInfo $wi_prefix.f2 0 $curnode $iface_id
+	$wi_prefix.f1.tree selection set $iface_id
 
 	if { [_getNodeType $node_cfg] == "stpswitch" } {
 	    configGUI_showBridgeIfcInfo .popup.nbook.nfBridge.panwin.f2 0 $curnode $iface_id
@@ -1004,7 +1005,13 @@ proc configGUI_physicalInterfaces { wi node_id ifc } {
 	global curnode ifaces_list node_cfg
 	global changed force
 
-	set wi .popup.nbook.nfInterfaces.panwin.f2.ifphysIfcFrame
+	if { [_getNodeType $node_cfg] in "hub lanswitch" } {
+	    set wi_prefix .popup.panwin
+	} else {
+	    set wi_prefix .popup.nbook.nfInterfaces.panwin
+	}
+	set wi $wi_prefix.f2.ifphysIfcFrame
+
 	set iface_name [$wi.rmvbox get]
 	set iface_id [_ifaceIdFromName $node_cfg $iface_name]
 	if { $iface_id == "" } {
@@ -1022,9 +1029,9 @@ proc configGUI_physicalInterfaces { wi node_id ifc } {
 	$wi.rmvbox configure -values $ifaces_list
 	$wi.list configure -listvariable ifaces_list
 
-	configGUI_refreshIfcsTree .popup.nbook.nfInterfaces.panwin.f1.tree $curnode
-	configGUI_showIfcInfo .popup.nbook.nfInterfaces.panwin.f2 0 $curnode physIfcFrame
-	.popup.nbook.nfInterfaces.panwin.f1.tree selection set physIfcFrame
+	configGUI_refreshIfcsTree $wi_prefix.f1.tree $curnode
+	configGUI_showIfcInfo $wi_prefix.f2 0 $curnode physIfcFrame
+	$wi_prefix.f1.tree selection set physIfcFrame
 
 	if { [_getNodeType $node_cfg] == "stpswitch" } {
 	    set bridge_wi .popup.nbook.nfBridge.panwin.f2
@@ -1444,6 +1451,24 @@ proc configGUI_ifcMainFrame { wi node_id ifc } {
     pack $wi.if$ifc.label.txt -side left -anchor w
     pack $wi.if$ifc.label -anchor w
     pack $wi.if$ifc -anchor w -fill both -expand 1
+}
+
+#****f* nodecfgGUI.tcl/configGUI_ifcGap
+# NAME
+#   configGUI_ifcGap -- configure GUI - interface gap
+# SYNOPSIS
+#   configGUI_ifcGap $wi $node_id $ifc
+# FUNCTION
+#   Creating empty frame which will be used for padding.
+# INPUTS
+#   * wi -- widget
+#   * ifc -- interface name
+#   * height -- total height of the element
+#****
+proc configGUI_ifcGap { wi ifc height } {
+    ttk::frame $wi.if$ifc.pad -height $height
+
+    pack $wi.if$ifc.pad -anchor w -fill both -expand 1
 }
 
 #****f* nodecfgGUI.tcl/configGUI_ifcEssentials
