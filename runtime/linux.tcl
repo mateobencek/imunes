@@ -772,7 +772,9 @@ proc createNsLinkBridge { netNs link } {
 	set nsstr "-n $netNs"
     }
 
-    pipesExec "ip $nsstr link add name $link type bridge ageing_time 0" "hold"
+    pipesExec "ip $nsstr link add name $link type bridge ageing_time 0 mcast_snooping 0" "hold"
+    pipesExec "ip $nsstr link set $link multicast off" "hold"
+    pipesExec "ip netns exec $netNs sysctl net.ipv6.conf.$link.disable_ipv6=1" "hold"
     pipesExec "ip $nsstr link set $link up" "hold"
 }
 
@@ -801,6 +803,11 @@ proc createNsVethPair { ifname1 netNs1 ifname2 netNs2 } {
 
     if { $nsstr2x != "" } {
 	pipesExec "ip $nsstr2x link set $eid-$ifname2 name $ifname2" "hold"
+    }
+
+    if { $netNs2 == $eid } {
+	pipesExec "ip netns exec $eid ip link set $ifname2 multicast off" "hold"
+	pipesExec "ip netns exec $eid sysctl net.ipv6.conf.$ifname2.disable_ipv6=1" "hold"
     }
 }
 
