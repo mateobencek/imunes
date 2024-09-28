@@ -148,11 +148,6 @@ proc removeLink { link_id { keep_ifaces 0 } } {
 	    continue
 	}
 
-	if { [getNodeType $node_id] == "rj45" } {
-	    cfgUnset "nodes" $node_id "ifaces" $iface_id
-	    continue
-	}
-
 	removeIface $node_id $iface_id
     }
 

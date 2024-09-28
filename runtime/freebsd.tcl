@@ -1383,7 +1383,17 @@ proc nodePhysIfacesCreate { node ifcs } {
 		# we don't know the name, so make sure all other options cover other IMUNES
 		# 'physical' interfaces
 		# XXX not yet implemented
-		pipesExec "ifconfig $iface_id vnet $jail_id" "hold"
+		if { [getIfcType $node $iface_id] == "stolen" } {
+		    captureExtIfcByName $eid $iface_name $node
+		    if { [getNodeType $node] in "hub lanswitch" } {
+			lassign [[getNodeType $node].nghook $eid $node $iface_id] \
+			    ngpeer1 nghook1
+			lassign "$iface_name lower" \
+			    ngpeer2 nghook2
+
+			pipesExec "jexec $eid ngctl connect $ngpeer1: $ngpeer2: $nghook1 $nghook2" "hold"
+		    }
+		}
 	    }
 	}
     }
@@ -2045,14 +2055,25 @@ proc destroyLinkBetween { eid lnode1 lnode2 link } {
 #   * eid -- experiment id
 #   * vimages -- list of virtual nodes
 #****
-proc destroyNodeIfaces { eid node ifcs } {
-    foreach ifc $ifcs {
-	set iface_name [getIfcName $node $ifc]
-	pipesExec "jexec $eid ngctl rmnode $node-$iface_name:" "hold"
+proc destroyNodeIfaces { eid node_id ifaces } {
+    set node_type [getNodeType $node_id]
+    if { $node_type == "rj45" } {
+	foreach iface_id $ifaces {
+	    releaseExtIfcByName $eid [getIfcName $node_id $iface_id] $node_id
+	}
+    } else {
+	foreach iface_id $ifaces {
+	    set iface_name [getIfcName $node_id $iface_id]
+	    if { [getIfcType $node_id $iface_id] == "stolen" } {
+		releaseExtIfcByName $eid $iface_name $node_id
+	    } else {
+		pipesExec "jexec $eid ngctl rmnode $node_id-$iface_name:" "hold"
+	    }
+	}
     }
 
-    foreach ifc $ifcs {
-	setToRunning "${node}|${ifc}_running" false
+    foreach iface_id $ifaces {
+	setToRunning "${node_id}|${iface_id}_running" false
     }
 }
 
@@ -2178,15 +2199,15 @@ proc getCpuCount {} {
 #   Captures the external interface given by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #   * iface_id -- interface id
 #****
-proc captureExtIfc { eid node iface_id } {
+proc captureExtIfc { eid node_id iface_id } {
     global execMode
 
-    set ifname [getIfcName $node $iface_id]
-    if { [getIfcVlanDev $node $iface_id] != "" } {
-	set vlan [getIfcVlanTag $node $iface_id]
+    set ifname [getIfcName $node_id $iface_id]
+    if { [getIfcVlanDev $node_id $iface_id] != "" } {
+	set vlan [getIfcVlanTag $node_id $iface_id]
 	try {
 	    exec ifconfig $ifname.$vlan create
 	} on error err {
@@ -2207,7 +2228,7 @@ proc captureExtIfc { eid node iface_id } {
 	}
     }
 
-    captureExtIfcByName $eid $ifname
+    captureExtIfcByName $eid $ifname $node_id
 }
 
 #****f* freebsd.tcl/captureExtIfcByName
@@ -2221,34 +2242,40 @@ proc captureExtIfc { eid node iface_id } {
 #   * eid -- experiment id
 #   * ifname -- physical interface name
 #****
-proc captureExtIfcByName { eid ifname } {
-    pipesExec "ifconfig $ifname vnet $eid" "hold"
-    pipesExec "jexec $eid ifconfig $ifname up promisc" "hold"
+proc captureExtIfcByName { eid ifname node_id } {
+    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	set nodeNs $eid
+    } else {
+	set nodeNs $eid.$node_id
+    }
+
+    pipesExec "ifconfig $ifname vnet $nodeNs" "hold"
+    pipesExec "jexec $nodeNs ifconfig $ifname up promisc" "hold"
 }
 
 #****f* freebsd.tcl/releaseExtIfc
 # NAME
 #   releaseExtIfc -- release external interface
 # SYNOPSIS
-#   releaseExtIfc $eid $node $iface_id
+#   releaseExtIfc $eid $node_id $iface_id
 # FUNCTION
 #   Releases the external interface captured by the given rj45 node.
 # INPUTS
 #   * eid -- experiment id
-#   * node -- node id
+#   * node_id -- node id
 #   * iface_id -- interface id
 #****
-proc releaseExtIfc { eid node iface_id } {
-    set ifname [getIfcName $node $iface_id]
-    if { [getIfcVlanDev $node $iface_id] != "" } {
-	set vlan [getIfcVlanTag $node $iface_id]
+proc releaseExtIfc { eid node_id iface_id } {
+    set ifname [getIfcName $node_id $iface_id]
+    if { [getIfcVlanDev $node_id $iface_id] != "" } {
+	set vlan [getIfcVlanTag $node_id $iface_id]
 	set ifname $ifname.$vlan
 	catch { exec ifconfig $ifname -vnet $eid destroy }
 
 	return
     }
 
-    releaseExtIfcByName $eid $ifname
+    releaseExtIfcByName $eid $ifname $node_id
 }
 
 #****f* freebsd.tcl/releaseExtIfcByName
@@ -2262,8 +2289,14 @@ proc releaseExtIfc { eid node iface_id } {
 #   * eid -- experiment id
 #   * ifname -- physical interface name
 #****
-proc releaseExtIfcByName { eid ifname } {
-    pipesExec "ifconfig $ifname -vnet $eid" "hold"
+proc releaseExtIfcByName { eid ifname node_id } {
+    if { [[getNodeType $node_id].virtlayer] == "NATIVE" } {
+	set nodeNs $eid
+    } else {
+	set nodeNs $eid.$node_id
+    }
+
+    pipesExec "ifconfig $ifname -vnet $nodeNs" "hold"
     pipesExec "ifconfig $ifname up -promisc" "hold"
 }
 

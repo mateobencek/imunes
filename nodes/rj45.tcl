@@ -237,6 +237,7 @@ proc $MODULE.nodePhysIfacesCreate { eid node_id ifaces } {
 	set link_id [getIfcLink $node_id $iface_id]
 	if { $link_id != "" && [getLinkDirect $link_id] } {
 	    # do direct link stuff
+	    captureExtIfc $eid $node_id $iface_id
 	} else {
 	    captureExtIfc $eid $node_id $iface_id
 	}
@@ -312,6 +313,7 @@ proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {
 	set link_id [getIfcLink $node_id $iface_id]
 	if { $link_id != "" && [getLinkDirect $link_id] } {
 	    # do direct link stuff
+	    releaseExtIfc $eid $node_id $iface_id
 	} else {
 	    releaseExtIfc $eid $node_id $iface_id
 	}

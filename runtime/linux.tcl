@@ -843,11 +843,14 @@ proc createDirectLinkBetween { lnode1 lnode2 iface1_id iface2_id } {
 	if { [getNodeType $lnode1] == "rj45" } {
 	    set physical_ifc [getIfcName $lnode1 $iface1_id]
 	    set vlan [getIfcVlanTag $lnode1 $iface1_id]
-	    set physical_ifc $physical_ifc.$vlan
+	    if { $vlan != "" } {
+		set physical_ifc $physical_ifc.$vlan
+	    }
 	    set nodeNs [getNodeNetns $eid $lnode2]
-	    set full_virtual_ifc $eid-$lnode2-$iface2_id
-	    set virtual_ifc $iface2_id
-	    set ether [getIfcMACaddr $lnode2 $virtual_ifc]
+	    set iface2_name [getIfcName $lnode2 $iface2_id]
+	    set full_virtual_ifc $eid-$lnode2-$iface2_name
+	    set virtual_ifc $iface2_name
+	    set ether [getIfcMACaddr $lnode2 $iface2_id]
 
 	    if { [[getNodeType $lnode2].virtlayer] == "NATIVE" } {
 		pipesExec "ip link set $physical_ifc netns $nodeNs" "hold"
@@ -857,11 +860,14 @@ proc createDirectLinkBetween { lnode1 lnode2 iface1_id iface2_id } {
 	} else {
 	    set physical_ifc [getIfcName $lnode2 $iface2_id]
 	    set vlan [getIfcVlanTag $lnode2 $iface2_id]
-	    set physical_ifc $physical_ifc.$vlan
+	    if { $vlan != "" } {
+		set physical_ifc $physical_ifc.$vlan
+	    }
 	    set nodeNs [getNodeNetns $eid $lnode1]
-	    set full_virtual_ifc $eid-$lnode1-$iface1_id
-	    set virtual_ifc $iface1_id
-	    set ether [getIfcMACaddr $lnode1 $virtual_ifc]
+	    set iface1_name [getIfcName $lnode1 $iface1_id]
+	    set full_virtual_ifc $eid-$lnode1-$iface1_name
+	    set virtual_ifc $iface1_name
+	    set ether [getIfcMACaddr $lnode1 $iface1_id]
 
 	    if { [[getNodeType $lnode1].virtlayer] == "NATIVE" } {
 		pipesExec "ip link set $physical_ifc netns $nodeNs" "hold"
