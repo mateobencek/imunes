@@ -650,6 +650,9 @@ proc nodePhysIfacesCreate { node_id ifcs } {
 		# XXX not yet implemented
 		if { [getIfcType $node_id $iface_id] == "stolen" } {
 		    captureExtIfcByName $eid $iface_name $node_id
+		    if { [getNodeType $node_id] in "hub lanswitch" } {
+			setNsIfcMaster $nodeNs $iface_name $node_id "up"
+		    }
 		}
 	    }
 	}
