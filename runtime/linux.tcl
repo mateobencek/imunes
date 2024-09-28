@@ -890,13 +890,13 @@ proc createDirectLinkBetween { lnode1 lnode2 iface1_id iface2_id } {
     }
 
     if { [getNodeType $lnode1] in "ext extnat" } {
-	set iface1_name $eid-$lnode1
+	set iface1_name $lnode1
     } else {
 	set iface1_name [getIfcName $lnode1 $iface1_id]
     }
 
     if { [getNodeType $lnode2] in "ext extnat" } {
-	set iface2_name $eid-$lnode2
+	set iface2_name $lnode2
     } else {
 	set iface2_name [getIfcName $lnode2 $iface2_id]
     }
