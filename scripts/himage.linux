@@ -64,7 +64,7 @@ get_explist() {
 	fi
 
 	if test $1 = "nodes"; then
-	    data=`grep network-config -A 3 /var/run/imunes/$exp/config.imn | grep hostname | awk '{print $2}' | paste -s -d" " -`
+	    data=`jq -r '.nodes | to_entries | map(.value.name + if .value.type == "rj45" then " (" + (.value.ifaces | to_entries | map(.value.name) | join(", ")) + ")" else "" end) | join(", ")' /var/run/imunes/$exp/config.imn`
 	else
 	    if test -r /var/run/imunes/$exp/name; then
 		exp_name=`cat /var/run/imunes/$exp/name`
@@ -74,7 +74,7 @@ get_explist() {
 	    exp_timestamp=`cat /var/run/imunes/$exp/timestamp`
 	    data="$exp_name - $exp_timestamp"
 	fi
-	echo "$exp ($data)"
+	echo "$exp [$data]"
     done
 }
 

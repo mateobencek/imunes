@@ -946,7 +946,7 @@ proc dumpLinksToFile { path } {
 	}
 
 	lassign [getLinkPeers $link] lnode1 lnode2
-	lassign [getLinkPeersIfaces $link] ifname1 ifname2
+	lassign [getLinkPeersIfaces $link] iface1_id iface2_id
 
 	set mirror_link [getLinkMirror $link]
 	if { $mirror_link != "" } {
@@ -954,7 +954,7 @@ proc dumpLinksToFile { path } {
 
 	    # switch direction for mirror links
 	    lassign "$lnode2 [lindex [getLinkPeers $mirror_link] 1]" lnode1 lnode2
-	    lassign "$ifname2 [lindex [getLinkPeersIfaces $mirror_link] 1]" ifname1 ifname2
+	    lassign "$iface2_id [lindex [getLinkPeersIfaces $mirror_link] 1]" iface1_id iface2_id
 	}
 
 	set name1 [getNodeName $lnode1]
@@ -962,8 +962,8 @@ proc dumpLinksToFile { path } {
 
 	set linkname "$name1$linkDelim$name2"
 
-	set lpair [list $lnode1 $ifname1]
-	set rpair [list $lnode2 $ifname2]
+	set lpair [list $lnode1 [getIfcName $lnode1 $iface1_id]]
+	set rpair [list $lnode2 [getIfcName $lnode2 $iface2_id]]
 
 	set line "$link {$lnode1-$lnode2 {{$lpair} {$rpair}} $linkname}\n"
 	set data "$data$line"
