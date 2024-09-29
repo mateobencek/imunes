@@ -342,17 +342,38 @@ if { $execMode == "interactive" } {
 	upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 	upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 	set dict_cfg [dict create]
+	setOption "version" $CFG_VERSION
+
 	set dict_run [dict create]
 	set execute_vars [dict create]
-
 	lappendToRunning "cfg_list" $curcfg
+
+	setToRunning "eid" ""
+	setToRunning "oper_mode" "edit"
+	setToRunning "auto_execution" 1
+	setToRunning "cfg_deployed" false
+	setToRunning "stop_sched" true
+	setToRunning "undolevel" 0
+	setToRunning "redolevel" 0
+	setToRunning "zoom" $zoom
+
 	readCfgJson $currentFileBatch
+
+	setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
+	setToRunning "current_file" $argv
 
 	if { [checkExternalInterfaces] } {
 	    return
 	}
 
 	if { [allSnapshotsAvailable] == 1 } {
+	    setToExecuteVars "instantiate_nodes" [getFromRunning "node_list"]
+	    setToExecuteVars "create_nodes_ifaces" "*"
+	    setToExecuteVars "instantiate_links" [getFromRunning "link_list"]
+	    setToExecuteVars "configure_links" "*"
+	    setToExecuteVars "configure_nodes_ifaces" "*"
+	    setToExecuteVars "configure_nodes" "*"
+
 	    deployCfg 1
 	    createExperimentFilesFromBatch
 	}
@@ -367,13 +388,28 @@ if { $execMode == "interactive" } {
 	    upvar 0 ::cf::[set ::curcfg]::execute_vars execute_vars
 	    upvar 0 ::cf::[set ::curcfg]::dict_cfg dict_cfg
 	    set dict_cfg [dict create]
+	    setOption "version" $CFG_VERSION
+
 	    set dict_run [dict create]
 	    set execute_vars [dict create]
 	    lappendToRunning "cfg_list" $curcfg
 
-	    readCfgJson $configFile
-
 	    setToRunning "eid" $eid_base
+	    setToRunning "oper_mode" "edit"
+	    setToRunning "auto_execution" 1
+	    setToRunning "cfg_deployed" false
+	    setToRunning "stop_sched" true
+	    setToRunning "undolevel" 0
+	    setToRunning "redolevel" 0
+	    setToRunning "zoom" $zoom
+	    setToRunning "canvas_list" {}
+	    setToRunning "current_file" $configFile
+
+	    readCfgJson $configFile
+	    setToRunning "curcanvas" [lindex [getFromRunning "canvas_list"] 0]
+
+	    readRunningVarsFile $eid_base
+	    setToRunning "cfg_deployed" true
 
 	    setToExecuteVars "terminate_cfg" [cfgGet]
 	    setToExecuteVars "terminate_nodes" [getFromRunning "node_list"]
