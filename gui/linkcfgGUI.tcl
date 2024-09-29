@@ -221,7 +221,7 @@ proc configGUI_linkConfig { wi link_id param label } {
 
     lappend configelements $param
     if { $param == "Bandwidth" } {
-        set from 0; set to 1000000000; set inc 1000
+        set from 0; set to 1000000000000; set inc 1000
     } elseif { $param == "Delay" } {
         set from 0; set to 10000000; set inc 5
     } elseif { $param == "BER" } {
