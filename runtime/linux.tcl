@@ -1558,22 +1558,15 @@ proc fetchNodeRunningConfig { node_id } {
     set node_cfg [cfgGet "nodes" $node_id]
 
     set ifaces_names "[logIfaceNames $node_id] [ifaceNames $node_id]"
-    puts "IFACES_NAMES: '$ifaces_names'"
 
     catch { exec docker exec [getFromRunning "eid"].$node_id sh -c "ip --json a" } json
     foreach elem [json::json2dict $json] {
-	puts "================================================"
-	puts "ELEM: '$elem'"
 	set iface_name [dictGet $elem "ifname"]
-	puts "NAME? '$iface_name'"
 	if { $iface_name ni $ifaces_names } {
-	    puts "not our iface"
-	    puts "================================================"
 	    continue
 	}
 
 	set iface_id [ifaceIdFromName $node_id $iface_name]
-	puts "IFACE: '$iface_id'"
 
 	if { "UP" in [dictGet $elem "flags"] } {
 	    set oper_state ""
@@ -1634,22 +1627,15 @@ proc fetchNodeRunningConfig { node_id } {
 	}
     }
 
-    puts "#####################################################################################"
     lassign [getDefaultGateways $node_id {} {}] my_gws {} {}
     lassign [getDefaultRoutesConfig $node_id $my_gws] default_routes4 default_routes6
-    puts "default_routes4 '$default_routes4'"
-    puts "default_routes6 '$default_routes6'"
 
     set croutes4 {}
     set croutes6 {}
 
     catch { exec docker exec [getFromRunning "eid"].$node_id sh -c "ip -4 --json r" } json
     foreach elem [json::json2dict $json] {
-	puts "================================================"
-	puts "ELEM: '$elem'"
 	if { [dictGet $elem "scope"] in "link" } {
-	    puts "link route"
-	    puts "================================================"
 	    continue
 	}
 
@@ -1663,15 +1649,12 @@ proc fetchNodeRunningConfig { node_id } {
 
 	set new_route "$dst $gateway"
 	if { $new_route in $default_routes4 } {
-	    puts "auto route, skipping"
-	    puts "================================================"
 	    continue
 	}
 
 	lappend croutes4 $new_route
     }
 
-    puts "croutes4: '$croutes4'"
     set old_croutes4 [lsort [_getStatIPv4routes $node_cfg]]
     set new_croutes4 [lsort $croutes4]
     if { $old_croutes4 != $new_croutes4 } {
@@ -1681,11 +1664,7 @@ proc fetchNodeRunningConfig { node_id } {
 
     catch { exec docker exec [getFromRunning "eid"].$node_id sh -c "ip -6 --json r" } json
     foreach elem [json::json2dict $json] {
-	puts "================================================"
-	puts "ELEM: '$elem'"
 	if { [dictGet $elem "nexthops"] == "" && [dictGet $elem "gateway"] == "" } {
-	    puts "link route"
-	    puts "================================================"
 	    continue
 	}
 
@@ -1700,8 +1679,6 @@ proc fetchNodeRunningConfig { node_id } {
 	if { $gateway != "" } {
 	    set new_route "$dst $gateway"
 	    if { $new_route in $default_routes6 } {
-		puts "auto route, skipping"
-		puts "================================================"
 		continue
 	    }
 
@@ -1711,15 +1688,12 @@ proc fetchNodeRunningConfig { node_id } {
 		set gateway [dictGet $nexthop_elem "gateway"]
 		set new_route "$dst $gateway"
 		if { $new_route in $default_routes6 } {
-		    puts "auto route, skipping"
-		    puts "================================================"
 		    continue
 		}
 	    }
 	}
     }
 
-    puts "croutes6: '$croutes6'"
     set old_croutes6 [lsort [_getStatIPv6routes $node_cfg]]
     set new_croutes6 [lsort $croutes6]
     if { $old_croutes6 != $new_croutes6 } {

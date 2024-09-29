@@ -879,19 +879,19 @@ proc killExtProcess { regex } {
     catch "exec pkill -f \"$regex\""
 }
 
-#****f* freebsd.tcl/getRunningNodeIfcList
+#****f* freebsd.tcl/fetchNodeRunningConfig
 # NAME
-#   getRunningNodeIfcList -- get interfaces list from the node
+#   fetchNodeRunningConfig -- get interfaces list from the node
 # SYNOPSIS
-#   getRunningNodeIfcList $node
+#   fetchNodeRunningConfig $node_id
 # FUNCTION
 #   Returns the list of all network interfaces for the given node.
 # INPUTS
-#   * node -- node id
+#   * node_id -- node id
 # RESULT
 #   * list -- list in the form of {netgraph_node_name hook}
 #****
-proc getRunningNodeIfcList { node_id } {
+proc fetchNodeRunningConfig { node_id } {
     global node_existing_mac node_existing_ipv4 node_existing_ipv6
     set node_existing_mac [getFromRunning "mac_used_list"]
     set node_existing_ipv4 [getFromRunning "ipv4_used_list"]
@@ -901,7 +901,6 @@ proc getRunningNodeIfcList { node_id } {
     set node_cfg [cfgGet "nodes" $node_id]
 
     set ifaces_names "[logIfaceNames $node_id] [ifaceNames $node_id]"
-    puts "IFACES_NAMES: '$ifaces_names'"
 
     set iface_id ""
     set loopback 0
@@ -910,12 +909,10 @@ proc getRunningNodeIfcList { node_id } {
     catch { exec jexec [getFromRunning "eid"].$node_id ifconfig -v -f inet:cidr,inet6:cidr } full
     set lines [split $full "\n"]
     foreach line $lines {
-	puts "LINE: '$line'"
 	if { [regexp {^([[:alnum:]]+):.*<([^>]+)>.*mtu ([^$]+)$} $line \
 	    -> iface_name flags mtu]} {
 
 	    if { $iface_id != "" } {
-		puts "SETTING '$iface_id'"
 		set old_ipv4_addrs [lsort [_getIfcIPv4addrs $node_cfg $iface_id]]
 		set new_ipv4_addrs [lsort $ipv4_addrs]
 		if { $old_ipv4_addrs != $new_ipv4_addrs } {
@@ -942,13 +939,10 @@ proc getRunningNodeIfcList { node_id } {
 	    set ipv4_addrs {}
 	    set ipv6_addrs {}
 	    if { $iface_name ni $ifaces_names } {
-		puts "not our iface"
-		puts "================================================"
 		continue
 	    }
 
 	    set iface_id [ifaceIdFromName $node_id $iface_name]
-	    puts "IFACE: '$iface_id'"
 
 	    if { "UP" in [split $flags ","] } {
 		set oper_state ""
@@ -992,7 +986,6 @@ proc getRunningNodeIfcList { node_id } {
     }
 
     if { $iface_id != "" } {
-	puts "SETTING '$iface_id'"
 	set old_ipv4_addrs [lsort [_getIfcIPv4addrs $node_cfg $iface_id]]
 	set new_ipv4_addrs [lsort $ipv4_addrs]
 	if { $old_ipv4_addrs != $new_ipv4_addrs } {
@@ -1014,11 +1007,8 @@ proc getRunningNodeIfcList { node_id } {
 	}
     }
 
-    puts "#####################################################################################"
     lassign [getDefaultGateways $node_id {} {}] my_gws {} {}
     lassign [getDefaultRoutesConfig $node_id $my_gws] default_routes4 default_routes6
-    puts "default_routes4 '$default_routes4'"
-    puts "default_routes6 '$default_routes6'"
 
     set croutes4 {}
     set croutes6 {}
@@ -1042,8 +1032,6 @@ proc getRunningNodeIfcList { node_id } {
 
 	    set new_route "$dst $gateway"
 	    if { $new_route in $default_routes4 } {
-		puts "auto route, skipping"
-		puts "================================================"
 		continue
 	    }
 
@@ -1051,7 +1039,6 @@ proc getRunningNodeIfcList { node_id } {
 	}
     }
 
-    puts "croutes4: '$croutes4'"
     set old_croutes4 [lsort [_getStatIPv4routes $node_cfg]]
     set new_croutes4 [lsort $croutes4]
     if { $old_croutes4 != $new_croutes4 } {
@@ -1064,9 +1051,7 @@ proc getRunningNodeIfcList { node_id } {
 
     foreach elem $route_table {
 	foreach rt [dictGet $elem "rt-entry"] {
-	    puts "RT: '$rt'"
 	    set flags [dictGet $rt "flags"]
-	    puts "FLAGS: '$flags'"
 	    if { "G" ni [split $flags ""] } {
 		continue
 	    }
@@ -1081,8 +1066,6 @@ proc getRunningNodeIfcList { node_id } {
 
 	    set new_route "$dst $gateway"
 	    if { $new_route in $default_routes6 } {
-		puts "auto route, skipping"
-		puts "================================================"
 		continue
 	    }
 
@@ -1090,7 +1073,6 @@ proc getRunningNodeIfcList { node_id } {
 	}
     }
 
-    puts "croutes6: '$croutes6'"
     set old_croutes6 [lsort [_getStatIPv6routes $node_cfg]]
     set new_croutes6 [lsort $croutes6]
     if { $old_croutes6 != $new_croutes6 } {
@@ -1337,8 +1319,6 @@ proc nodePhysIfacesCreate { node ifcs } {
 		set cmds "$cmds; jexec $eid ngctl name \$ifid: $public_hook"
 		set cmds "$cmds; jexec $eid ifconfig \$ifid name $public_hook"
 
-		puts "$cmds"
-
 		pipesExec $cmds "hold"
 		pipesExec "jexec $eid ifconfig $public_hook vnet $node" "hold"
 		pipesExec "jexec $jail_id ifconfig $public_hook name $iface_name" "hold"
@@ -1493,7 +1473,6 @@ proc startIfcsNode { node ifaces } {
 
     # TODO: check this
     set ifaces_cfgs [lmap iface_id $ifaces {set iface_id "$iface_id [getNodeIface $node $iface_id]"}]
-    puts "IFACES_CFGS: '$ifacs_cfgs'"
 
     foreach {iface_id iface_cfg} $ifaces_cfgs {
 	set iface_name [dictGet $iface_cfg "name"]
@@ -1967,7 +1946,6 @@ proc createLinkBetween { lnode1 lnode2 ifname1 ifname2 link } {
     set ngcmds "$ngcmds\n name $ngpeer1:$nghook1 $link"
     set ngcmds "$ngcmds\n connect $link: $ngpeer2: lower $nghook2"
 
-    puts "printf \"$ngcmds\" | jexec $eid ngctl -f -"
     pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
 }
 
