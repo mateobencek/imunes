@@ -438,10 +438,25 @@ proc setIfcIPv4addrs { node_id iface_id addrs } {
 	return
     }
 
-    lassign [getSubnetData $node_id $iface_id {} {} 0] - subnet_data
+    lassign [getSubnetData $node_id $iface_id {} {} 0] subnet_gws subnet_data
+    if { $subnet_gws != "{||}" } {
+	return
+    }
+
+    set has_extnat [string match "*extnat*" $subnet_gws]
     foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
+	if { [getCustomEnabled $subnet_node] == "true" || [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+	    continue
+	}
+
 	set subnet_node_type [getNodeType $subnet_node]
 	if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+	    # skip extnat and L2 nodes
+	    continue
+	}
+
+	if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+	    # skip routers if there is no extnats
 	    continue
 	}
 
@@ -557,10 +572,25 @@ proc setIfcIPv6addrs { node_id iface_id addrs } {
 	return
     }
 
-    lassign [getSubnetData $node_id $iface_id {} {} 0] - subnet_data
+    lassign [getSubnetData $node_id $iface_id {} {} 0] subnet_gws subnet_data
+    if { $subnet_gws != "{||}" } {
+	return
+    }
+
+    set has_extnat [string match "*extnat*" $subnet_gws]
     foreach subnet_node [removeFromList [dict keys $subnet_data] $node_id] {
+	if { [getCustomEnabled $subnet_node] == "true" || [getAutoDefaultRoutesStatus $subnet_node] != "enabled" } {
+	    continue
+	}
+
 	set subnet_node_type [getNodeType $subnet_node]
 	if { $subnet_node_type == "extnat" || [$subnet_node_type.netlayer] != "NETWORK" } {
+	    # skip extnat and L2 nodes
+	    continue
+	}
+
+	if { ! $has_extnat && [getNodeType $subnet_node] in "router nat64" } {
+	    # skip routers if there is no extnats
 	    continue
 	}
 

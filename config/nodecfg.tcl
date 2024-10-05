@@ -947,6 +947,10 @@ proc getAutoDefaultRoutesStatus { node_id } {
 proc setAutoDefaultRoutesStatus { node_id state } {
     cfgSet "nodes" $node_id "auto_default_routes" $state
 
+    if { [getCustomEnabled $node_id] == "true" } {
+	return
+    }
+
     trigger_nodeReconfig $node_id
 }
 
