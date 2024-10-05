@@ -1332,10 +1332,12 @@ proc configGUI_nodeRestart { wi node_id } {
 	    continue
 	}
 
-	if { $element == "reconfigure" && [_getAutoDefaultRoutesStatus $node_cfg] == "enabled" } {
+	if { $element == "reconfigure" && [_getAutoDefaultRoutesStatus $node_cfg] == "enabled" && \
+	    [_getCustomEnabled $node_cfg] != "true" } {
+
 	    set auto_routes [string trim [.popup.nbook.nfConfiguration.sroutes.auto.editor get 0.0 end]]
 	    if { $auto_routes != "" } {
-		$w.options.$element state selected
+		set force_$element 1
 	    }
 	}
     }
@@ -1640,10 +1642,10 @@ proc configGUI_staticRoutes { wi node_id } {
     ttk::checkbutton $ifc_routes_enable -text "Enable automatic default routes" \
 	-variable auto_default_routes -padding 4 -onvalue "enabled" -offvalue "disabled" \
 	-command "
-	    global auto_default_routes
+	    global auto_default_routes force_reconfigure
 
 	    if { \$auto_default_routes == \"enabled\" && (\"$all_routes4\" != \"\" || \"$all_routes6\" != \"\")} {
-		.popup.node_force_options.options.reconfigure state selected
+		set force_reconfigure 1
 	    }
 	"
     pack $ifc_routes_enable -anchor w
