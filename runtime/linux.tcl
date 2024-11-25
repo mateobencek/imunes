@@ -415,7 +415,7 @@ proc getHostIfcVlanExists { node_id ifname } {
     # this can be only done by trying to create it, as it's possible that the same
     # VLAN interface already exists in some other namespace
     set iface_id [ifaceIdFromName $node_id $ifname]
-    set vlan [getIfcVlanTag $node $iface_id]
+    set vlan [getIfcVlanTag $node_id $iface_id]
     try {
 	exec ip link add link $ifname name $ifname.$vlan type vlan id $vlan
     } on ok {} {
