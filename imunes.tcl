@@ -162,6 +162,7 @@ array set nodeNamingBase {
     rj45 rj45-
     packgen packgen
     stpswitch stpswitch
+    vlanswitch vlanswitch
     wlan wlan
 }
 
@@ -188,7 +189,7 @@ foreach {option default_value} [concat $option_defaults $gui_option_defaults] {
 }
 
 # Set default L2 node list
-set l2nodes "hub lanswitch rj45 stpswitch filter packgen ext extnat"
+set l2nodes "hub lanswitch rj45 stpswitch filter packgen ext extnat vlanswitch"
 # Set default L3 node list
 set l3nodes "router host pc nat64"
 # Set default supported router models
@@ -196,7 +197,7 @@ set supp_router_models "frr quagga static"
 
 if { $isOSlinux } {
     # Limit default nodes on linux
-    set l2nodes "hub lanswitch rj45 ext extnat"
+    set l2nodes "hub lanswitch rj45 ext extnat vlanswitch"
     set l3nodes "router pc host nat64"
     set supp_router_models "frr quagga static"
     safeSourceFile $ROOTDIR/$LIBDIR/runtime/linux.tcl

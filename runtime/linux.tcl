@@ -12,18 +12,21 @@ set ULIMIT_PROC "1024:2048"
 #   Procedure l2node.nodeCreate creates a new netgraph node of the appropriate type.
 # INPUTS
 #   * eid -- experiment id
-#   * node_id -- id of the node (type of the node is either lanswitch or hub)
+#   * node_id -- id of the node (type of the node is either lanswitch, vlanswitch or hub)
 #****
 proc l2node.nodeCreate { eid node_id } {
     set type [getNodeType $node_id]
 
     set ageing_time ""
+    set vlanfiltering ""
     if { $type == "hub" } {
-	set ageing_time "ageing_time 0"
+		set ageing_time "ageing_time 0"
+    } elseif { $type == "vlanswitch" } {
+        set vlanfiltering "vlan_filtering 1"
     }
 
     set nodeNs [getNodeNetns $eid $node_id]
-    pipesExec "ip netns exec $nodeNs ip link add name $node_id type bridge $ageing_time" "hold"
+    pipesExec "ip netns exec $nodeNs ip link add name $node_id type bridge $vlanfiltering $ageing_time" "hold"
     pipesExec "ip netns exec $nodeNs ip link set $node_id up" "hold"
 }
 
@@ -695,7 +698,7 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 		# XXX not yet implemented
 		if { [getIfcType $node_id $iface_id] == "stolen" } {
 		    captureExtIfcByName $eid $iface_name $node_id
-		    if { [getNodeType $node_id] in "hub lanswitch" } {
+		    if { [getNodeType $node_id] in "hub lanswitch vlanswitch" } {
 			setNsIfcMaster $nodeNs $iface_name $node_id "up"
 		    }
 		}
