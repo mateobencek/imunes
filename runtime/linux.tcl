@@ -576,7 +576,7 @@ proc createNodeContainer { node_id } {
 proc isNodeStarted { node_id } {
     set node_type [getNodeType $node_id]
     if { [$node_type.virtlayer] != "VIRTUALIZED" } {
-	if { $node_type in "rj45 extnat" } {
+	if { $node_type in "rj45 ext extnat" } {
 	    return true
 	}
 
