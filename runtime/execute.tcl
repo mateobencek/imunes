@@ -26,7 +26,7 @@
 # and Technology through the research contract #IP-2003-143.
 #
 
-#****f* exec.tcl/genExperimentId
+#****f* execute.tcl/genExperimentId
 # NAME
 #   genExperimentId -- generate experiment ID
 # SYNOPSIS
@@ -47,7 +47,7 @@ proc genExperimentId {} {
     }
 }
 
-#****f* exec.tcl/checkExternalInterfaces
+#****f* execute.tcl/checkExternalInterfaces
 # NAME
 #   checkExternalInterfaces -- check external interfaces in the topology
 # SYNOPSIS
@@ -127,7 +127,7 @@ proc checkExternalInterfaces {} {
     return 0
 }
 
-#****f* exec.tcl/execCmdsNode
+#****f* execute.tcl/execCmdsNode
 # NAME
 #   execCmdsNode -- execute a set of commands on virtual node
 # SYNOPSIS
@@ -149,7 +149,7 @@ proc execCmdsNode { node cmds } {
     return $output
 }
 
-#****f* exec.tcl/execCmdsNodeBkg
+#****f* execute.tcl/execCmdsNodeBkg
 # NAME
 #   execCmdsNodeBkg -- execute a set of commands on virtual node
 # SYNOPSIS
@@ -173,7 +173,7 @@ proc execCmdsNodeBkg { node cmds { output "" } } {
     execCmdNodeBkg $node $cmds_str
 }
 
-#****f* exec.tcl/createExperimentFiles
+#****f* execute.tcl/createExperimentFiles
 # NAME
 #   createExperimentFiles -- create experiment files
 # SYNOPSIS
@@ -237,7 +237,7 @@ proc readRunningVarsFile { eid } {
     set execute_vars [dictGet $vars_dict "execute_vars"]
 }
 
-#****f* exec.tcl/saveRunningConfigurationInteractive
+#****f* execute.tcl/saveRunningConfigurationInteractive
 # NAME
 #   saveRunningConfigurationInteractive -- save running configuration in
 #       interactive
@@ -256,7 +256,7 @@ proc saveRunningConfigurationInteractive { eid } {
     saveCfgJson $fileName
 }
 
-#****f* exec.tcl/saveRunningConfigurationBatch
+#****f* execute.tcl/saveRunningConfigurationBatch
 # NAME
 #   saveRunningConfigurationBatch -- save running configuration in batch
 # SYNOPSIS
@@ -274,7 +274,7 @@ proc saveRunningConfigurationBatch { eid } {
     exec cp $currentFileBatch $fileName
 }
 
-#****f* exec.tcl/createExperimentScreenshot
+#****f* execute.tcl/createExperimentScreenshot
 # NAME
 #   createExperimentScreenshot -- create experiment screenshot
 # SYNOPSIS
@@ -298,7 +298,7 @@ proc createExperimentScreenshot { eid } {
     }
 }
 
-#****f* exec.tcl/createExperimentFilesFromBatch
+#****f* execute.tcl/createExperimentFilesFromBatch
 # NAME
 #   createExperimentFilesFromBatch -- create experiment files from batch
 # SYNOPSIS
@@ -335,7 +335,7 @@ proc l3node.nghook { eid node ifc } {
     }
 }
 
-#****f* exec.tcl/nodeIpsecInit
+#****f* execute.tcl/nodeIpsecInit
 # NAME
 #   nodeIpsecInit -- IPsec initialization
 # SYNOPSIS
@@ -418,7 +418,7 @@ proc nodeIpsecInit { node } {
     }
 }
 
-#****f* exec.tcl/deployCfg
+#****f* execute.tcl/deployCfg
 # NAME
 #   deployCfg -- deploy working configuration
 # SYNOPSIS
@@ -1242,7 +1242,7 @@ proc execute_nodesConfigure { nodes nodes_count w } {
     }
 }
 
-#****f* exec.tcl/generateHostsFile
+#****f* execute.tcl/generateHostsFile
 # NAME
 #   generateHostsFile -- generate hosts file
 # SYNOPSIS
