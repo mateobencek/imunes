@@ -942,13 +942,13 @@ proc execute_nodesPhysIfacesCreate { nodes_ifaces nodes_count w } {
 
 	if { $node ni $skip_nodes && [info procs [getNodeType $node].nodePhysIfacesCreate] != "" } {
 	    if { $ifaces == "*" } {
-		set ifaces [ifcList $node]
+			set ifaces [ifcList $node]
 	    }
 
 	    try {
-		[getNodeType $node].nodePhysIfacesCreate $eid $node $ifaces
+			[getNodeType $node].nodePhysIfacesCreate $eid $node $ifaces
 	    } on error err {
-		return -code error "Error in '[getNodeType $node].nodePhysIfacesCreate $eid $node $ifaces': $err"
+			return -code error "Error in '[getNodeType $node].nodePhysIfacesCreate $eid $node $ifaces': $err"
 	    }
 	    pipesExec ""
 	}

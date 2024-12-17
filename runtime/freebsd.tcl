@@ -2210,12 +2210,15 @@ proc terminate_removeExperimentFiles { eid } {
 #****
 proc l2node.nodeCreate { eid node_id } {
     switch -exact [getNodeType $node_id] {
-	lanswitch {
-	    set ngtype bridge
-	}
-	hub {
-	    set ngtype hub
-	}
+        lanswitch {
+            set ngtype bridge
+        }
+        hub {
+            set ngtype hub
+        }
+        vlanswitch {
+            set ngtype bridge
+        }
     }
 
     # create an ng node and make it persistent in the same command

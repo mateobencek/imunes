@@ -26,6 +26,7 @@ proc l2node.nodeCreate { eid node_id } {
     }
 
     set nodeNs [getNodeNetns $eid $node_id]
+    puts "$type - ip netns exec $nodeNs ip link add name $node_id type bridge $vlanfiltering $ageing_time"
     pipesExec "ip netns exec $nodeNs ip link add name $node_id type bridge $vlanfiltering $ageing_time" "hold"
     pipesExec "ip netns exec $nodeNs ip link set $node_id up" "hold"
 }
@@ -640,70 +641,84 @@ proc nodePhysIfacesCreate { node_id ifaces } {
     set node_type [getNodeType $node_id]
 
     # Create "physical" network interfaces
+    puts "trenutni node $node_id"
     foreach iface_id $ifaces {
-	setToRunning "${node_id}|${iface_id}_running" true
-	set iface_name [getIfcName $node_id $iface_id]
-	set public_hook $node_id-$iface_name
-	set prefix [string trimright $iface_name "0123456789"]
-	if { $node_type in "ext extnat" } {
-	    set iface_name $node_id
-	}
+        setToRunning "${node_id}|${iface_id}_running" true
+        set iface_name [getIfcName $node_id $iface_id]
+        set public_hook $node_id-$iface_name
+        set prefix [string trimright $iface_name "0123456789"]
+        puts "trenutni interface: \[$iface_id\] - $iface_name"
+        if { $node_type in "ext extnat" } {
+            set iface_name $node_id
+        }
 
-	# direct link, simulate capturing the host interface into the node,
-	# without bridges between them
-	set peer [getIfcPeer $node_id $iface_id]
-	if { $peer != "" } {
-	    set link [linkByPeers $node_id $peer]
-	    if { $link != "" && [getLinkDirect $link] } {
-		continue
-	    }
-	}
+        # direct link, simulate capturing the host interface into the node,
+        # without bridges between them
+        set peer [getIfcPeer $node_id $iface_id]
+        if { $peer != "" } {
+            set link [linkByPeers $node_id $peer]
+            if { $link != "" && [getLinkDirect $link] } {
+                continue
+            }
+        }
 
-	switch -exact $prefix {
-	    e -
-	    ext -
-	    eth {
-		# Create a veth pair - private hook in node netns and public hook
-		# in the experiment netns
-		createNsVethPair $iface_name $nodeNs $public_hook $eid
-	    }
-	}
+        switch -exact $prefix {
+            e -
+            ext -
+            eth {
+                # Create a veth pair - private hook in node netns and public hook
+                # in the experiment netns
+                createNsVethPair $iface_name $nodeNs $public_hook $eid
+            }
+        }
 
-	switch -exact $prefix {
-	    e {
-		# bridge private hook with L2 node
-		setNsIfcMaster $nodeNs $iface_name $node_id "up"
-	    }
-	    ext {
-		# bridge private hook with ext node
-		#setNsIfcMaster $nodeNs $iface_name $eid-$node_id "up"
-	    }
-	    eth {
-		#set ether [getIfcMACaddr $node_id $iface_id]
-		#if { $ether == "" } {
-		#    autoMACaddr $node_id $iface_id
-		#    set ether [getIfcMACaddr $node_id $iface_id]
-		#}
+		puts "peer je $peer"
 
-		#set nsstr ""
-		#if { $nodeNs != "" } {
-		#    set nsstr "-n $nodeNs"
-		#}
-		#pipesExec "ip $nsstr link set $iface_name address $ether" "hold"
-	    }
-	    default {
-		# capture physical interface directly into the node, without using a bridge
-		# we don't know the name, so make sure all other options cover other IMUNES
-		# 'physical' interfaces
-		# XXX not yet implemented
-		if { [getIfcType $node_id $iface_id] == "stolen" } {
-		    captureExtIfcByName $eid $iface_name $node_id
-		    if { [getNodeType $node_id] in "hub lanswitch vlanswitch" } {
-			setNsIfcMaster $nodeNs $iface_name $node_id "up"
-		    }
-		}
-	    }
-	}
+        switch -exact $prefix {
+            e {
+                # bridge private hook with L2 node
+                setNsIfcMaster $nodeNs $iface_name $node_id "up"
+                if { $node_type == "vlanswitch" } {
+					# Set even numbers to vlanid 10 and odd to 20
+                    set vlan_id [expr {[string range $iface_name 1 end] % 2 == 0 ? 10 : 20}]
+                    puts "setNsIfcVlanId $nodeNs $iface_name $node_id $vlan_id"
+                    setNsIfcVlanId $nodeNs $iface_name $node_id $vlan_id
+                }
+            }
+            ext {
+                # bridge private hook with ext node
+                #setNsIfcMaster $nodeNs $iface_name $eid-$node_id "up"
+            }
+            eth {
+                #set ether [getIfcMACaddr $node_id $iface_id]
+                #if { $ether == "" } {
+                #    autoMACaddr $node_id $iface_id
+                #    set ether [getIfcMACaddr $node_id $iface_id]
+                #}
+
+                #set nsstr ""
+                #if { $nodeNs != "" } {
+                #    set nsstr "-n $nodeNs"
+                #}
+                #pipesExec "ip $nsstr link set $iface_name address $ether" "hold"
+
+                # add ip addr
+                #set peer_node_type [getNodeType $peer]
+
+            }
+            default {
+                # capture physical interface directly into the node, without using a bridge
+                # we don't know the name, so make sure all other options cover other IMUNES
+                # 'physical' interfaces
+                # XXX not yet implemented
+                if { [getIfcType $node_id $iface_id] == "stolen" } {
+                    captureExtIfcByName $eid $iface_name $node_id
+                    if { [getNodeType $node_id] in "hub lanswitch vlanswitch" } {
+                        setNsIfcMaster $nodeNs $iface_name $node_id "up"
+                    }
+                }
+            }
+        }
     }
 
     pipesExec ""
@@ -871,9 +886,21 @@ proc createNsVethPair { ifname1 netNs1 ifname2 netNs2 } {
 proc setNsIfcMaster { netNs ifname master state } {
     set nsstr ""
     if { $netNs != "" } {
-	set nsstr "-n $netNs"
+		set nsstr "-n $netNs"
     }
     pipesExec "ip $nsstr link set $ifname master $master $state" "hold"
+}
+
+proc setNsIfcVlanId { netNs ifname nodeId vlanId } {
+    set nsstr ""
+    if { $netNs != "" } {
+		set nsstr "netns exec $netNs"
+    }
+
+    puts "pipesExec \"ip $nsstr bridge vlan del dev $ifname vid 1\""
+    pipesExec "ip $nsstr bridge vlan del dev $ifname vid 1"
+    puts "pipesExec \"ip $nsstr bridge vlan add dev $ifname vid $vlanId\""
+    pipesExec "ip $nsstr bridge vlan add dev $ifname vid $vlanId"
 }
 
 #****f* linux.tcl/createDirectLinkBetween
