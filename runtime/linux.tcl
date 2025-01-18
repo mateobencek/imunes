@@ -20,13 +20,12 @@ proc l2node.nodeCreate { eid node_id } {
     set ageing_time ""
     set vlanfiltering ""
     if { $type == "hub" } {
-		set ageing_time "ageing_time 0"
+	set ageing_time "ageing_time 0"
     } elseif { $type == "vlanswitch" } {
         set vlanfiltering "vlan_filtering 1"
     }
 
     set nodeNs [getNodeNetns $eid $node_id]
-    puts "$type - ip netns exec $nodeNs ip link add name $node_id type bridge $vlanfiltering $ageing_time"
     pipesExec "ip netns exec $nodeNs ip link add name $node_id type bridge $vlanfiltering $ageing_time" "hold"
     pipesExec "ip netns exec $nodeNs ip link set $node_id up" "hold"
 }
@@ -678,12 +677,6 @@ proc nodePhysIfacesCreate { node_id ifaces } {
             e {
                 # bridge private hook with L2 node
                 setNsIfcMaster $nodeNs $iface_name $node_id "up"
-                if { $node_type == "vlanswitch" } {
-					# Set even numbers to vlanid 10 and odd to 20
-                    set vlan_id [expr {[string range $iface_name 1 end] % 2 == 0 ? 10 : 20}]
-                    puts "setNsIfcVlanId $nodeNs $iface_name $node_id $vlan_id"
-                    setNsIfcVlanId $nodeNs $iface_name $node_id $vlan_id
-                }
             }
             ext {
                 # bridge private hook with ext node
@@ -889,18 +882,6 @@ proc setNsIfcMaster { netNs ifname master state } {
 		set nsstr "-n $netNs"
     }
     pipesExec "ip $nsstr link set $ifname master $master $state" "hold"
-}
-
-proc setNsIfcVlanId { netNs ifname nodeId vlanId } {
-    set nsstr ""
-    if { $netNs != "" } {
-		set nsstr "netns exec $netNs"
-    }
-
-    puts "pipesExec \"ip $nsstr bridge vlan del dev $ifname vid 1\""
-    pipesExec "ip $nsstr bridge vlan del dev $ifname vid 1"
-    puts "pipesExec \"ip $nsstr bridge vlan add dev $ifname vid $vlanId\""
-    pipesExec "ip $nsstr bridge vlan add dev $ifname vid $vlanId"
 }
 
 #****f* linux.tcl/createDirectLinkBetween
@@ -1918,6 +1899,65 @@ proc execSetIfcQLen { eid node_id iface_id qlen } {
     set iface_name [getIfcName $node_id $iface_id]
     pipesExec "ip -n $eid-$node_id l set $iface_name txqueuelen $qlen" "hold"
 }
+
+#****f* linux.tcl/execSetIfcVlanConfig
+# NAME
+#   execSetIfcVlanConfig -- in exec mode set interface vlan configuration
+# SYNOPSIS
+#   execSetIfcVlanConfig $eid $node_id $iface_id $vlantag $vlantype
+# FUNCTION
+#   Configures VLAN tag and type during the simulation.
+#   VLAN tag and type are defined in vlantag and vlantype parameters.
+# INPUTS
+#   eid -- experiment id
+#   node_id -- node id
+#   iface_id -- interface name
+#   vlantag -- vlan tag number
+#   vlantype -- vlan type (access/trunk)
+#****
+proc execSetIfcVlanConfig { eid node_id iface_id vlantag vlantype } {
+    set iface_name [getIfcName $node_id $iface_id]
+    set nsstr "netns exec $eid-$node_id"
+
+    if { $vlantag != 1 || $vlantype == "trunk"} {
+        pipesExec "ip $nsstr bridge vlan del dev $iface_name vid 1" "hold"
+    }
+
+    if { $vlantype == "trunk" } {
+        foreach id [ifcList $node_id] {
+            set ifc_vlantype [getIfcVlanType $node_id $id]
+            if { $ifc_vlantype eq "access" } {
+                set id_vlantag [getIfcVlanTag $node_id $id]
+                pipesExec "ip $nsstr bridge vlan add dev $iface_name vid $id_vlantag tagged" "hold"
+            }
+        }
+    } else {
+        # Default is access
+        pipesExec "ip $nsstr bridge vlan add dev $iface_name vid $vlantag pvid untagged" "hold"
+    }
+}
+
+
+#****f* linux.tcl/execDelIfcVlanConfig
+# NAME
+#   execDelIfcVlanConfig -- in exec mode restore interface vlan configuration
+# SYNOPSIS
+#   execDelIfcVlanConfig $eid $node_id $iface_id
+# FUNCTION
+#   Restores VLAN configuration to the default state during the simulation.
+# INPUTS
+#   eid -- experiment id
+#   node_id -- node id
+#   iface_id -- interface name
+#****
+proc execDelIfcVlanConfig { eid node_id iface_id } {
+    set iface_name [getIfcName $node_id $iface_id]
+    set nsstr "netns exec $eid-$node_id"
+
+    pipesExec "ip $nsstr bridge vlan del dev $iface_name vid 1-4094" "hold"
+    pipesExec "ip $nsstr bridge vlan add dev $iface_name vid 1 pvid untagged" "hold"
+}
+
 
 proc getNetemConfigLine { bandwidth delay loss dup } {
     array set netem {

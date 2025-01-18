@@ -231,6 +231,12 @@ proc $MODULE.nodeLogIfacesCreate { eid node_id ifaces } {
 #****
 proc $MODULE.nodeIfacesConfigure { eid node_id ifaces } {
     #startNodeIfaces $node_id $ifaces
+
+    foreach iface_id $ifaces {
+        set vlantag [getIfcVlanTag $node_id $iface_id]
+        set vlantype [getIfcVlanType $node_id $iface_id]
+        execSetIfcVlanConfig $eid $node_id $iface_id $vlantag $vlantype
+    }
 }
 
 #****f* exec.tcl/vlanswitch.nodeConfigure
@@ -257,6 +263,14 @@ proc $MODULE.nodeConfigure { eid node_id } {
 
 proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
     #unconfigNodeIfaces $eid $node_id $ifaces
+
+    foreach iface_id $ifaces {
+        set vlantag [getIfcVlanTag $node_id $iface_id]
+        set vlantype [getIfcVlanType $node_id $iface_id]
+        if { $vlantag != 1 || $vlantype != "access"} {
+            execDelIfcVlanConfig $eid $node_id $iface_id
+        }
+    }
 }
 
 proc $MODULE.nodeIfacesDestroy { eid node_id ifaces } {

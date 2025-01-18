@@ -1538,6 +1538,47 @@ proc configGUI_ifcQueueConfig { wi node_id iface_id } {
     pack $wi.if$iface_id.queuecfg -anchor w -padx 10
 }
 
+#****f* nodecfgGUI.tcl/configGUI_ifcVlanConfig2
+# NAME
+#   configGUI_ifcVlanConfig2 -- configure GUI - interface queue configuration
+# SYNOPSIS
+#   configGUI_ifcVlanConfig2 $wi $node_id $iface_id
+# FUNCTION
+#   Creating module for queue configuration.
+# INPUTS
+#   * wi -- widget
+#   * node_id -- node id
+#   * iface_id -- interface name
+#****
+proc configGUI_ifcVlanConfig2 { wi node_id iface_id } {
+    global ifvlantype$iface_id node_cfg
+
+    global guielements
+    lappend guielements "configGUI_ifcVlanConfig2 $iface_id"
+
+    set ifvlantype$iface_id [_getIfcVlanType $node_cfg $iface_id]
+
+    ttk::frame $wi.if$iface_id.vlancfg -borderwidth 2
+
+    ttk::label $wi.if$iface_id.vlancfg.txt1 -text "Vlan tag" -anchor w
+    ttk::spinbox $wi.if$iface_id.vlancfg.vlantag -width 4 \
+    	-validate focus -invalidcommand "focusAndFlash %W"
+    $wi.if$iface_id.vlancfg.vlantag insert 0 [_getIfcVlanTag $node_cfg $iface_id]
+    $wi.if$iface_id.vlancfg.vlantag configure \
+    	-from 1 -to 4094 -increment 1 \
+    	-validatecommand { checkIntRange %P 1 4094 }
+
+    ttk::label $wi.if$iface_id.vlancfg.txt2 -text "Vlan type" -anchor w
+    ttk::combobox $wi.if$iface_id.vlancfg.vlantype -width 6 \
+        -textvariable ifvlantype$iface_id \
+        -values [list access trunk]
+
+    pack $wi.if$iface_id.vlancfg.txt1 $wi.if$iface_id.vlancfg.vlantag -side left -anchor w -padx 1
+    pack $wi.if$iface_id.vlancfg.txt2 -side left -anchor w
+    pack $wi.if$iface_id.vlancfg.vlantype -side left -anchor w -padx 1
+    pack $wi.if$iface_id.vlancfg -anchor w -padx 10
+}
+
 #****f* nodecfgGUI.tcl/configGUI_ifcMACAddress
 # NAME
 #   configGUI_ifcMACAddress -- configure GUI - interface MAC address
@@ -2443,6 +2484,43 @@ proc configGUI_ifcQueueConfigApply { wi node_id iface_id } {
 	    }
 	    set changed 1
 	}
+    }
+}
+
+#****f* nodecfgGUI.tcl/configGUI_ifcVlanConfig2Apply
+# NAME
+#   configGUI_ifcVlanConfig2Apply -- configure GUI - interface queue
+#      configuration apply
+# SYNOPSIS
+#   configGUI_ifcVlanConfig2Apply $wi $node_id $iface_id
+# FUNCTION
+#   Saves changes in the module with queue configuration parameters.
+# INPUTS
+#   * wi -- widget
+#   * node_id -- node id
+#   * iface_id -- interface name
+#****
+proc configGUI_ifcVlanConfig2Apply { wi node_id iface_id } {
+    global changed apply node_cfg
+
+    if { [getNodeType $node_id] in "vlanswitch" } {
+	set vlantag [$wi.if$iface_id.vlancfg.vlantag get]
+        set oldvlantag [_getIfcVlanTag $node_cfg $iface_id]
+        if { $vlantag != $oldvlantag } {
+            if { $apply == 1 } {
+                set node_cfg [_setIfcVlanTag $node_cfg $iface_id $vlantag]
+            }
+            set changed 1
+        }
+
+        set vlantype [$wi.if$iface_id.vlancfg.vlantype get]
+        set oldvlantype [_getIfcVlanType $node_cfg $iface_id]
+        if { $vlantype != $oldvlantype } {
+            if { $apply == 1 } {
+                set node_cfg [_setIfcVlanType $node_cfg $iface_id $vlantype]
+            }
+            set changed 1
+        }
     }
 }
 
