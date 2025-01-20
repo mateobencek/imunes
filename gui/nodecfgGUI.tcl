@@ -1538,11 +1538,11 @@ proc configGUI_ifcQueueConfig { wi node_id iface_id } {
     pack $wi.if$iface_id.queuecfg -anchor w -padx 10
 }
 
-#****f* nodecfgGUI.tcl/configGUI_ifcVlanConfig2
+#****f* nodecfgGUI.tcl/configGUI_bridgeIfcVlanConfig
 # NAME
-#   configGUI_ifcVlanConfig2 -- configure GUI - interface queue configuration
+#   configGUI_bridgeIfcVlanConfig -- configure GUI - interface queue configuration
 # SYNOPSIS
-#   configGUI_ifcVlanConfig2 $wi $node_id $iface_id
+#   configGUI_bridgeIfcVlanConfig $wi $node_id $iface_id
 # FUNCTION
 #   Creating module for queue configuration.
 # INPUTS
@@ -1550,11 +1550,11 @@ proc configGUI_ifcQueueConfig { wi node_id iface_id } {
 #   * node_id -- node id
 #   * iface_id -- interface name
 #****
-proc configGUI_ifcVlanConfig2 { wi node_id iface_id } {
+proc configGUI_bridgeIfcVlanConfig { wi node_id iface_id } {
     global ifvlantype$iface_id node_cfg
 
     global guielements
-    lappend guielements "configGUI_ifcVlanConfig2 $iface_id"
+    lappend guielements "configGUI_bridgeIfcVlanConfig $iface_id"
 
     set ifvlantype$iface_id [_getIfcVlanType $node_cfg $iface_id]
 
@@ -2487,12 +2487,12 @@ proc configGUI_ifcQueueConfigApply { wi node_id iface_id } {
     }
 }
 
-#****f* nodecfgGUI.tcl/configGUI_ifcVlanConfig2Apply
+#****f* nodecfgGUI.tcl/configGUI_bridgeIfcVlanConfigApply
 # NAME
-#   configGUI_ifcVlanConfig2Apply -- configure GUI - interface queue
+#   configGUI_bridgeIfcVlanConfigApply -- configure GUI - interface queue
 #      configuration apply
 # SYNOPSIS
-#   configGUI_ifcVlanConfig2Apply $wi $node_id $iface_id
+#   configGUI_bridgeIfcVlanConfigApply $wi $node_id $iface_id
 # FUNCTION
 #   Saves changes in the module with queue configuration parameters.
 # INPUTS
@@ -2500,7 +2500,7 @@ proc configGUI_ifcQueueConfigApply { wi node_id iface_id } {
 #   * node_id -- node id
 #   * iface_id -- interface name
 #****
-proc configGUI_ifcVlanConfig2Apply { wi node_id iface_id } {
+proc configGUI_bridgeIfcVlanConfigApply { wi node_id iface_id } {
     global changed apply node_cfg
 
     if { [getNodeType $node_id] in "vlanswitch" } {
