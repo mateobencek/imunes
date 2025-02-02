@@ -2343,8 +2343,8 @@ proc l2node.nodeCreate { eid node_id } {
             # create an ng_vlan node and make it persistent in the same command
             set ngcmds "mkpeer $ngtype $node_id parent\n"
             set ngcmds "$ngcmds name .$node_id $node_id\n"
-            set ngcmds "$ngcmds mkpeer $node_id: eiface upper ether\n"
-            set ngcmds "$ngcmds name $node_id:upper $node_id-hole"
+            set ngcmds "$ngcmds mkpeer $node_id: eiface nomatch ether\n"
+            set ngcmds "$ngcmds name $node_id:nomatch $node_id-hole"
         }
     }
 
