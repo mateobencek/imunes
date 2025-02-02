@@ -548,10 +548,9 @@ proc execSetIfcQLen { eid node_id iface qlen } {
 proc execSetIfcVlanConfig { eid node_id iface_id } {
     set vlantag [getIfcVlanTag $node_id $iface_id]
     set vlantype [getIfcVlanType $node_id $iface_id]
-    
+
     set access_ifc_key "$eid,$node_id,$vlantag"
     set trunk_ifc_key "$eid,$node_id,trunk"
-    #set trunk_ifc_key "$eid,$node_id,$iface_id" # TODO support multiple trunk ports?
     set ngcmds ""
 
     set trunk_ifc_name "$node_id-downstream"
@@ -564,11 +563,11 @@ proc execSetIfcVlanConfig { eid node_id iface_id } {
 
     if {$vlantype eq "trunk"} {
         if {![info exists ::trunk_interfaces($trunk_ifc_key)]} {
-            append ngcmds "mkpeer $node_id: bridge lower link0\n"
-            append ngcmds "name $node_id:lower $trunk_ifc_name\n"
+            append ngcmds "mkpeer $node_id: bridge downstream link0\n"
+            append ngcmds "name $node_id:downstream $trunk_ifc_name\n"
             set ::trunk_interfaces($trunk_ifc_key) 1
         }
-        append ngcmds "connect $trunk_ifc_name: $node_id: link0 lower\n"
+        append ngcmds "connect $trunk_ifc_name: $node_id: link0 downstream\n"
 
     } else {
         if {![info exists ::vlan_interfaces($access_ifc_key)]} {
@@ -606,7 +605,6 @@ proc execDelIfcVlanConfig { eid node_id iface_id } {
 
     set access_ifc_key "$eid,$node_id,$vlantag"
     set trunk_ifc_key "$eid,$node_id,trunk"
-    #set trunk_ifc_key "$eid,$node_id,$iface_id" # TODO support multiple trunk ports?
     set ngcmds ""
 
     set trunk_ifc_name "$node_id-downstream"
