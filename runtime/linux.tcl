@@ -1959,8 +1959,13 @@ proc execDelIfcVlanConfig { eid node_id iface_id } {
     set iface_name [getIfcName $node_id $iface_id]
     set nsstr "netns exec $eid-$node_id"
 
-    pipesExec "ip $nsstr bridge vlan del dev $iface_name vid 1-4094" "hold"
-    pipesExec "ip $nsstr bridge vlan add dev $iface_name vid 1 pvid untagged" "hold"
+    set vlantag [getIfcVlanTag $node_id $iface_id]
+    set vlantype [getIfcVlanType $node_id $iface_id]
+
+    if { $vlantag != 1 || $vlantype != "access"} {
+        pipesExec "ip $nsstr bridge vlan del dev $iface_name vid 1-4094" "hold"
+        pipesExec "ip $nsstr bridge vlan add dev $iface_name vid 1 pvid untagged" "hold"
+    }
 }
 
 

@@ -545,7 +545,10 @@ proc execSetIfcQLen { eid node_id iface qlen } {
 #   vlantag -- vlan tag number
 #   vlantype -- vlan type (access/trunk)
 #****
-proc execSetIfcVlanConfig { eid node_id iface_id vlantag vlantype } {
+proc execSetIfcVlanConfig { eid node_id iface_id } {
+    set vlantag [getIfcVlanTag $node_id $iface_id]
+    set vlantype [getIfcVlanType $node_id $iface_id]
+    
     set access_ifc_key "$eid,$node_id,$vlantag"
     set trunk_ifc_key "$eid,$node_id,trunk"
     #set trunk_ifc_key "$eid,$node_id,$iface_id" # TODO support multiple trunk ports?
@@ -598,6 +601,9 @@ proc execSetIfcVlanConfig { eid node_id iface_id vlantag vlantype } {
 #   iface_id -- interface name
 #****
 proc execDelIfcVlanConfig { eid node_id iface_id } {
+    set vlantag [getIfcVlanTag $node_id $iface_id]
+    set vlantype [getIfcVlanType $node_id $iface_id]
+
     set access_ifc_key "$eid,$node_id,$vlantag"
     set trunk_ifc_key "$eid,$node_id,trunk"
     #set trunk_ifc_key "$eid,$node_id,$iface_id" # TODO support multiple trunk ports?
@@ -1447,9 +1453,7 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 	switch -exact $prefix {
 	    e {
                 if { [getNodeType $node_id] in "vlanswitch" } {
-                    set vlantag [getIfcVlanTag $node_id $iface_id]
-                    set vlantype [getIfcVlanType $node_id $iface_id]
-                    execSetIfcVlanConfig $eid $node_id $iface_id $vlantag $vlantype
+                    execSetIfcVlanConfig $eid $node_id $iface_id
                 }
 	    }
 	    eth {

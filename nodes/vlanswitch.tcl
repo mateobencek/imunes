@@ -267,11 +267,7 @@ proc $MODULE.nodeIfacesUnconfigure { eid node_id ifaces } {
     #unconfigNodeIfaces $eid $node_id $ifaces
 
     foreach iface_id $ifaces {
-        set vlantag [getIfcVlanTag $node_id $iface_id]
-        set vlantype [getIfcVlanType $node_id $iface_id]
-        if { $vlantag != 1 || $vlantype != "access"} {
-            execDelIfcVlanConfig $eid $node_id $iface_id
-        }
+        execDelIfcVlanConfig $eid $node_id $iface_id
     }
 }
 
