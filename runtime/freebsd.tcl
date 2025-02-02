@@ -530,6 +530,104 @@ proc execSetIfcQLen { eid node_id iface qlen } {
     pipesExec "jexec $eid ngctl msg $link_id: setcfg \"{ $direction={ $queuelen=$qlen } }\"" "hold"
 }
 
+#****f* freebsd.tcl/execSetIfcVlanConfig
+# NAME
+#   execSetIfcVlanConfig -- in exec mode set interface vlan configuration
+# SYNOPSIS
+#   execSetIfcVlanConfig $eid $node_id $iface_id $vlantag $vlantype
+# FUNCTION
+#   Configures VLAN tag and type during the simulation.
+#   VLAN tag and type are defined in vlantag and vlantype parameters.
+# INPUTS
+#   eid -- experiment id
+#   node_id -- node id
+#   iface_id -- interface name
+#   vlantag -- vlan tag number
+#   vlantype -- vlan type (access/trunk)
+#****
+proc execSetIfcVlanConfig { eid node_id iface_id vlantag vlantype } {
+    set access_ifc_key "$eid,$node_id,$vlantag"
+    set trunk_ifc_key "$eid,$node_id,trunk"
+    #set trunk_ifc_key "$eid,$node_id,$iface_id" # TODO support multiple trunk ports?
+    set ngcmds ""
+
+    set trunk_ifc_name "$node_id-downstream"
+    set hook_name "v$vlantag"
+
+    if {![info exists node_id]} {
+        puts "Error: VLAN switch $node_id does not exist!"
+        return
+    }
+
+    if {$vlantype eq "trunk"} {
+        if {![info exists ::trunk_interfaces($trunk_ifc_key)]} {
+            append ngcmds "mkpeer $node_id: bridge lower link0\n"
+            append ngcmds "name $node_id:lower $trunk_ifc_name\n"
+            set ::trunk_interfaces($trunk_ifc_key) 1
+        }
+        append ngcmds "connect $trunk_ifc_name: $node_id: link0 lower\n"
+
+    } else {
+        if {![info exists ::vlan_interfaces($access_ifc_key)]} {
+            append ngcmds "mkpeer $node_id: bridge $hook_name link0\n"
+            append ngcmds "name $node_id:$hook_name $node_id-$hook_name\n"
+            append ngcmds "msg $node_id: addfilter { vlan=$vlantag hook=\"$hook_name\" }\n"
+            set ::vlan_interfaces($access_ifc_key) 1
+        }
+    }
+
+    if {$ngcmds ne ""} {
+        puts "$ngcmds"
+        pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
+    }
+}
+
+
+
+
+#****f* freebsd.tcl/execDelIfcVlanConfig
+# NAME
+#   execDelIfcVlanConfig -- in exec mode restore interface vlan configuration
+# SYNOPSIS
+#   execDelIfcVlanConfig $eid $node_id $iface_id
+# FUNCTION
+#   Restores VLAN configuration to the default state during the simulation.
+# INPUTS
+#   eid -- experiment id
+#   node_id -- node id
+#   iface_id -- interface name
+#****
+proc execDelIfcVlanConfig { eid node_id iface_id } {
+    set access_ifc_key "$eid,$node_id,$vlantag"
+    set trunk_ifc_key "$eid,$node_id,trunk"
+    #set trunk_ifc_key "$eid,$node_id,$iface_id" # TODO support multiple trunk ports?
+    set ngcmds ""
+
+    set trunk_ifc_name "$node_id-downstream"
+    set hook_name "v$vlantag"
+
+    if {$vlantype eq "trunk"} {
+        if {[info exists ::trunk_interfaces($trunk_ifc_key)]} {
+            append ngcmds "disconnect $trunk_ifc_name:\n"
+            append ngcmds "shutdown $trunk_ifc_name:\n"
+            unset ::trunk_interfaces($trunk_ifc_key)
+        }
+
+    } else {
+        if {[info exists ::vlan_interfaces($access_ifc_key)]} {
+            append ngcmds "msg $node_id: delfilter { vlan=$vlantag }\n"
+            append ngcmds "disconnect $node_id-$hook_name:\n"
+            append ngcmds "shutdown $node_id-$hook_name:\n"
+            unset ::vlan_interfaces($access_ifc_key)
+        }
+    }
+
+    if {$ngcmds ne ""} {
+        puts "$ngcmds"
+        pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
+    }
+}
+
 #****f* freebsd.tcl/execSetLinkParams
 # NAME
 #   execSetLinkParams -- in exec mode set link parameters
@@ -1348,6 +1446,11 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 
 	switch -exact $prefix {
 	    e {
+                if { [getNodeType $node_id] in "vlanswitch" } {
+                    set vlantag [getIfcVlanTag $node_id $iface_id]
+                    set vlantype [getIfcVlanType $node_id $iface_id]
+                    execSetIfcVlanConfig $eid $node_id $iface_id $vlantag $vlantype
+                }
 	    }
 	    eth {
 		# save newly created ngnodeX into a shell variable ifid and
@@ -1404,7 +1507,7 @@ proc nodePhysIfacesCreate { node_id ifaces } {
 		# XXX not yet implemented
 		if { [getIfcType $node_id $iface_id] == "stolen" } {
 		    captureExtIfcByName $eid $iface_name $node_id
-		    if { [getNodeType $node_id] in "hub lanswitch" } {
+		    if { [getNodeType $node_id] in "hub lanswitch vlanswitch" } {
 			lassign [[getNodeType $node_id].nghook $eid $node_id $iface_id] \
 			    ngpeer1 nghook1
 			lassign "$iface_name lower" \
@@ -2030,9 +2133,13 @@ proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
     set nghook2 \
 	[lindex [[getNodeType $node2_id].nghook $eid $node2_id $iface2_id] 1]
 
+    puts "$ngpeer1 $ngpeer2 $nghook1 $nghook2"
+
     set ngcmds "mkpeer $ngpeer1: pipe $nghook1 upper"
     set ngcmds "$ngcmds\n name $ngpeer1:$nghook1 $link_id"
     set ngcmds "$ngcmds\n connect $link_id: $ngpeer2: lower $nghook2"
+
+    puts "$ngcmds"
 
     pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
 }
@@ -2217,15 +2324,28 @@ proc l2node.nodeCreate { eid node_id } {
             set ngtype hub
         }
         vlanswitch {
-            set ngtype bridge
+            set ngtype vlan
         }
     }
 
-    # create an ng node and make it persistent in the same command
-    # bridge demands hookname 'linkX'
-    set ngcmds "mkpeer $ngtype link0 link0\n"
-    set ngcmds "$ngcmds msg .link0 setpersistent\n"
-    set ngcmds "$ngcmds name .link0 $node_id"
+    switch -exact [getNodeType $node_id] {
+        lanswitch -
+        hub {
+            # create an ng node and make it persistent in the same command
+            # bridge demands hookname 'linkX'
+            set ngcmds "mkpeer $ngtype link0 link0\n"
+            set ngcmds "$ngcmds msg .link0 setpersistent\n"
+            set ngcmds "$ngcmds name .link0 $node_id"
+        }
+        vlanswitch {
+            # create an ng_vlan node and make it persistent in the same command
+            set ngcmds "mkpeer $ngtype $node_id parent\n"
+            set ngcmds "$ngcmds name .$node_id $node_id\n"
+            set ngcmds "$ngcmds mkpeer $node_id: eiface upper ether\n"
+            set ngcmds "$ngcmds name $node_id:upper $node_id-hole"
+        }
+    }
+
     pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
 }
 

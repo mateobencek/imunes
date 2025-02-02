@@ -677,6 +677,11 @@ proc nodePhysIfacesCreate { node_id ifaces } {
             e {
                 # bridge private hook with L2 node
                 setNsIfcMaster $nodeNs $iface_name $node_id "up"
+                if { [getNodeType $node_id] in "vlanswitch" } {
+                    set vlantag [getIfcVlanTag $node_id $iface_id]
+                    set vlantype [getIfcVlanType $node_id $iface_id]
+                    execSetIfcVlanConfig $eid $node_id $iface_id $vlantag $vlantype
+                }
             }
             ext {
                 # bridge private hook with ext node
