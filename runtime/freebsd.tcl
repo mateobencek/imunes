@@ -567,13 +567,11 @@ proc execSetIfcVlanConfig { eid node_id iface_id } {
             append ngcmds "name $node_id:downstream $trunk_ifc_name\n"
             set ::trunk_interfaces($trunk_ifc_key) 1
         }
-        append ngcmds "connect $trunk_ifc_name: $node_id: link0 downstream\n"
-
     } else {
         if {![info exists ::vlan_interfaces($access_ifc_key)]} {
             append ngcmds "mkpeer $node_id: bridge $hook_name link0\n"
             append ngcmds "name $node_id:$hook_name $node_id-$hook_name\n"
-            append ngcmds "msg $node_id: addfilter { vlan=$vlantag hook=\"$hook_name\" }\n"
+            append ngcmds "msg $node_id: addfilter { vlan=$vlantag hook=\\\"$hook_name\\\" }\n"
             set ::vlan_interfaces($access_ifc_key) 1
         }
     }
