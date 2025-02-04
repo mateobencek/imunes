@@ -1968,7 +1968,6 @@ proc execDelIfcVlanConfig { eid node_id iface_id } {
     }
 }
 
-
 proc getNetemConfigLine { bandwidth delay loss dup } {
     array set netem {
 	bandwidth	"rate Xbit"

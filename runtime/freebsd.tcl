@@ -556,24 +556,25 @@ proc execSetIfcVlanConfig { eid node_id iface_id } {
     set trunk_ifc_name "$node_id-downstream"
     set hook_name "v$vlantag"
 
-    if {![info exists node_id]} {
-        puts "Error: VLAN switch $node_id does not exist!"
-        return
-    }
-
     if {$vlantype eq "trunk"} {
         if {![info exists ::trunk_interfaces($trunk_ifc_key)]} {
+            set ::trunk_interfaces($trunk_ifc_key) 0
+        }
+        if { $::trunk_interfaces($trunk_ifc_key) == 0 } {
             append ngcmds "mkpeer $node_id: bridge downstream link0\n"
             append ngcmds "name $node_id:downstream $trunk_ifc_name\n"
-            set ::trunk_interfaces($trunk_ifc_key) 1
         }
+        incr ::trunk_interfaces($trunk_ifc_key)
     } else {
         if {![info exists ::vlan_interfaces($access_ifc_key)]} {
+            set ::vlan_interfaces($access_ifc_key) 0
+        }
+        if { $::vlan_interfaces($access_ifc_key) == 0 } {
             append ngcmds "mkpeer $node_id: bridge $hook_name link0\n"
             append ngcmds "name $node_id:$hook_name $node_id-$hook_name\n"
             append ngcmds "msg $node_id: addfilter { vlan=$vlantag hook=\\\"$hook_name\\\" }\n"
-            set ::vlan_interfaces($access_ifc_key) 1
         }
+        incr ::vlan_interfaces($access_ifc_key)
     }
 
     if {$ngcmds ne ""} {
@@ -581,9 +582,6 @@ proc execSetIfcVlanConfig { eid node_id iface_id } {
         pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
     }
 }
-
-
-
 
 #****f* freebsd.tcl/execDelIfcVlanConfig
 # NAME
@@ -609,18 +607,21 @@ proc execDelIfcVlanConfig { eid node_id iface_id } {
     set hook_name "v$vlantag"
 
     if {$vlantype eq "trunk"} {
-        if {[info exists ::trunk_interfaces($trunk_ifc_key)]} {
-            append ngcmds "disconnect $trunk_ifc_name:\n"
-            append ngcmds "shutdown $trunk_ifc_name:\n"
-            unset ::trunk_interfaces($trunk_ifc_key)
+        if {[info exists ::trunk_interfaces($trunk_ifc_key)] && $::trunk_interfaces($trunk_ifc_key) > 0} {
+            incr ::trunk_interfaces($trunk_ifc_key) -1
+            if {$::trunk_interfaces($trunk_ifc_key) == 0} {
+                append ngcmds "disconnect $node_id: downstream\n"
+                unset ::trunk_interfaces($trunk_ifc_key)
+            }
         }
-
     } else {
-        if {[info exists ::vlan_interfaces($access_ifc_key)]} {
-            append ngcmds "msg $node_id: delfilter { vlan=$vlantag }\n"
-            append ngcmds "disconnect $node_id-$hook_name:\n"
-            append ngcmds "shutdown $node_id-$hook_name:\n"
-            unset ::vlan_interfaces($access_ifc_key)
+        if {[info exists ::vlan_interfaces($access_ifc_key)] && $::vlan_interfaces($access_ifc_key) > 0} {
+            incr ::vlan_interfaces($access_ifc_key) -1
+            if {$::vlan_interfaces($access_ifc_key) == 0} {
+                append ngcmds "msg $node_id: delfilter \\\"$hook_name\\\" \n"
+                append ngcmds "disconnect $node_id: $hook_name\n"
+                unset ::vlan_interfaces($access_ifc_key)
+            }
         }
     }
 
@@ -2124,6 +2125,8 @@ proc createDirectLinkBetween { node1_id node2_id iface1_id iface2_id } {
 proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
     set eid [getFromRunning "eid"]
 
+    set ngcmds ""
+
     set ngpeer1 \
 	[lindex [[getNodeType $node1_id].nghook $eid $node1_id $iface1_id] 0]
     set ngpeer2 \
@@ -2135,9 +2138,9 @@ proc createLinkBetween { node1_id node2_id iface1_id iface2_id link_id } {
 
     puts "$ngpeer1 $ngpeer2 $nghook1 $nghook2"
 
-    set ngcmds "mkpeer $ngpeer1: pipe $nghook1 upper"
-    set ngcmds "$ngcmds\n name $ngpeer1:$nghook1 $link_id"
-    set ngcmds "$ngcmds\n connect $link_id: $ngpeer2: lower $nghook2"
+    append ngcmds "mkpeer $ngpeer1: pipe $nghook1 upper\n"
+    append ngcmds "name $ngpeer1:$nghook1 $link_id\n"
+    append ngcmds "connect $link_id: $ngpeer2: lower $nghook2\n"
 
     puts "$ngcmds"
 
@@ -2346,6 +2349,7 @@ proc l2node.nodeCreate { eid node_id } {
         }
     }
 
+    puts "$ngcmds"
     pipesExec "printf \"$ngcmds\" | jexec $eid ngctl -f -" "hold"
 }
 
@@ -2363,6 +2367,9 @@ proc l2node.nodeCreate { eid node_id } {
 #****
 proc l2node.nodeDestroy { eid node_id } {
     pipesExec "jexec $eid ngctl msg $node_id: shutdown" "hold"
+    if { [getNodeType $node_id] in "vlanswitch" } {
+        pipesExec "jexec $eid ngctl shutdown $node_id-hole:" "hold"
+    }
 }
 
 #****f* freebsd.tcl/getCpuCount
